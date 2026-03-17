@@ -97,7 +97,7 @@ intersphinx_mapping = {
     "pytest": ("https://docs.pytest.org/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
-    "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
+    "pyxem": ("https://www.pyxem.org/en/latest", None),
     "readthedocs": ("https://docs.readthedocs.com/platform/stable", None),
     "rosettasciio": ("https://rosettasciio.readthedocs.io/en/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
@@ -288,10 +288,6 @@ pv.global_theme.window_size = [600, 600]
 # Use static display until trame works with nbsphinx:
 # https://github.com/pyvista/pyvista/discussions/4809
 pv.set_jupyter_backend("static")
-try:
-    pv.start_xvfb()
-except Exception:
-    pass
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code

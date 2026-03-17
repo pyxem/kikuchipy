@@ -104,7 +104,7 @@ def skipif_no_vtk_support():
 
 def pytest_sessionstart(session):
     _ = kp.data.nickel_ebsd_large(allow_download=True)
-    plt.rcParams["backend"] = "agg"
+    plt.rcParams.update({"backend": "agg", "figure.max_open_warning": False})
 
 
 # ---------------------- pytest doctest-modules ---------------------- #

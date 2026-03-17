@@ -83,6 +83,7 @@ doc = [
     "sphinx-design",
     "sphinx-gallery",
     "sphinxcontrib-bibtex         >= 1.0",
+    "vtk                          >= 9.5",
 ]
 tests = [
     "numpydoc",
@@ -171,7 +172,6 @@ filterwarnings = [
     "ignore:Unable to import recommended hash 'siphash24.siphash13'",
     # From HyperSpy
     "ignore:This module has been deprecated and should now be imported as:FutureWarning",
-    "ignore:The private module `_lazy_signals` is deprecated",
     # From NLopt
     "ignore:builtin type SwigPyPacked has no __module__ attribute",
     "ignore:builtin type SwigPyObject has no __module__ attribute",
