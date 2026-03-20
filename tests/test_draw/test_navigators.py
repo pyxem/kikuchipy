@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import kikuchipy as kp
-from kikuchipy._utils.rosettasciio import RGB_DTYPES
+from kikuchipy._utils.rosettasciio_utils import RGB_DTYPES
 
 
 def test_get_rgb_navigator():
