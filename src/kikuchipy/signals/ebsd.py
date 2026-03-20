@@ -3190,9 +3190,9 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
     See the documentation of ``EBSD`` for attributes and methods.
 
     This class extends HyperSpy's
-    :class:`~hyperspy._signals.signal2d.LazySignal2D` class for EBSD
-    patterns. See the documentation of that class for how to create
-    this signal and the list of inherited attributes and methods.
+    :class:`~hyperspy.signals.LazySignal2D` class for EBSD patterns. See
+    the documentation of that class for how to create this signal and
+    the list of inherited attributes and methods.
     """
 
     def compute(self, *args, **kwargs) -> None:
