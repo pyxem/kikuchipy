@@ -206,44 +206,6 @@ class EBSDDetector:
 
     The calculation of gnomonic coordinates is based on the
     supplementary material to :cite:`britton2016tutorial`.
-
-    Examples
-    --------
-    Create an EBSD detector and plot the PC on top of a pattern
-
-    >>> import numpy as np
-    >>> import kikuchipy as kp
-    >>> det = kp.detectors.EBSDDetector(
-    ...     shape=(60, 60),
-    ...     pc=np.full((10, 20, 3), (0.421, 0.779, 0.505)),
-    ...     convention="edax",
-    ...     px_size=70,
-    ...     binning=8,
-    ...     tilt=5,
-    ...     sample_tilt=70,
-    ... )
-    >>> det
-    EBSDDetector
-      shape (Ny, Nx):     (60, 60)
-      pc (PCx, PCy, PCz): (0.421, 0.221, 0.505)
-      sample_tilt:        70.0 deg
-      tilt:               5.0 deg
-      azimuthal:          0.0 deg
-      twist:              0.0 deg
-      binning:            8
-      px_size:            70.0 um
-    >>> det.navigation_shape
-    (10, 20)
-    >>> det.bounds
-    array([ 0, 59,  0, 59])
-    >>> det.gnomonic_bounds[0, 0]
-    array([-0.83366337,  1.14653465, -1.54257426,  0.43762376])
-    >>> s = kp.data.nickel_ebsd_small()
-    >>> det.plot(
-    ...     pattern=s.inav[0, 0].data,
-    ...     coordinates="gnomonic",
-    ...     draw_gnomonic_circles=True,
-    ... )
     """
 
     def __init__(
@@ -998,40 +960,6 @@ class EBSDDetector:
         -------
         new_detector
             A new detector with a new shape and PC values.
-
-        Examples
-        --------
-        >>> import kikuchipy as kp
-        >>> det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
-        >>> det
-        EBSDDetector
-          shape (Ny, Nx):     (6, 6)
-          pc (PCx, PCy, PCz): (0.5, 0.333, 0.5)
-          sample_tilt:        70.0 deg
-          tilt:               0.0 deg
-          azimuthal:          0.0 deg
-          twist:              0.0 deg
-          binning:            1
-          px_size:            1.0 um
-        >>> det.crop((1, 5, 2, 6))
-        EBSDDetector
-          shape (Ny, Nx):     (4, 4)
-          pc (PCx, PCy, PCz): (0.25, 0.25, 0.75)
-          sample_tilt:        70.0 deg
-          tilt:               0.0 deg
-          azimuthal:          0.0 deg
-          twist:              0.0 deg
-          binning:            1
-          px_size:            1.0 um
-
-        Plot a cropped detector with the PC on a cropped pattern
-
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> s.remove_static_background(show_progressbar=False)
-        >>> det2 = s.detector
-        >>> det2.plot(pattern=s.inav[0, 0].data)
-        >>> det3 = det2.crop((10, 50, 20, 60))
-        >>> det3.plot(pattern=s.inav[0, 0].data[10:50, 20:60])
         """
         ny, nx = self.shape
 
@@ -1903,33 +1831,6 @@ class EBSDDetector:
         -------
         fig
             Matplotlib figure instance, if *return_figure* is True.
-
-        Examples
-        --------
-        >>> import matplotlib.pyplot as plt
-        >>> import kikuchipy as kp
-        >>> det = kp.detectors.EBSDDetector(
-        ...     shape=(60, 60),
-        ...     pc=(0.4, 0.8, 0.5),
-        ...     convention="tsl",
-        ...     sample_tilt=70,
-        ... )
-        >>> det.plot()
-        >>> plt.show()
-
-        Plot with gnomonic coordinates and circles
-
-        >>> det.plot(
-        ...     coordinates="gnomonic",
-        ...     draw_gnomonic_circles=True,
-        ...     gnomonic_circles_kwargs={"edgecolor": "b", "alpha": 0.3}
-        ... )
-        >>> plt.show()
-
-        Plot a pattern on the detector and return it for saving etc.
-
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> fig = det.plot(pattern=s.inav[0, 0].data, return_figure=True)
         """
         if pattern_kwargs is None:
             pattern_kwargs = {}
@@ -2020,55 +1921,6 @@ class EBSDDetector:
         -------
         fig
             Figure is returned if *return_figure* is True.
-
-        Examples
-        --------
-        Create a detector with smoothly changing PC values, extrapolated
-        from a single PC (assumed to be in the upper left corner of a
-        map)
-
-        >>> import matplotlib.pyplot as plt
-        >>> import kikuchipy as kp
-        >>> det0 = kp.detectors.EBSDDetector(
-        ...     shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
-        ... )
-        >>> det0
-        EBSDDetector
-          shape (Ny, Nx):     (480, 640)
-          pc (PCx, PCy, PCz): (0.4, 0.3, 0.5)
-          sample_tilt:        70.0 deg
-          tilt:               0.0 deg
-          azimuthal:          0.0 deg
-          twist:              0.0 deg
-          binning:            1
-          px_size:            70.0 um
-        >>> det = det0.extrapolate_pc(
-        ...     pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
-        ... )
-        >>> det
-        EBSDDetector
-          shape (Ny, Nx):     (480, 640)
-          pc (PCx, PCy, PCz): (0.398, 0.299, 0.5)
-          sample_tilt:        70.0 deg
-          tilt:               0.0 deg
-          azimuthal:          0.0 deg
-          twist:              0.0 deg
-          binning:            1
-          px_size:            70.0 um
-
-        Plot PC values in maps
-
-        >>> det.plot_pc()
-        >>> plt.show()
-
-        Plot in scatter plots in vertical orientation
-
-        >>> det.plot_pc("scatter", orientation="vertical", annotate=True)
-        >>> plt.show()
-
-        Plot in a 3D scatter plot, returning the figure for saving etc.
-
-        >>> fig = det.plot_pc("3d", return_figure=True)
         """
         # Ensure there are PCs to plot
         if self.navigation_size == 1:
