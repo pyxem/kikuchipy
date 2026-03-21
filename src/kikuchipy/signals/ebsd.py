@@ -1163,7 +1163,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if not isinstance(factor, int) or factor <= 1:
-            raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
+            raise ValueError(f"Binning factor {factor} must be an integer > 1")
         else:
             factor = int(factor)
 
@@ -1171,11 +1171,12 @@ class EBSD(KikuchipySignal2D):
         rest = np.mod(sig_shape_old, factor)
         if not all(rest == 0):
             raise ValueError(
-                f"Binning `factor` {factor} must be a divisor of the initial pattern "
+                f"Binning factor {factor} must be a divisor of the initial pattern "
                 f"shape {sig_shape_old}, but {tuple(rest)} pixels remain.\n"
-                "You might try to crop away these pixels first using EBSD.crop()"
+                "You might try to crop away these pixels first using EBSD.crop()."
             )
-        sig_shape_new = tuple(np.array(sig_shape_old) // factor)
+        sig_shape_new = np.array(sig_shape_old) // factor
+        sig_shape_new = tuple(map(int, sig_shape_new))
         sig_shape_new = sig_shape_new[::-1]
 
         if dtype_out is not None:
@@ -1193,8 +1194,9 @@ class EBSD(KikuchipySignal2D):
             static_bg_new = _downsample2d(static_bg, factor, omin, omax, dtype_out)
             attrs["static_background"] = static_bg_new
 
-        attrs["detector"]._shape = sig_shape_new
-        attrs["detector"]._binning *= factor
+        detector: EBSDDetector = attrs["detector"]
+        detector.shape = sig_shape_new
+        detector.binning *= factor
 
         map_kw = {
             "show_progressbar": show_progressbar,
@@ -2811,17 +2813,18 @@ class EBSD(KikuchipySignal2D):
             attrs["static_background"] = static_bg2
 
         # Update detector shape and binning factor
-        attrs["detector"]._shape = sig_shape_new
+        detector: EBSDDetector = attrs["detector"]
+        detector.shape = sig_shape_new
         factors = np.array(sig_shape_old) / np.array(sig_shape_new)
-        binning = attrs["detector"]._binning * factors
-        if binning[0] == binning[1] and np.allclose(binning, binning.round(0)):
-            attrs["detector"]._binning = float(binning[0])
+        binning2 = detector.binning * factors
+        if binning2[0] == binning2[1] and np.allclose(binning2, binning2.round(0)):
+            detector.binning = float(binning2[0])
         else:
-            attrs["detector"]._binning = 1.0
+            detector.binning = 1.0
 
         if nav_shape_new != nav_shape_old:
             attrs["xmap"] = None
-            attrs["detector"].pc = np.full(nav_shape_new + (3,), 0.5)
+            detector.pc = np.full(nav_shape_new + (3,), 0.5)
             attrs["static_background"] = None
 
         new._set_custom_attributes(attrs)

@@ -2970,13 +2970,13 @@ class TestDownsample:
     def test_downsample_raises(self):
         s = kp.data.nickel_ebsd_small(lazy=True)
 
-        with pytest.raises(ValueError, match="Binning `factor` 2.5 must be an integer"):
+        with pytest.raises(ValueError, match="Binning factor 2.5 must be an integer"):
             s.downsample(2.5)
 
-        with pytest.raises(ValueError, match="Binning `factor` 1 must be an integer >"):
+        with pytest.raises(ValueError, match="Binning factor 1 must be an integer >"):
             s.downsample(1)
 
-        with pytest.raises(ValueError, match="Binning `factor` 7 must be a divisor of"):
+        with pytest.raises(ValueError, match="Binning factor 7 must be a divisor of"):
             s.downsample(7)
 
     def test_inplace(self):
