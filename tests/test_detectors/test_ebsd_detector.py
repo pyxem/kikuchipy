@@ -780,6 +780,28 @@ class TestEBSDDetector:
             det.binning = (3, 4)
 
 
+class TestPlotDetector:
+    def test_plot_side_view(self):
+        det = kp.detectors.EBSDDetector()
+
+        fig1 = det.plot_side_view(return_figure=True)
+        ax1 = fig1.axes[0]
+        line_labels = [line.get_label() for line in ax1.lines]
+        for expected_label in ["Sample", "PC", "Detector"]:
+            assert expected_label in line_labels
+        assert len(ax1.texts) == 1
+        assert ax1.get_xlabel() == ""
+
+        fig2 = plt.figure()
+        ax2 = fig2.add_subplot()
+        det.plot_side_view(ax=ax2, annotate=True, dimensionless=False)
+        annotation_labels = [text.get_label() for text in ax2.texts]
+        for expected_annotation_prefix in ["sample", "beam", "detector", "pc"]:
+            assert f"{expected_annotation_prefix}_annotation" in annotation_labels
+        assert ax2.get_xlabel() == "Microscope Y axis [mm]"
+        assert ax2.get_ylabel() == "Microscope Z axis [mm]"
+
+
 class TestPlotPC:
     det = kp.detectors.EBSDDetector(
         shape=(60, 60),

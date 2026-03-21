@@ -447,21 +447,28 @@ def plot_ebsd_detector_geometry_side_view(
         zorder=0,
     )
 
-    ax.set_aspect("equal")
-
     # Handle axis orientation: Y axis as x-coordinate, Z as
     # y-coordinate, Z pointing down
+    ax.set_aspect("equal")
     ax.invert_yaxis()
     ax.invert_xaxis()
 
     if annotate:
-        ax.text(beam_start[0], beam_start[1], "Beam", ha="center", va="bottom")
+        ax.text(
+            beam_start[0],
+            beam_start[1],
+            "Beam",
+            ha="center",
+            va="bottom",
+            label="beam_annotation",
+        )
         ax.text(
             sample_start[0],
             sample_end[1],
             "Sample",
             ha="right",
             va="center",
+            label="sample_annotation",
         )
         ax.annotate(
             "Detector",
@@ -470,6 +477,7 @@ def plot_ebsd_detector_geometry_side_view(
             textcoords="offset points",
             ha="center",
             va="top",
+            label="detector_annotation",
         )
         ax.annotate(
             "PC",
@@ -478,6 +486,7 @@ def plot_ebsd_detector_geometry_side_view(
             textcoords="offset points",
             ha="left",
             va="top",
+            label="pc_annotation",
         )
 
     if dimensionless:
