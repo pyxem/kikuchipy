@@ -22,7 +22,7 @@ library.
 .. |python| image:: https://img.shields.io/badge/python-3.10+-blue.svg
    :target: https://www.python.org/downloads/
 
-.. |coverage| image:: https://codecov.io/github/hakonanes/kikuchipy/graph/badge.svg?token=tyF8x9nJKC
+.. |coverage| image:: https://codecov.io/github/pyxem/kikuchipy/graph/badge.svg?token=TLRI1M0LBB
    :target: https://codecov.io/github/pyxem/kikuchipy
 
 .. |pypi_downloads| image:: https://img.shields.io/pypi/dm/kikuchipy.svg?label=pypi%20downloads
