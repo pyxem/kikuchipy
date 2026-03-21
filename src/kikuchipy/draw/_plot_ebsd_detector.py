@@ -94,7 +94,8 @@ def plot_ebsd_detector(
             marker=MarkerStyle(marker="*", fillstyle="full"),
             zorder=10,
         )
-        _ = [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
+        for k, v in default_params_pc.items():
+            pc_kwargs.setdefault(k, v)
         ax.scatter(x=pcx, y=pcy, **pc_kwargs)
 
     # Draw gnomonic circles centered on the projection center
@@ -107,10 +108,8 @@ def plot_ebsd_detector(
             "facecolor": "None",
             "linewidth": 3,
         }
-        [
+        for k, v in default_params_gnomonic.items():
             gnomonic_circles_kwargs.setdefault(k, v)
-            for k, v in default_params_gnomonic.items()
-        ]
         if gnomonic_angles is None:
             gnomonic_angles = np.arange(1, 9) * 10
         for angle in gnomonic_angles:
@@ -177,6 +176,7 @@ def plot_projection_center_fit(
     w, h = plt.rcParams["figure.figsize"]
     kwargs.setdefault("layout", "compressed")
     kwargs.setdefault("figsize", (w, h))
+    kwargs.setdefault("layout", "tight")
 
     fig = plt.figure(**kwargs)
     # PCx v PCy
@@ -216,8 +216,6 @@ def plot_projection_center_fit(
     # Add 3D plane
     if pcx_fit_2d.ndim == 2:
         ax3.plot_surface(pcx_fit_2d, pcz_fit_2d, pcy_fit_2d, color="r", alpha=0.5)
-
-    fig.tight_layout()
 
     return fig
 
