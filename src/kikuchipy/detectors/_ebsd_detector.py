@@ -21,10 +21,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from copy import deepcopy
-from datetime import datetime
 from numbers import Number
 from pathlib import Path
-import re
 from typing import TYPE_CHECKING, Any, Literal, overload
 import warnings
 
@@ -34,7 +32,6 @@ from orix.crystal_map import PhaseList
 from orix.quaternion import Rotation
 from typing_extensions import Self, get_args
 
-from kikuchipy import __version__
 from kikuchipy._constants import dependency_version
 from kikuchipy._utils._detector_coordinates import (
     convert_coordinates,
@@ -798,56 +795,12 @@ class EBSDDetector:
         detector
             Loaded EBSD detector.
         """
-        pc = np.loadtxt(fname)
+        from kikuchipy.io._detectors import read_ebsd_detector_from_file
 
-        keys = [
-            "shape",
-            "px_size",
-            "binning",
-            "tilt",
-            "azimuthal",
-            "twist",
-            "sample_tilt",
-            "convention",
-            "navigation_shape",
-        ]
+        detector_kw = read_ebsd_detector_from_file(fname)
+        detector = cls(**detector_kw)
 
-        detector_kw: dict = dict(zip(keys, [None] * len(keys)))
-        with open(fname, mode="r") as f:
-            header = []
-            for line in f.readlines():
-                if line[0] == "#":
-                    line = line[2:-1].lstrip(" ")
-                    if len(line) > 0:
-                        header.append(line)
-                        match = re.match(r"^(\w+|\w+\s\w+): (.*)", line)
-                        if match:
-                            groups = match.groups()
-                            if groups[0] in detector_kw and len(groups) > 1:
-                                detector_kw[groups[0]] = groups[1]
-                else:
-                    break
-
-        for k in ["shape", "navigation_shape"]:
-            shape = detector_kw[k]
-            try:
-                detector_kw[k] = tuple(int(i) for i in shape[1:-1].split(","))
-            except ValueError:  # pragma: no cover
-                detector_kw[k] = None
-        for k in ["px_size", "binning", "tilt", "azimuthal", "twist", "sample_tilt"]:
-            value = detector_kw[k].rstrip(" deg")
-            try:
-                detector_kw[k] = float(value)
-            except Exception:  # pragma: no cover
-                detector_kw[k] = None
-
-        nav_shape = detector_kw.pop("navigation_shape")
-        if isinstance(nav_shape, tuple):
-            pc = pc.reshape(nav_shape + (3,))
-
-        det = cls(pc=pc, **detector_kw)
-
-        return det
+        return detector
 
     def convert_detector_coordinates(
         self,
@@ -1939,31 +1892,11 @@ class EBSDDetector:
             ``fmt="%.4f"`` to reduce the number of PC decimals from the
             default 7 to 4.
         """
-        pc = self._get_pc_in_convention(convention)
-        pc = pc.reshape(-1, 3)
+        from kikuchipy.io._detectors import write_ebsd_detector_to_file
 
-        time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        kwargs.setdefault(
-            "header",
-            (
-                f"EBSDDetector\n"
-                f"  shape: {self.shape}\n"
-                f"  px_size: {self.px_size}\n"
-                f"  binning: {self._binning}\n"
-                f"  tilt: {self.tilt} deg\n"
-                f"  azimuthal: {self.azimuthal} deg\n"
-                f"  twist: {self.twist} deg\n"
-                f"  sample_tilt: {self.sample_tilt} deg\n"
-                f"  convention: {convention}\n"
-                f"  navigation_shape: {self.navigation_shape}\n\n"
-                f"kikuchipy version: {__version__}\n"
-                f"Time: {time_now}\n\n"
-                "Column names: PCx, PCy, PCz"
-            ),
+        write_ebsd_detector_to_file(
+            detector=self, filename=filename, convention=convention, **kwargs
         )
-        kwargs.setdefault("fmt", "%.7f")
-        np.savetxt(fname=filename, X=pc, **kwargs)
 
     # ------------------------ Private methods ----------------------- #
 
