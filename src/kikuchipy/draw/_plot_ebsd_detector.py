@@ -176,7 +176,6 @@ def plot_projection_center_fit(
     w, h = plt.rcParams["figure.figsize"]
     kwargs.setdefault("layout", "compressed")
     kwargs.setdefault("figsize", (w, h))
-    kwargs.setdefault("layout", "tight")
 
     fig = plt.figure(**kwargs)
     # PCx v PCy

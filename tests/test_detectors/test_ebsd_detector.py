@@ -1007,7 +1007,7 @@ class TestExtrapolatePC:
                 det.sample_tilt,
                 det.tilt,
                 det.px_size,
-                det._binning,
+                det.binning,
                 det.azimuthal,
             ],
         )
