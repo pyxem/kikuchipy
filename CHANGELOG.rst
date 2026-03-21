@@ -22,9 +22,17 @@ Added
 - Download from conda-forge of ``kikuchipy-base`` without optional dependencies.
 - Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
   (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
+- Added error handling for setting various properties of the
+  ``kikuchipy.detectors.EBSDDetector``.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Dependency on typing-extensions for type hints only available from Python >= 3.11.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 Changed
 -------
+- Made the string representation of the ``kikuchipy.detectors.EBSDDetector`` more
+  informative.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 Removed
 -------
@@ -33,13 +41,19 @@ Fixed
 -----
 - Removed possibility for a silent out-of-bounds array indexing with Numba when
   projecting a single pattern from a master pattern in the Lambert projection to the
-  detector. (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
+  detector.
+  (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
 - Getting Matplotlib collections of zone axes and zone axes labels in geometrical EBSD
   simulations with a 2D navigation shape.
   (`#720 <https://github.com/pyxem/kikuchipy/pull/720>`_)
 
 Deprecated
 ----------
+- Option to pass ``EBSDDetector(..., convention=None)`` has been deprecated and will
+  emit a warning.
+  To avoid the warning, use the default value ``convention="bruker"`` instead.
+  The warning will change to an error in version 0.14.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 
 0.11.5 (2026-03-08)

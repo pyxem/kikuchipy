@@ -70,7 +70,7 @@ from kikuchipy._utils.numba import rotate_vector
 from kikuchipy.pattern._pattern import _rescale_with_min_max
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy.detectors.ebsd_detector import EBSDDetector
+    from kikuchipy.detectors._ebsd_detector import EBSDDetector
 
 
 # Reusable constants

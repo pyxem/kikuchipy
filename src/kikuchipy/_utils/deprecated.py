@@ -17,20 +17,11 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Helper functions and classes for managing kikuchipy.
-
-This module and documentation is only relevant for kikuchipy developers,
-not for users.
-
-.. warning:
-    This module and its submodules are for internal use only.  Do not
-    use them in your own code. We may change the API at any time with no
-    warning.
-"""
+"""Tools to handle deprecation of functions and arguments."""
 
 import functools
 import inspect
-from typing import Callable
+from typing import Any, Callable
 import warnings
 
 from kikuchipy._constants import VisibleDeprecationWarning
@@ -73,7 +64,7 @@ class deprecated:
         self.alternative_is_function = alternative_is_function
         self.removal = removal
 
-    def __call__(self, func: Callable) -> None:
+    def __call__(self, func: Callable) -> Any:
         # Wrap function to raise warning when called, and add warning to
         # docstring
         if self.alternative is not None:

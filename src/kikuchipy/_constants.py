@@ -29,6 +29,7 @@ deps_for_version_check = [
     "matplotlib",
     "numpy",
     "rosettasciio",
+    "scikit-image",
     # Optional
     "nlopt",
     "pyvista",

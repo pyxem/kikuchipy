@@ -31,8 +31,8 @@ from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
 
-from kikuchipy._utils.rosettasciio import memmap_distributed
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy._utils.rosettasciio_utils import memmap_distributed
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 
 if TYPE_CHECKING:  # pragma: no cover
     from kikuchipy.signals.ebsd import EBSD, LazyEBSD

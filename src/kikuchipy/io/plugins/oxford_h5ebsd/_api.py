@@ -29,7 +29,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap
 from packaging.version import Version
 
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
 _logger = logging.getLogger(__name__)

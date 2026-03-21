@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Functions for converting between pixel and gnomonic detector coordinates."""
 
@@ -84,7 +86,15 @@ def get_coordinate_conversions(gnomonic_bounds: np.ndarray, bounds: np.ndarray) 
     ...     sample_tilt=70,
     ... )
     >>> det
-    EBSDDetector(shape=(60, 60), pc=(0.421, 0.221, 0.505), sample_tilt=70.0, tilt=5.0, azimuthal=0.0, twist=0.0, binning=8.0, px_size=70.0 um)
+    EBSDDetector
+      shape (Ny, Nx):     (60, 60)
+      pc (PCx, PCy, PCz): (0.421, 0.221, 0.505)
+      sample_tilt:        70.0 deg
+      tilt:               5.0 deg
+      azimuthal:          0.0 deg
+      twist:              0.0 deg
+      binning:            8
+      px_size:            70.0 um
     >>> det.navigation_shape
     (10, 20)
     >>> det.bounds

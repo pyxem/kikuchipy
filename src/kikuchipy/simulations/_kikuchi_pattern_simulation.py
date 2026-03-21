@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -30,7 +30,7 @@ import matplotlib.text as mtext
 import numpy as np
 from orix.quaternion import Rotation
 
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
     KikuchiPatternZoneAxis,

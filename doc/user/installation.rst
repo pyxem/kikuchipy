@@ -98,7 +98,7 @@ Dependencies
 kikuchipy builds on the great work and effort of many people.
 This is a list of core package dependencies:
 
-* :doc:`dask<dask:index>`: Out-of-memory processing of data larger than RAM
+* :doc:`dask <dask:index>`: Out-of-memory processing of data larger than RAM
 * :doc:`diffpy.structure <diffpy.structure:index>`: Handling of crystal structures
 * :doc:`diffsims <diffsims:index>`: Handling of reciprocal lattice vectors and structure
   factors
@@ -119,6 +119,8 @@ This is a list of core package dependencies:
 * `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis
 * :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more
 * `tqdm <https://tqdm.github.io/>`__: Progressbars
+* :doc:`typing-extensions <typing-extensions:index>`: Type hints only available from
+  Python >= 3.11
 
 .. _lazy_loader: https://scientific-python.org/specs/spec-0001/#lazy_loader
 

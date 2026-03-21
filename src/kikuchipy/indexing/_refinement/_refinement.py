@@ -48,7 +48,7 @@ from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_d
 
 if TYPE_CHECKING:  # pragma: no cover
     from kikuchipy._constants import dependency_version
-    from kikuchipy.detectors.ebsd_detector import EBSDDetector
+    from kikuchipy.detectors._ebsd_detector import EBSDDetector
     from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
     if dependency_version["nlopt"] is not None:
