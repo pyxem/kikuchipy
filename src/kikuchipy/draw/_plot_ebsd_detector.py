@@ -19,7 +19,7 @@
 
 """Private functions for plotting an EBSD detector and projection centers."""
 
-from typing import Literal
+from typing import Any, Literal
 
 import matplotlib.figure as mfigure
 from matplotlib.markers import MarkerStyle
@@ -161,7 +161,7 @@ def plot_projection_center_fit(
     pc_fit: np.ndarray,
     fit_intercept: float,
     fit_slope: float,
-    figure_kwargs: dict,
+    **kwargs,
 ) -> mfigure.Figure:
     pcx, pcy, pcz = pc.T
     pcx_fit_2d, pcy_fit_2d, pcz_fit_2d = pc_fit.T
@@ -175,10 +175,10 @@ def plot_projection_center_fit(
     fit_kw = {"s": 50, "fc": "gray", "alpha": 0.5, "ec": "k"}
 
     w, h = plt.rcParams["figure.figsize"]
-    figure_kwargs.setdefault("layout", "compressed")
-    figure_kwargs.setdefault("figsize", (w, h))
+    kwargs.setdefault("layout", "compressed")
+    kwargs.setdefault("figsize", (w, h))
 
-    fig = plt.figure()
+    fig = plt.figure(**kwargs)
     # PCx v PCy
     ax0 = fig.add_subplot(221)
     ax0.set(xlabel="PCx", ylabel="PCy", aspect="equal")
@@ -228,7 +228,7 @@ def plot_all_projection_centers(
     mode: PROJECTION_CENTER_PLOT_MODES,
     orientation: Literal["horizontal", "vertical"],
     annotate: bool,
-    figure_kwargs: dict,
+    figure_kwargs: dict[str, Any],
     **kwargs,
 ) -> mfigure.Figure:
     # Prepare keyword arguments common to at least two modes
@@ -261,17 +261,22 @@ def plot_all_projection_centers(
             fig=fig,
             subplots_kw=subplots_kw,
             annotate=annotate,
+            **kwargs,
         )
     else:
         fig = plot_all_projection_centers_in_3d(
-            pc=pc, labels=labels, fig=fig, annotate=annotate
+            pc=pc, labels=labels, fig=fig, annotate=annotate, **kwargs
         )
 
     return fig
 
 
 def plot_all_projection_centers_in_map(
-    pc: np.ndarray, labels: list[str], fig: mfigure.Figure, subplots_kw: dict, **kwargs
+    pc: np.ndarray,
+    labels: list[str],
+    fig: mfigure.Figure,
+    subplots_kw: dict[str, Any],
+    **kwargs,
 ) -> mfigure.Figure:
     axes = fig.subplots(**subplots_kw)
     for i, ax in enumerate(axes):

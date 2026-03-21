@@ -1556,7 +1556,7 @@ class EBSDDetector:
                 pc_fit=pc_fit_2d,
                 fit_intercept=result.intercept,
                 fit_slope=result.slope,
-                figure_kwargs=figure_kwargs,
+                **figure_kwargs,
             )
         else:
             fig = None
