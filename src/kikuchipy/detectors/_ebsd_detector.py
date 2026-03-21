@@ -22,18 +22,16 @@ from __future__ import annotations
 from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
-import logging
 from numbers import Number
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 import warnings
 
 from diffsims.crystallography import ReciprocalLatticeVector
 import numpy as np
 from orix.crystal_map import PhaseList
 from orix.quaternion import Rotation
-import scipy.stats as scs
 from typing_extensions import Self, get_args
 
 from kikuchipy import __version__
@@ -43,12 +41,11 @@ from kikuchipy._utils._detector_coordinates import (
     get_coordinate_conversions,
 )
 from kikuchipy._utils.deprecated import VisibleDeprecationWarning
-from kikuchipy.detectors._pc_fit import (
+from kikuchipy.detectors._fit_projection_center import (
     estimate_xtilt_linear,
     estimate_xtilt_linear_robust,
     fit_hyperplane,
-    fit_pc_affine,
-    fit_pc_projective,
+    fit_plane_to_pc,
 )
 from kikuchipy.draw._plot_ebsd_detector import (
     DETECTOR_PLOT_FORMATS,
@@ -67,8 +64,6 @@ if TYPE_CHECKING:  # pragma: no cover
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
 
-
-_logger = logging.getLogger(__name__)
 
 PC_CONVENTIONS = Literal[
     "bruker",
@@ -1378,7 +1373,7 @@ class EBSDDetector:
         is_outlier: np.ndarray | None = None,
         plot: bool = True,
         return_figure: Literal[False] = False,
-        figure_kwargs: dict | None = None,
+        figure_kwargs: dict[str, Any] | None = None,
     ) -> Self: ...
 
     @overload
@@ -1390,7 +1385,7 @@ class EBSDDetector:
         is_outlier: np.ndarray | None = None,
         plot: bool = True,
         return_figure: Literal[True] = True,
-        figure_kwargs: dict | None = None,
+        figure_kwargs: dict[str, Any] | None = None,
     ) -> "tuple[Self, mfigure.Figure]": ...
 
     def fit_pc(
@@ -1401,7 +1396,7 @@ class EBSDDetector:
         is_outlier: np.ndarray | None = None,
         plot: bool = True,
         return_figure: bool = False,
-        figure_kwargs: dict | None = None,
+        figure_kwargs: dict[str, Any] | None = None,
     ) -> "Self | tuple[Self, mfigure.Figure]":
         """Return a new detector with interpolated projection centers
         (PCs) for all points in a map by fitting a plane to :attr:`pc`.
@@ -1421,10 +1416,9 @@ class EBSDDetector:
         transformation
             Which transformation function to use when fitting PCs,
             either "projective" (default) or "affine". Both
-            transformations perserve co-planarity of map points, while
-            the projective transformation allows parallel lines in the
-            map point grid to become non-parallel within the sample
-            plane.
+            transformations preserve co-planarity of map points. The
+            projective transformation allows parallel lines in the map
+            point grid to become non-parallel within the sample plane.
         is_outlier
             Boolean array with True for PCs to not include in the fit.
             If not given, all PCs are used. Must be of
@@ -1499,50 +1493,16 @@ class EBSDDetector:
                 "PCs"
             )
 
-        # Prepare PCs and PC map indices for fitting
-        pc_flat = self.pc_flattened
-        pc_indices_flat = pc_indices.reshape((2, -1)).T
-        pc_indices_flat = np.column_stack((pc_indices_flat, np.ones(n_pc)))
-
-        # Prepare all map indices for projection
-        map_indices_flat = map_indices.reshape((2, -1)).T
-        map_indices_flat = np.column_stack(
-            (map_indices_flat, np.ones(map_indices_flat.shape[0]))
+        pc_fit, pc_fit_map, pc_flat, x_tilt, intercept, slope = fit_plane_to_pc(
+            n_pc=n_pc,
+            pc_flat=self.pc_flattened,
+            pc_indices=pc_indices,
+            map_indices=map_indices,
+            is_outlier=is_outlier,
+            transformation=transformation,
         )
 
-        if isinstance(is_outlier, np.ndarray):
-            is_inlier = ~is_outlier.ravel()
-            nav_shape = (np.sum(is_inlier),)
-            pc_flat = pc_flat[is_inlier]
-            pc_indices_flat = pc_indices_flat[is_inlier]
-
-        if transformation == "projective":
-            pc_average = np.mean(pc_flat, axis=0)
-            pc_flat_centered = pc_flat - pc_average
-            pc_fit, pc_fit_map = fit_pc_projective(
-                pc_flat_centered,
-                pc_indices_flat,
-                map_indices_flat,
-            )
-            pc_fit += pc_average
-            pc_fit_map += pc_average
-        else:
-            pc_fit, pc_fit_map = fit_pc_affine(
-                pc_flat, pc_indices_flat, map_indices_flat
-            )
-
-        max_err = np.max(np.abs(pc_flat - pc_fit), axis=0)
-        _logger.debug(f"Max. error for (PCx, PCy, PCz): {max_err}")
-
-        # Linear fit to YZ-plane to estimate tilt angle about detector X
-        result = scs.linregress(pc_fit[..., 2], pc_fit[..., 1])
-        x_tilt = np.pi / 2 + np.arctan(result.slope)
         x_tilt_deg = np.rad2deg(x_tilt)
-        _logger.debug(f"Estimated detector X tilt: {x_tilt_deg:.5f} deg")
-
-        # Reshape new fitted PC array to desired map shape
-        pc_fit_map = pc_fit_map.reshape(map_indices.shape[1:] + (3,))
-
         new_detector = self.deepcopy()
         new_detector.pc = pc_fit_map
         new_detector.sample_tilt = 90 - x_tilt_deg - new_detector.tilt
@@ -1550,18 +1510,20 @@ class EBSDDetector:
         if plot:
             if figure_kwargs is None:
                 figure_kwargs = {}
+            if isinstance(is_outlier, np.ndarray):
+                nav_shape = (int(np.sum(~is_outlier)),)
             pc_fit_2d = pc_fit.reshape(nav_shape + (3,))
             fig = plot_projection_center_fit(
                 pc=pc_flat,
                 pc_fit=pc_fit_2d,
-                fit_intercept=result.intercept,
-                fit_slope=result.slope,
+                fit_intercept=intercept,
+                fit_slope=slope,
                 **figure_kwargs,
             )
         else:
             fig = None
 
-        if return_figure and fig:
+        if return_figure and fig is not None:
             return new_detector, fig
         else:
             return new_detector

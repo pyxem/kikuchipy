@@ -17,7 +17,12 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""Functions for fitting estimated projection/pattern centers (PCs) to a
+plane.
+"""
+
 import logging
+from typing import Literal
 
 import numpy as np
 from orix.quaternion import Rotation
@@ -38,6 +43,7 @@ def fit_hyperplane(
     # Hyperplane fit
     pc_trim_mean = scs.trim_mean(pc_centered, proportiontocut=0.1)
     pc_trim_centered = pc_centered - pc_trim_mean[np.newaxis, :]
+
     # u @ np.diag(s) @ vh = (u * s) @ vh
     u, s, vh = np.linalg.svd(pc_trim_centered, full_matrices=False)
 
@@ -52,10 +58,10 @@ def fit_hyperplane(
     if sample_normal.z < 0:
         # Make normal point towards detector screen
         sample_normal = -sample_normal
-    _logger.debug(f"Sample plane normal from SVD: {sample_normal.data.squeeze()}")
+    vx, vy, vz = sample_normal.data.squeeze()
+    _logger.debug(f"Sample plane normal from SVD: ({vx, vy, vz})")
 
     # Tilt about the detector x and z axes
-    vx, vy, vz = sample_normal.data.squeeze()
     x_tilt = np.arccos(vz)
     z_tilt = np.pi / 2 - np.arctan2(vy, vx)
 
@@ -69,6 +75,55 @@ def fit_hyperplane(
     )
 
     return x_tilt, z_tilt, rot_xtilt, rot_ztilt, pc_trim_mean
+
+
+def fit_plane_to_pc(
+    n_pc: int,
+    pc_flat: np.ndarray,
+    pc_indices: np.ndarray,
+    map_indices: np.ndarray,
+    is_outlier: np.ndarray | None,
+    transformation: Literal["projective", "affine"],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float, float]:
+    # Prepare PCs and PC map indices for fitting
+    pc_indices_flat = pc_indices.reshape((2, -1)).T
+    pc_indices_flat = np.column_stack((pc_indices_flat, np.ones(n_pc)))
+
+    # Prepare all map indices for projection
+    map_indices_flat = map_indices.reshape((2, -1)).T
+    map_indices_flat = np.column_stack(
+        (map_indices_flat, np.ones(map_indices_flat.shape[0]))
+    )
+
+    if isinstance(is_outlier, np.ndarray):
+        is_inlier = ~is_outlier.ravel()
+        pc_flat = pc_flat[is_inlier]
+        pc_indices_flat = pc_indices_flat[is_inlier]
+
+    if transformation == "projective":
+        pc_average = np.mean(pc_flat, axis=0)
+        pc_flat_centered = pc_flat - pc_average
+        pc_fit, pc_fit_map = fit_pc_projective(
+            pc_flat_centered, pc_indices_flat, map_indices_flat
+        )
+        pc_fit += pc_average
+        pc_fit_map += pc_average
+    else:
+        pc_fit, pc_fit_map = fit_pc_affine(pc_flat, pc_indices_flat, map_indices_flat)
+
+    max_err = np.max(np.abs(pc_flat - pc_fit), axis=0)
+    _logger.debug(f"Max. error for (PCx, PCy, PCz): {max_err}")
+
+    # Linear fit to YZ-plane to estimate tilt angle about detector X
+    result = scs.linregress(pc_fit[..., 2], pc_fit[..., 1])
+    x_tilt = np.pi / 2 + np.arctan(result.slope)
+    x_tilt_deg = np.rad2deg(x_tilt)
+    _logger.debug(f"Estimated detector X tilt: {x_tilt_deg:.5f} deg")
+
+    # Reshape new fitted PC array to desired map shape
+    pc_fit_map = pc_fit_map.reshape(map_indices.shape[1:] + (3,))
+
+    return pc_fit, pc_fit_map, pc_flat, x_tilt, result.intercept, result.slope
 
 
 def fit_pc_projective(
