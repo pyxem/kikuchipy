@@ -44,19 +44,17 @@ from kikuchipy.detectors._fit_projection_center import (
     fit_hyperplane,
     fit_plane_to_pc,
 )
-from kikuchipy.draw._plot_ebsd_detector import (
-    DETECTOR_PLOT_FORMATS,
-    PROJECTION_CENTER_PLOT_MODES,
-    plot_all_projection_centers,
-    plot_ebsd_detector,
-    plot_projection_center_fit,
-    plot_xtilt_estimate,
-)
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
     from diffsims.crystallography import ReciprocalLatticeVector
+    import matplotlib.axes as maxes
     import matplotlib.figure as mfigure
+
+    from kikuchipy.draw._plot_ebsd_detector import (
+        DETECTOR_PLOT_FORMATS,
+        PROJECTION_CENTER_PLOT_MODES,
+    )
 
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
@@ -1095,6 +1093,8 @@ class EBSDDetector:
         estimate_xtilt_ztilt,
         fit_pc
         """
+        from kikuchipy.draw._plot_ebsd_detector import plot_xtilt_estimate
+
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
         pcy = self.pcy.reshape((-1, 1))
@@ -1416,6 +1416,8 @@ class EBSDDetector:
         (https://stackoverflow.com/a/20555267/3228100) for the affine
         transformation.
         """
+        from kikuchipy.draw._plot_ebsd_detector import plot_projection_center_fit
+
         n_pc = self.navigation_size
         if n_pc == 1:
             raise ValueError("Fitting requires multiple projection centers (PCs)")
@@ -1659,7 +1661,7 @@ class EBSDDetector:
     @overload
     def plot(
         self,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: "DETECTOR_PLOT_FORMATS" = "detector",
         show_pc: bool = ...,
         pc_kwargs: dict | None = None,
         pattern: np.ndarray | None = None,
@@ -1674,7 +1676,7 @@ class EBSDDetector:
     @overload
     def plot(
         self,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: "DETECTOR_PLOT_FORMATS" = "detector",
         show_pc: bool = ...,
         pc_kwargs: dict | None = None,
         pattern: np.ndarray | None = None,
@@ -1688,7 +1690,7 @@ class EBSDDetector:
 
     def plot(
         self,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: "DETECTOR_PLOT_FORMATS" = "detector",
         show_pc: bool = True,
         pc_kwargs: dict | None = None,
         pattern: np.ndarray | None = None,
@@ -1747,6 +1749,8 @@ class EBSDDetector:
         fig
             Matplotlib figure instance, if *return_figure* is True.
         """
+        from kikuchipy.draw._plot_ebsd_detector import plot_ebsd_detector
+
         if pattern_kwargs is None:
             pattern_kwargs = {}
         if pc_kwargs is None:
@@ -1754,10 +1758,7 @@ class EBSDDetector:
         if gnomonic_circles_kwargs is None:
             gnomonic_circles_kwargs = {}
         fig = plot_ebsd_detector(
-            shape=self.shape,
-            pcxy=self.pc_average[:2],
-            bounds=self.bounds,
-            average_gnomonic_bounds=self._average_gnomonic_bounds,
+            detector=self,
             coords_fmt=coordinates,
             zoom=zoom,
             show_pc=show_pc,
@@ -1771,10 +1772,53 @@ class EBSDDetector:
         if return_figure:
             return fig
 
+    def plot_side_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: bool = False,
+    ) -> "mfigure.Figure | mfigure.SubFigure | None":
+        """Plot the EBSD detector-sample geometry in a 2D side-view.
+
+        Parameters
+        ----------
+        detector
+            EBSD detector.
+        ax
+            The Matplotlib axis to plot in. If not given, a new figure
+            and axis are created.
+        annotate
+            Whether to annotate the various components of the geometry.
+            Default is False.
+        dimensionless
+            Whether to ignore the
+            :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
+            drawing the plot axes. Default is True.
+        **kwargs
+            Keyword arguments passed to
+            :func:`~matplotlib.pyplot.figure` if *ax* is not given.
+
+        Returns
+        -------
+        fig
+            Figure showing the detector-sample geometry.
+        """
+        from kikuchipy.draw._plot_ebsd_detector import (
+            plot_ebsd_detector_geometry_side_view,
+        )
+
+        fig = plot_ebsd_detector_geometry_side_view(
+            detector=self, ax=ax, annotate=annotate, dimensionless=dimensionless
+        )
+
+        if return_figure:
+            return fig
+
     @overload
     def plot_pc(
         self,
-        mode: PROJECTION_CENTER_PLOT_MODES = "map",
+        mode: "PROJECTION_CENTER_PLOT_MODES" = "map",
         return_figure: Literal[False] = False,
         orientation: Literal["horizontal", "vertical"] = "horizontal",
         annotate: bool = False,
@@ -1785,7 +1829,7 @@ class EBSDDetector:
     @overload
     def plot_pc(
         self,
-        mode: PROJECTION_CENTER_PLOT_MODES = ...,
+        mode: "PROJECTION_CENTER_PLOT_MODES" = ...,
         return_figure: Literal[True] = True,
         orientation: Literal["horizontal", "vertical"] = ...,
         annotate: bool = ...,
@@ -1795,7 +1839,7 @@ class EBSDDetector:
 
     def plot_pc(
         self,
-        mode: PROJECTION_CENTER_PLOT_MODES = "map",
+        mode: "PROJECTION_CENTER_PLOT_MODES" = "map",
         return_figure: bool = False,
         orientation: Literal["horizontal", "vertical"] = "horizontal",
         annotate: bool = False,
@@ -1837,6 +1881,8 @@ class EBSDDetector:
         fig
             Figure is returned if *return_figure* is True.
         """
+        from kikuchipy.draw._plot_ebsd_detector import plot_all_projection_centers
+
         # Ensure there are PCs to plot
         if self.navigation_size == 1:
             raise ValueError(

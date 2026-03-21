@@ -21,6 +21,7 @@
 
 from typing import Any, Literal
 
+import matplotlib.axes as maxes
 import matplotlib.figure as mfigure
 from matplotlib.markers import MarkerStyle
 import matplotlib.patches as mpatches
@@ -29,15 +30,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
+
 DETECTOR_PLOT_FORMATS = Literal["detector", "gnomonic"]
 PROJECTION_CENTER_PLOT_MODES = Literal["map", "scatter", "3d"]
 
 
 def plot_ebsd_detector(
-    shape: tuple[int, int],
-    pcxy: np.ndarray,
-    bounds: np.ndarray,
-    average_gnomonic_bounds: np.ndarray,
+    detector: EBSDDetector,
     coords_fmt: DETECTOR_PLOT_FORMATS,
     zoom: float,
     show_pc: bool,
@@ -48,19 +48,19 @@ def plot_ebsd_detector(
     gnomonic_circles_kwargs: dict,
     gnomonic_angles: np.ndarray | list | None,
 ) -> mfigure.Figure:
-    sy, sx = shape
-    pcx, pcy = pcxy
+    sy, sx = detector.shape
+    pcx, pcy = detector.pc_average[:2]
+    bounds = detector.bounds
 
     if coords_fmt == "detector":
         pcy *= sy - 1
         pcx *= sx - 1
-        bounds = bounds
         bounds[2:] = bounds[2:][::-1]
         x_label = "x detector"
         y_label = "y detector"
     else:
         pcy, pcx = (0, 0)
-        bounds = average_gnomonic_bounds
+        bounds = detector._average_gnomonic_bounds
         x_label = "x gnomonic"
         y_label = "y gnomonic"
 
@@ -338,5 +338,153 @@ def plot_all_projection_centers_in_3d(
     if annotate:
         for i, (x, z, y) in enumerate(zip(pcx, pcz, pcy)):
             ax.text(x, z, y, i)
+
+    return fig
+
+
+def plot_ebsd_detector_geometry_side_view(
+    detector: EBSDDetector,
+    ax: maxes.Axes | None = None,
+    annotate: bool = False,
+    dimensionless: bool = False,
+    **kwargs,
+) -> mfigure.Figure | mfigure.SubFigure:
+    """See the docstring of the EBSD detector method using this
+    function.
+    """
+    if ax is None:
+        kwargs.setdefault("layout", "constrained")
+        fig = plt.figure(**kwargs)
+        ax = fig.add_subplot()
+    else:
+        fig = ax.figure
+
+    # Dimensions in microns
+    height = detector.height
+    L = detector.specimen_scintillator_distance[0]
+    beam_length = L * 0.5
+    sample_length = L * 1.5
+
+    # Coordinates are calculated in microns relative to the beam-sample
+    # interaction volume (0, 0)
+
+    # Electron beam
+    beam_start = np.array([0, -beam_length], dtype=np.float64)
+    beam_end = np.zeros(2, dtype=np.float64)
+
+    # Sample surface
+    sigma = np.deg2rad(detector.sample_tilt)
+    dx_sample = (sample_length / 2) * np.cos(sigma)
+    dz_sample = (sample_length / 2) * np.sin(sigma)
+    sample_start = np.array([-dx_sample, -dz_sample])
+    sample_end = np.array([dx_sample, dz_sample])
+
+    # Detector screen (Z = normal, Y = down)
+    theta = np.deg2rad(detector.tilt)
+    detector_z = np.array([np.cos(theta), np.sin(theta)])
+    P = L * detector_z
+    detector_y = np.array([-np.sin(theta), np.cos(theta)])
+
+    # Screen extent
+    pcy = detector.pc_average[1]
+    screen_top = P - pcy * height * detector_y
+    screen_bottom = P + (1 - pcy) * detector.height * detector_y
+
+    # Shift coordinates to top left corner of detector and convert to mm
+    def trans(point):
+        return (point - screen_top) * 1e-3
+
+    beam_start = trans(beam_start)
+    beam_end = trans(beam_end)
+    sample_start = trans(sample_start)
+    sample_end = trans(sample_end)
+    detector_start = trans(screen_top)
+    detector_end = trans(screen_bottom)
+    pc_pos = trans(P)
+    source_pos = trans(np.zeros(2, dtype=np.float64))
+
+    beam_color = "#c4761c"
+    ax.annotate(
+        "",
+        xy=beam_end,
+        xytext=beam_start,
+        arrowprops={"arrowstyle": "->", "lw": 2, "color": beam_color},
+        zorder=5,
+    )
+    ax.plot(
+        [sample_start[0], sample_end[0]],
+        [sample_start[1], sample_end[1]],
+        c="gray",
+        lw=3,
+        label="Sample",
+        zorder=4,
+    )
+    ax.plot(
+        [detector_start[0], detector_end[0]],
+        [detector_start[1], detector_end[1]],
+        c="purple",
+        lw=4,
+        label="Detector",
+        zorder=4,
+    )
+    ax.plot(
+        pc_pos[0],
+        pc_pos[1],
+        marker="*",
+        ms=15,
+        mfc="gold",
+        mec="k",
+        linestyle="None",
+        label="PC",
+        zorder=5,
+    )
+    ax.plot(
+        [source_pos[0], pc_pos[0]],
+        [source_pos[1], pc_pos[1]],
+        linestyle=":",
+        color=beam_color,
+        alpha=0.5,
+        zorder=0,
+    )
+
+    ax.set_aspect("equal")
+
+    # Handle axis orientation: Y axis as x-coordinate, Z as
+    # y-coordinate, Z pointing down
+    ax.invert_yaxis()
+    ax.invert_xaxis()
+
+    if annotate:
+        ax.text(beam_start[0], beam_start[1], "Beam", ha="center", va="bottom")
+        ax.text(
+            sample_start[0],
+            sample_end[1],
+            "Sample",
+            ha="right",
+            va="center",
+        )
+        ax.annotate(
+            "Detector",
+            xy=(detector_start[0], detector_start[1]),
+            xytext=(0, 12),
+            textcoords="offset points",
+            ha="center",
+            va="top",
+        )
+        ax.annotate(
+            "PC",
+            xy=(pc_pos[0], pc_pos[1]),
+            xytext=(5, -5),
+            textcoords="offset points",
+            ha="left",
+            va="top",
+        )
+
+    if dimensionless:
+        ax.axis("off")
+    else:
+        unit = "mm"
+        ax.set_xlabel(f"Microscope Y axis [{unit}]")
+        ax.set_ylabel(f"Microscope Z axis [{unit}]")
 
     return fig
