@@ -17,7 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Private functions for plotting an EBSD detector and projection centers."""
+"""Plotting an EBSD detector and projection centers."""
 
 from typing import Any, Literal
 

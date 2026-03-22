@@ -33,6 +33,7 @@ from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 from kikuchipy._constants import dependency_version
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 
 _logger = logging.getLogger(__name__)
 
@@ -78,13 +79,15 @@ def fit_hyperplane(
 
 
 def fit_plane_to_pc(
-    n_pc: int,
-    pc_flat: np.ndarray,
+    detector: EBSDDetector,
     pc_indices: np.ndarray,
     map_indices: np.ndarray,
     is_outlier: np.ndarray | None,
     transformation: Literal["projective", "affine"],
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float, float, float]:
+    n_pc = detector.navigation_size
+    pc_flat = detector.pc_flattened
+
     # Prepare PCs and PC map indices for fitting
     pc_indices_flat = pc_indices.reshape((2, -1)).T
     pc_indices_flat = np.column_stack((pc_indices_flat, np.ones(n_pc)))
@@ -187,28 +190,34 @@ def fit_pc_affine(
     return pc_fit, pc_fit_map
 
 
-def estimate_xtilt_linear(
-    pcy: np.ndarray, pcz: np.ndarray
-) -> tuple[float, LinearRegression]:
+def estimate_xtilt_linear(detector: EBSDDetector) -> tuple[float, LinearRegression]:
     """Return an estimated X tilt from (PCy, PCz) using a linear model."""
+    pcy = detector.pcy.reshape((-1, 1))
+    pcz = detector.pcz.reshape((-1, 1))
+
     regressor = LinearRegression()
     regressor.fit(pcz, pcy)
     slope = regressor.coef_
     slope = slope.squeeze()
     x_tilt = float(np.pi / 2 + np.arctan(slope))
+
     return x_tilt, regressor
 
 
 def estimate_xtilt_linear_robust(
-    pcy: np.ndarray, pcz: np.ndarray
+    detector: EBSDDetector,
 ) -> tuple[float, RANSACRegressor, np.ndarray]:
     """Return an estimated X tilt from (PCy, PCz) using a robust linear
     model with detection of outliers.
     """
+    pcy = detector.pcy.reshape((-1, 1))
+    pcz = detector.pcz.reshape((-1, 1))
+
     regressor = RANSACRegressor()
     regressor.fit(pcz, pcy)
     slope = regressor.estimator_.coef_
     slope = slope.squeeze()
     x_tilt = float(np.pi / 2 + np.arctan(slope))
     is_outlier = ~regressor.inlier_mask_
+
     return x_tilt, regressor, is_outlier

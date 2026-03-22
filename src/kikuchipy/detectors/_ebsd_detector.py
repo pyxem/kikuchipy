@@ -17,6 +17,19 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""Implementation of the EBSD detector class.
+
+The class is implemented with the following goals in mind:
+
+- Enable it's use as many places in the code as possible.
+  This means that in this file, to avoid circular imports, we must
+  import from other modules inside the using detector methods, rather
+  than at the top of the file.
+- To ease understanding and extending the class, we should put
+  implementations of fitting, plotting, IO, and such in separate
+  modules, rather than here.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -38,12 +51,6 @@ from kikuchipy._utils._detector_coordinates import (
     get_coordinate_conversions,
 )
 from kikuchipy._utils.deprecated import VisibleDeprecationWarning
-from kikuchipy.detectors._fit_projection_center import (
-    estimate_xtilt_linear,
-    estimate_xtilt_linear_robust,
-    fit_hyperplane,
-    fit_plane_to_pc,
-)
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -211,13 +218,10 @@ class EBSDDetector:
         convention: PC_CONVENTIONS | None = "bruker",
     ) -> None:
         self.shape = shape
-
         self.px_size = px_size
-
         # .binning returns an integer, while ._binning should always be
         # a float. Use the latter for any computation.
         self.binning = binning
-
         self.tilt = tilt
         self.azimuthal = azimuthal
         self.twist = twist
@@ -235,7 +239,6 @@ class EBSDDetector:
                 category=VisibleDeprecationWarning,
             )
             convention = "bruker"
-
         self._set_pc_in_bruker_convention(convention)
 
     # -------------------------- Properties -------------------------- #
@@ -1093,22 +1096,22 @@ class EBSDDetector:
         estimate_xtilt_ztilt,
         fit_pc
         """
+        from kikuchipy.detectors._fit_projection_center import (
+            estimate_xtilt_linear,
+            estimate_xtilt_linear_robust,
+        )
         from kikuchipy.draw._plot_ebsd_detector import plot_xtilt_estimate
 
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
-        pcy = self.pcy.reshape((-1, 1))
-        pcz = self.pcz.reshape((-1, 1))
 
         if return_outliers:
             detect_outliers = True
 
         if detect_outliers:
-            x_tilt, regressor, is_outlier = estimate_xtilt_linear_robust(
-                pcy=pcy, pcz=pcz
-            )
+            x_tilt, regressor, is_outlier = estimate_xtilt_linear_robust(detector=self)
         else:
-            x_tilt, regressor = estimate_xtilt_linear(pcy=pcy, pcz=pcz)
+            x_tilt, regressor = estimate_xtilt_linear(detector=self)
             is_outlier = None
 
         if degrees:
@@ -1121,6 +1124,8 @@ class EBSDDetector:
             out += (is_outlier_2d,)
 
         if plot:
+            pcy = self.pcy.reshape((-1, 1))
+            pcz = self.pcz.reshape((-1, 1))
             pcz_fit = np.linspace(np.min(pcz), np.max(pcz), 2)
             pcy_fit = regressor.predict(pcz_fit[:, np.newaxis])
             if figure_kwargs is None:
@@ -1192,6 +1197,8 @@ class EBSDDetector:
         --------
         estimate_xtilt, fit_pc
         """
+        from kikuchipy.detectors._fit_projection_center import fit_hyperplane
+
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
 
@@ -1416,6 +1423,7 @@ class EBSDDetector:
         (https://stackoverflow.com/a/20555267/3228100) for the affine
         transformation.
         """
+        from kikuchipy.detectors._fit_projection_center import fit_plane_to_pc
         from kikuchipy.draw._plot_ebsd_detector import plot_projection_center_fit
 
         n_pc = self.navigation_size
@@ -1449,8 +1457,7 @@ class EBSDDetector:
             )
 
         pc_fit, pc_fit_map, pc_flat, x_tilt, intercept, slope = fit_plane_to_pc(
-            n_pc=n_pc,
-            pc_flat=self.pc_flattened,
+            detector=self,
             pc_indices=pc_indices,
             map_indices=map_indices,
             is_outlier=is_outlier,
@@ -1946,6 +1953,20 @@ class EBSDDetector:
 
     # ------------------------ Private methods ----------------------- #
 
+    @staticmethod
+    def _get_pc_convention_or_raise(conv: PC_CONVENTIONS) -> PC_CONVENTIONS_SINGLE:
+        conv_lower = conv.lower()
+        for k, v in PC_CONVENTIONS_ALIASES.items():
+            if conv_lower in v:
+                return k
+        else:
+            options = get_args(PC_CONVENTIONS)
+            options_str = ", ".join(options)
+            raise ValueError(
+                f"Invalid projection/pattern center convention {conv!r}. Options are "
+                f"{options_str}."
+            )
+
     def _get_pc_in_bruker_convention(
         self, convention: PC_CONVENTIONS = "bruker"
     ) -> np.ndarray:
@@ -1975,11 +1996,6 @@ class EBSDDetector:
             return self._pc_emsoft2bruker(version)
         else:
             return self.pc
-
-    def _set_pc_in_bruker_convention(
-        self, convention: PC_CONVENTIONS = "bruker"
-    ) -> None:
-        self.pc = self._get_pc_in_bruker_convention(convention)
 
     def _get_pc_in_convention(
         self, convention: PC_CONVENTIONS = "bruker"
@@ -2011,6 +2027,20 @@ class EBSDDetector:
             return self._pc_bruker2emsoft(version)
         else:
             return self.pc
+
+    @staticmethod
+    def _parse_valid_shape_or_raise(value: tuple[int, int]) -> tuple[int, int]:
+        if (
+            not isinstance(value, Iterable)
+            or len(value) != 2
+            or not all(isinstance(ni, Number) for ni in value)
+        ):
+            raise ValueError(
+                f"Invalid shape {value}. Must be an iterable of two integers."
+            )
+        ny, nx = value
+        shape = (int(ny), int(nx))
+        return shape
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=float)
@@ -2055,30 +2085,7 @@ class EBSDDetector:
         new_pc[..., 2] /= self.aspect_ratio
         return new_pc
 
-    @staticmethod
-    def _parse_valid_shape_or_raise(value: tuple[int, int]) -> tuple[int, int]:
-        if (
-            not isinstance(value, Iterable)
-            or len(value) != 2
-            or not all(isinstance(ni, Number) for ni in value)
-        ):
-            raise ValueError(
-                f"Invalid shape {value}. Must be an iterable of two integers."
-            )
-        ny, nx = value
-        shape = (int(ny), int(nx))
-        return shape
-
-    @staticmethod
-    def _get_pc_convention_or_raise(conv: PC_CONVENTIONS) -> PC_CONVENTIONS_SINGLE:
-        conv_lower = conv.lower()
-        for k, v in PC_CONVENTIONS_ALIASES.items():
-            if conv_lower in v:
-                return k
-        else:
-            options = get_args(PC_CONVENTIONS)
-            options_str = ", ".join(options)
-            raise ValueError(
-                f"Invalid projection/pattern center convention {conv!r}. Options are "
-                f"{options_str}."
-            )
+    def _set_pc_in_bruker_convention(
+        self, convention: PC_CONVENTIONS = "bruker"
+    ) -> None:
+        self.pc = self._get_pc_in_bruker_convention(convention)
