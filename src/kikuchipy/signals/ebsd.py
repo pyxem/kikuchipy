@@ -403,6 +403,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.axes_manager['x'].scale
         2.0
         """
+        # TODO: Update crystal map step size too
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ("x", "y")
         x.scale, y.scale = (step_x, step_y)
@@ -431,6 +432,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.axes_manager['dx'].scale
         70.0
         """
+        # TODO: Update detector pixel size too
         center = delta * np.array(self.axes_manager.signal_shape) / 2
         dx, dy = self.axes_manager.signal_axes
         dx.units, dy.units = ["um"] * 2
