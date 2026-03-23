@@ -66,6 +66,9 @@ if TYPE_CHECKING:  # pragma: no cover
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
 
+    if dependency_version["ipywidgets"] is not None:
+        import ipywidgets as widgets
+
 
 PC_CONVENTIONS = Literal[
     "bruker",
@@ -1785,13 +1788,12 @@ class EBSDDetector:
         annotate: bool = False,
         dimensionless: bool = True,
         return_figure: bool = False,
+        **kwargs,
     ) -> "mfigure.Figure | mfigure.SubFigure | None":
         """Plot the EBSD detector-sample geometry in a 2D side-view.
 
         Parameters
         ----------
-        detector
-            EBSD detector.
         ax
             The Matplotlib axis to plot in. If not given, a new figure
             and axis are created.
@@ -1821,6 +1823,66 @@ class EBSDDetector:
 
         if return_figure:
             return fig
+
+    def plot_side_view_interactive(
+        self,
+        inplace: bool = False,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        **kwargs,
+    ) -> "widgets.VBox":
+        """Plot the EBSD detector-sample geometry in a 2D side-view
+        with controls for changing the sample and detector tilts and the
+        projection center coordinates.
+
+        Parameters
+        ----------
+        inplace
+            Whether the interactive changes affect the detector inplace.
+            Default is False.
+        ax
+            The Matplotlib axis to plot in. If not given, a new figure
+            and axis are created.
+        annotate
+            Whether to annotate the various components of the geometry.
+            Default is False.
+        dimensionless
+            Whether to ignore the
+            :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
+            drawing the plot axes. Default is True.
+        **kwargs
+            Keyword arguments passed to
+            :func:`~matplotlib.pyplot.figure` if *ax* is not given.
+
+        Returns
+        -------
+        widgets
+            The widget containing the sliders. Required to display the
+            interactive controls.
+
+        See Also
+        --------
+        plot_side_view
+
+        Notes
+        -----
+        Requires that :mod:`ipywidgets` is installed.
+        """
+        from kikuchipy.draw._plot_ebsd_detector import (
+            plot_ebsd_detector_geometry_side_view_interactive,
+        )
+
+        widgets = plot_ebsd_detector_geometry_side_view_interactive(
+            detector=self,
+            inplace=inplace,
+            ax=ax,
+            annotate=annotate,
+            dimensionless=dimensionless,
+            **kwargs,
+        )
+
+        return widgets
 
     @overload
     def plot_pc(
