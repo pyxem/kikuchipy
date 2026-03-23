@@ -126,6 +126,8 @@ This is a list of core package dependencies:
 
 Some functionality requires optional dependencies:
 
+* :doc:`ipywidgets <ipywidgets:index>`: Interactive widgets in Jupyter notebooks.
+* :doc:`IPython <ipython:index>`: Interactive widgets in Jupyter notebooks.
 * :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing.
   We recommend to install with optional GPU support via :doc:`pyopencl<pyopencl:index>`
   with ``pip install "pyebsdindex[gpu]""`` or

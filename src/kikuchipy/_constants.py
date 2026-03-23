@@ -23,14 +23,17 @@ from importlib.metadata import version
 
 from packaging.version import Version
 
+# TODO: Create this list dynamically using importlib.metadata.require
 deps_for_version_check = [
-    # Core
+    # Required
     "hyperspy",
     "matplotlib",
     "numpy",
     "rosettasciio",
     "scikit-image",
     # Optional
+    "IPython",
+    "ipywidgets",
     "nlopt",
     "pyvista",
     "pyebsdindex",

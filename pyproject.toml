@@ -64,6 +64,8 @@ dependencies = [
 
 [project.optional-dependencies]
 all = [
+    "ipywidgets",
+    "IPython",
     "nlopt",
     "pyebsdindex                  >= 0.3.9.2",
     "pyvista",
