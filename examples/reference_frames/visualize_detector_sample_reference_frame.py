@@ -192,4 +192,20 @@ for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
     ax.set_title(pc_string(det6))
     det6.plot_side_view(ax=ax)
 
+# %%
+# Interactive changes
+# ===================
+#
+# We can also change the sample and detector tilts and the PC values interactively.
+#
+# .. note::
+#
+#   This requires that :mod:`ipywidgets` is installed and that the code is running in
+#   an interactive environment with an interactive Matplotlib backend.
+#
+# The default behavior is not to affect the detector.
+# Here, we want the changes to affect the detector inplace.
+
+det6.plot_side_view_interactive(inplace=True)
+
 plt.show()
