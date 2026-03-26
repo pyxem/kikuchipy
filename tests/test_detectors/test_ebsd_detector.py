@@ -21,6 +21,7 @@ from copy import deepcopy
 
 import matplotlib.collections as mcollections
 import matplotlib.colors as mcolors
+import matplotlib.figure as mfigure
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -800,6 +801,26 @@ class TestPlotDetector:
             assert f"{expected_annotation_prefix}_annotation" in annotation_labels
         assert ax2.get_xlabel() == "Microscope Y axis [mm]"
         assert ax2.get_ylabel() == "Microscope Z axis [mm]"
+
+    @pytest.mark.skipif(
+        dependency_version["ipywidgets"] is None, reason="Needs ipywidgets"
+    )
+    def test_plot_side_view_interactive(self):
+        import ipywidgets
+
+        det = kp.detectors.EBSDDetector()
+        widgets1 = det.plot_side_view_interactive()
+        assert isinstance(widgets1, ipywidgets.VBox)
+
+        widgets2, fig1 = det.plot_side_view_interactive(
+            inplace=True, return_figure=True
+        )
+        assert isinstance(widgets2, ipywidgets.VBox)
+        assert isinstance(fig1, mfigure.Figure)
+
+        _, ax = plt.subplots()
+        _, fig3 = det.plot_side_view_interactive(ax=ax, return_figure=True)
+        assert fig3.axes[0] is ax
 
 
 class TestPlotPC:
