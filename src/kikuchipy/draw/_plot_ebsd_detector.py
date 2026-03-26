@@ -513,7 +513,7 @@ def plot_ebsd_detector_geometry_side_view_interactive(
     annotate: bool = False,
     dimensionless: bool = True,
     **kwargs,
-) -> "widgets.VBox":
+) -> "tuple[mfigure.Figure | mfigure.SubFigure, widgets.VBox]":
     """Plot an interactive EBSD detector geometry side view.
 
     The plot allows interactive modification of the detector and sample
@@ -542,6 +542,8 @@ def plot_ebsd_detector_geometry_side_view_interactive(
 
     Returns
     -------
+    fig
+        Matplotlib figure.
     widgets
         The widget containing the sliders. Required to display the
         interactive controls.
@@ -634,4 +636,4 @@ def plot_ebsd_detector_geometry_side_view_interactive(
 
     widget = widgets.VBox([s_st, s_dt, s_px, s_py, s_pz])
 
-    return widget
+    return fig, widget

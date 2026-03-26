@@ -1782,6 +1782,26 @@ class EBSDDetector:
         if return_figure:
             return fig
 
+    @overload
+    def plot_side_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: Literal[False] = False,
+        **kwargs,
+    ) -> None: ...
+
+    @overload
+    def plot_side_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: Literal[True] = True,
+        **kwargs,
+    ) -> "mfigure.Figure | mfigure.SubFigure": ...
+
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
@@ -1804,6 +1824,8 @@ class EBSDDetector:
             Whether to ignore the
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
             drawing the plot axes. Default is True.
+        return_figure
+            Whether to return the figure. Default is False.
         **kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.figure` if *ax* is not given.
@@ -1818,11 +1840,37 @@ class EBSDDetector:
         )
 
         fig = plot_ebsd_detector_geometry_side_view(
-            detector=self, ax=ax, annotate=annotate, dimensionless=dimensionless
+            detector=self,
+            ax=ax,
+            annotate=annotate,
+            dimensionless=dimensionless,
+            **kwargs,
         )
 
         if return_figure:
             return fig
+
+    @overload
+    def plot_side_view_interactive(
+        self,
+        inplace: bool = False,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: Literal[False] = False,
+        **kwargs,
+    ) -> "widgets.VBox": ...
+
+    @overload
+    def plot_side_view_interactive(
+        self,
+        inplace: bool = False,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: Literal[True] = True,
+        **kwargs,
+    ) -> "tuple[widgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
 
     def plot_side_view_interactive(
         self,
@@ -1830,8 +1878,9 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         annotate: bool = False,
         dimensionless: bool = True,
+        return_figure: bool = False,
         **kwargs,
-    ) -> "widgets.VBox":
+    ) -> "widgets.VBox | tuple[widgets.VBox, mfigure.Figure | mfigure.SubFigure]":
         """Plot the EBSD detector-sample geometry in a 2D side-view
         with controls for changing the sample and detector tilts and the
         projection center coordinates.
@@ -1851,6 +1900,8 @@ class EBSDDetector:
             Whether to ignore the
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
             drawing the plot axes. Default is True.
+        return_figure
+            Whether to return the figure. Default is False.
         **kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.figure` if *ax* is not given.
@@ -1873,7 +1924,7 @@ class EBSDDetector:
             plot_ebsd_detector_geometry_side_view_interactive,
         )
 
-        widgets = plot_ebsd_detector_geometry_side_view_interactive(
+        fig, widgets = plot_ebsd_detector_geometry_side_view_interactive(
             detector=self,
             inplace=inplace,
             ax=ax,
@@ -1882,7 +1933,10 @@ class EBSDDetector:
             **kwargs,
         )
 
-        return widgets
+        if return_figure:
+            return widgets, fig
+        else:
+            return widgets
 
     @overload
     def plot_pc(
