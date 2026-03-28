@@ -67,7 +67,8 @@ all = [
     "ipywidgets",
     "IPython",
     "nlopt",
-    "pyebsdindex                  >= 0.3.9.2",
+    "psygnal",
+    "pyebsdindex >= 0.3.9.2",
     "pyvista",
 ]
 doc = [

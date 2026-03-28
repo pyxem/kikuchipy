@@ -94,6 +94,7 @@ intersphinx_mapping = {
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "packaging": ("https://packaging.python.org/en/latest", None),
     "pooch": ("https://www.fatiando.org/pooch/latest", None),
+    "psygnal": ("https://psygnal.readthedocs.io/en/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "pyopencl": ("https://documen.tician.de/pyopencl", None),
     "pytest": ("https://docs.pytest.org/en/stable", None),

@@ -29,6 +29,8 @@ Added
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 - Optional dependency on ipywidgets and IPython for IPython widgets.
   (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+- Optional dependency on psygnal to allow triggering actions based on state changes.
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
 
 Changed
 -------
