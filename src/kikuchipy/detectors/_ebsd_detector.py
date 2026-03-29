@@ -114,21 +114,25 @@ class EBSDDetector:
         binned into one. Default is 1, meaning no binning.
     tilt
         Detector tilt :math:`\theta` about the detector horizontal
-        :math:`X_d`, in degrees. Default is 0.0.
+        :math:`X_d`, in degrees. Default is 0. A positive angle means
+        features on the detector appear to move upward (assuming all
+        other defaults).
     azimuthal
         Detector tilt :math:`\omega` about the detector vertical
-        :math:`Y_d`, pointing downwards, in degrees. Default is 0.0. A
-        positive angle means features on the detector moves towards the
-        left looking from the detector towards the sample.
+        :math:`Y_d`, pointing downwards, in degrees. Default is 0. A
+        positive angle means features on the detector appear to move
+        toward the right (assuming all other defaults).
     twist
         Detector tilt :math:`\gamma` about the detector normal
         :math:`Z_d`, pointing towards the sample, in degrees. Default is
-        0.0.
+        0.0. A positive angle means features on the detector appear to
+        move counter-clockwise about the detector center (assuming all
+        other defaults).
     sample_tilt
         Sample tilt :math:`\sigma` about the sample horizontal,
-        :math:`Y_d`, in degrees. Default is 70.0. Note that the sample
-        horizontal :math:`Y_d` is parallel to the detector horizontal,
-        :math:`X_d`.
+        :math:`Y_d`, in degrees. Default is 70. Note that the sample
+        horizontal :math:`Y_s` is parallel to the detector horizontal,
+        :math:`X_d` (assuming all other defaults).
     pc
         X, Y, and Z coordinates of the projection centers (PCs) in the
         given *convention*. Default is [0.5, 0.5, 0.5]. The PC describes
@@ -210,6 +214,7 @@ class EBSDDetector:
 
         _sample_tilt_changed = Signal(float)
         _tilt_changed = Signal(float)
+        _azimuthal_changed = Signal(float)
         _pc_changed = Signal(np.ndarray)
 
     def __init__(
@@ -269,6 +274,9 @@ class EBSDDetector:
         if not isinstance(value, Number):
             raise ValueError(f"Invalid azimuthal {value}. Must be a number.")
         self._azimuthal = float(value)
+
+        if self._has_signals:
+            self._azimuthal_changed.emit(self._azimuthal)
 
     @property
     def binning(self) -> int:
@@ -1835,7 +1843,11 @@ class EBSDDetector:
         return_figure: bool = False,
         **kwargs,
     ) -> "mfigure.Figure | mfigure.SubFigure | None":
-        """Plot the EBSD detector-sample geometry in a 2D side-view.
+        r"""Plot the EBSD detector-sample geometry in a 2D side-view.
+
+        The view is looking down the microscope Z axis and shows the
+        X-Y plane. This is the view in which the detector azimuthal
+        angle :math:`\omega` is visible. The effect of
 
         Parameters
         ----------
@@ -1865,6 +1877,78 @@ class EBSDDetector:
         )
 
         fig = plot_ebsd_detector_geometry_side_view(
+            detector=self,
+            ax=ax,
+            annotate=annotate,
+            dimensionless=dimensionless,
+            **kwargs,
+        )
+
+        if return_figure:
+            return fig
+
+    @overload
+    def plot_top_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: Literal[False] = False,
+        **kwargs,
+    ) -> None: ...
+
+    @overload
+    def plot_top_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: Literal[True] = True,
+        **kwargs,
+    ) -> "mfigure.Figure | mfigure.SubFigure": ...
+
+    def plot_top_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        return_figure: bool = False,
+        **kwargs,
+    ) -> "mfigure.Figure | mfigure.SubFigure | None":
+        r"""Plot the EBSD detector-sample geometry in a 2D top-view.
+
+        The view is looking down the microscope Z axis and shows the
+        X-Y plane. This is the view in which the detector azimuthal
+        angle :math:`\omega` is visible. The effect of
+
+        Parameters
+        ----------
+        ax
+            The Matplotlib axis to plot in. If not given, a new figure
+            and axis are created.
+        annotate
+            Whether to annotate the various components of the geometry.
+            Default is False.
+        dimensionless
+            Whether to ignore the
+            :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
+            drawing the plot axes. Default is True.
+        return_figure
+            Whether to return the figure. Default is False.
+        **kwargs
+            Keyword arguments passed to
+            :func:`~matplotlib.pyplot.figure` if *ax* is not given.
+
+        Returns
+        -------
+        fig
+            Figure showing the detector-sample geometry from the top.
+        """
+        from kikuchipy.draw._plot_ebsd_detector import (
+            plot_ebsd_detector_geometry_top_view,
+        )
+
+        fig = plot_ebsd_detector_geometry_top_view(
             detector=self,
             ax=ax,
             annotate=annotate,
@@ -1997,8 +2081,8 @@ class EBSDDetector:
         return_figure: bool = False,
         **kwargs,
     ) -> "ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure]":
-        """Plot the side view and detector plane side by side with
-        interactive slider controls.
+        """Plot the side view, top view, and detector plane side by
+        side with interactive slider controls.
 
         Parameters
         ----------
@@ -2035,6 +2119,7 @@ class EBSDDetector:
         --------
         :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view_interactive`
 
         Notes
@@ -2045,6 +2130,7 @@ class EBSDDetector:
 
         - :attr:`sample_tilt`
         - Detector :attr:`tilt`
+        - Detector :attr:`azimuthal`
         - Average :attr:`pc`, (PCx, PCy, PCz), individually
 
         If :mod:`psygnal` is installed and *inplace* is True, the plot
@@ -2069,7 +2155,6 @@ class EBSDDetector:
         if return_figure:
             return widgets, fig
         else:
-            fig.show()
             return widgets
 
     @overload

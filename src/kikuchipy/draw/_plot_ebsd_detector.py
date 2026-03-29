@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import matplotlib.axes as maxes
 import matplotlib.figure as mfigure
-from matplotlib.markers import MarkerStyle
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -40,6 +39,11 @@ if TYPE_CHECKING:
 # Repeated in detector module
 DETECTOR_PLOT_FORMATS = Literal["detector", "gnomonic"]
 PROJECTION_CENTER_PLOT_MODES = Literal["map", "scatter", "3d"]
+
+BEAM_COLOR = "C2"
+SAMPLE_COLOR = "C0"
+PC_COLOR = "C1"
+DETECTOR_COLOR = "C7"
 
 
 def plot_ebsd_detector(
@@ -89,18 +93,16 @@ def plot_ebsd_detector(
         width = np.diff(bounds[:2])[0]
         height = np.diff(bounds[2:])[0]
         ax.add_artist(
-            mpatches.Rectangle(origin, width, height, fc=(0.5,) * 3, zorder=-1)
+            mpatches.Rectangle(origin, width, height, fc=DETECTOR_COLOR, zorder=-1)
         )
 
-    # Show the projection center
     if show_pc:
-        default_params_pc = dict(
-            s=300,
-            facecolor="gold",
-            edgecolor="k",
-            marker=MarkerStyle(marker="*", fillstyle="full"),
-            zorder=10,
-        )
+        default_params_pc = {
+            "s": 300,
+            "facecolor": PC_COLOR,
+            "marker": "+",
+            "zorder": 10,
+        }
         for k, v in default_params_pc.items():
             pc_kwargs.setdefault(k, v)
         ax.scatter(x=pcx, y=pcy, **pc_kwargs)
@@ -358,31 +360,38 @@ def plot_ebsd_detector_geometry_side_view(
 ) -> mfigure.Figure | mfigure.SubFigure:
     """See the docstring of the EBSD detector method using this
     function.
+
+    Coordinates are calculated in microns relative to the beam-sample
+    interaction volume (0, 0).
+
+    The figure plane is given by the microscope reference frame: Y west
+    and Z north. Coordinates for elements are transformed to this
+    reference frame after they are defined.
+
+    See the docstring of the EBSD detector method using this function
+    for further details.
     """
     fig, ax = set_up_figure_axis(ax=ax, **kwargs)
 
-    # Dimensions in microns
+    # Dimensions in mm and angles in radians
     height = detector.height
     L = detector.specimen_scintillator_distance[0]
     beam_length = L * 0.5
-    sample_length = L * 1.5
-
-    # Coordinates are calculated in microns relative to the beam-sample
-    # interaction volume (0, 0)
-
-    # Electron beam
-    beam_start = np.array([0, -beam_length], dtype=np.float64)
-    beam_end = np.zeros(2, dtype=np.float64)
-
-    # Sample surface
+    half_sample_length = (L * 1.5) / 2
     sigma = np.deg2rad(detector.sample_tilt)
-    dx_sample = (sample_length / 2) * np.cos(sigma)
-    dz_sample = (sample_length / 2) * np.sin(sigma)
-    sample_start = np.array([-dx_sample, -dz_sample])
-    sample_end = np.array([dx_sample, dz_sample])
-
-    # Detector screen (Z = normal, Y = down)
     theta = np.deg2rad(detector.tilt)
+
+    # Beam
+    beam_end = np.zeros(2, dtype=np.float64)
+    beam_start = np.array([0, -beam_length], dtype=np.float64)
+
+    # Sample
+    dx_sample = half_sample_length * np.cos(sigma)
+    dy_sample = half_sample_length * np.sin(sigma)
+    sample_end = np.array([dx_sample, dy_sample], dtype=np.float64)
+    sample_start = -sample_end
+
+    # Detector screen
     detector_z = np.array([np.cos(theta), np.sin(theta)])
     P = L * detector_z
     detector_y = np.array([-np.sin(theta), np.cos(theta)])
@@ -392,9 +401,11 @@ def plot_ebsd_detector_geometry_side_view(
     screen_top = P - pcy * height * detector_y
     screen_bottom = P + (1 - pcy) * detector.height * detector_y
 
-    # Shift coordinates to top left corner of detector and convert to mm
-    def trans(point):
-        return (point - screen_top) * 1e-3
+    # Negate Z so the Z axis points upward (opposite beam direction)
+    def trans(point: np.ndarray) -> np.ndarray:
+        p = point * 1e-3
+        p[1] = -p[1]
+        return p
 
     beam_start = trans(beam_start)
     beam_end = trans(beam_end)
@@ -405,18 +416,17 @@ def plot_ebsd_detector_geometry_side_view(
     pc_pos = trans(P)
     source_pos = trans(np.zeros(2, dtype=np.float64))
 
-    beam_color = "#c4761c"
     ax.annotate(
         "",
         xy=beam_end,
         xytext=beam_start,
-        arrowprops={"arrowstyle": "->", "lw": 2, "color": beam_color},
+        arrowprops={"arrowstyle": "->", "lw": 2, "color": BEAM_COLOR},
         zorder=5,
     )
     ax.plot(
         [sample_start[0], sample_end[0]],
         [sample_start[1], sample_end[1]],
-        c="gray",
+        c=SAMPLE_COLOR,
         lw=3,
         label="Sample",
         zorder=4,
@@ -424,7 +434,7 @@ def plot_ebsd_detector_geometry_side_view(
     ax.plot(
         [detector_start[0], detector_end[0]],
         [detector_start[1], detector_end[1]],
-        c="purple",
+        c=DETECTOR_COLOR,
         lw=4,
         label="Detector",
         zorder=4,
@@ -432,10 +442,9 @@ def plot_ebsd_detector_geometry_side_view(
     ax.plot(
         pc_pos[0],
         pc_pos[1],
-        marker="*",
+        marker="+",
         ms=15,
-        mfc="gold",
-        mec="k",
+        mec=PC_COLOR,
         linestyle="None",
         label="PC",
         zorder=5,
@@ -444,15 +453,14 @@ def plot_ebsd_detector_geometry_side_view(
         [source_pos[0], pc_pos[0]],
         [source_pos[1], pc_pos[1]],
         linestyle=":",
-        color=beam_color,
+        color=BEAM_COLOR,
         alpha=0.5,
         zorder=0,
     )
 
-    # Handle axis orientation: Y axis as x-coordinate, Z as
-    # y-coordinate, Z pointing down
+    # Handle axis orientation: Y axis as x-coordinate (inverted so
+    # detector appears on the left), Z as y-coordinate pointing up
     ax.set_aspect("equal")
-    ax.invert_yaxis()
     ax.invert_xaxis()
 
     if annotate:
@@ -466,7 +474,7 @@ def plot_ebsd_detector_geometry_side_view(
         )
         ax.text(
             sample_start[0],
-            sample_end[1],
+            sample_start[1],
             "Sample",
             ha="right",
             va="center",
@@ -475,7 +483,7 @@ def plot_ebsd_detector_geometry_side_view(
         ax.annotate(
             "Detector",
             xy=(detector_start[0], detector_start[1]),
-            xytext=(0, 12),
+            xytext=(0, -12),
             textcoords="offset points",
             ha="center",
             va="top",
@@ -484,19 +492,21 @@ def plot_ebsd_detector_geometry_side_view(
         ax.annotate(
             "PC",
             xy=(pc_pos[0], pc_pos[1]),
-            xytext=(5, -5),
+            xytext=(5, 5),
             textcoords="offset points",
             ha="left",
-            va="top",
+            va="bottom",
             label="pc_annotation",
         )
 
     if dimensionless:
-        ax.axis("off")
+        ax.xaxis.set_ticks([])
+        ax.yaxis.set_ticks([])
+        unit = ""
     else:
-        unit = "mm"
-        ax.set_xlabel(f"Microscope Y axis [{unit}]")
-        ax.set_ylabel(f"Microscope Z axis [{unit}]")
+        unit = " [mm]"
+    ax.set_xlabel(f"y microscope{unit}")
+    ax.set_ylabel(f"z microscope{unit}")
 
     return fig
 
@@ -510,6 +520,169 @@ def update_side_view(
     """Clear *ax* and redraw the side view for *detector*."""
     ax.clear()
     plot_ebsd_detector_geometry_side_view(
+        detector, ax=ax, annotate=annotate, dimensionless=dimensionless
+    )
+
+
+def plot_ebsd_detector_geometry_top_view(
+    detector: EBSDDetector,
+    ax: maxes.Axes | None = None,
+    annotate: bool = False,
+    dimensionless: bool = False,
+    **kwargs,
+) -> mfigure.Figure | mfigure.SubFigure:
+    r"""Plot the EBSD detector-sample geometry in a 2D top-view.
+
+    Coordinates are calculated in microns relative to the beam-sample
+    interaction volume (0, 0).
+
+    The figure plane is given by the microscope reference frame: x west
+    and y south. Coordinates for elements are transformed to this
+    reference frame after they are defined.
+
+    See the docstring of the EBSD detector method using this function
+    for further details.
+    """
+    fig, ax = set_up_figure_axis(ax=ax, **kwargs)
+
+    # Dimensions in microns and angles in radians
+    width = detector.width
+    L = detector.specimen_scintillator_distance[0]
+    sample_length = L * 1.5
+    azimuthal = np.deg2rad(detector.azimuthal)
+    theta = np.deg2rad(detector.tilt)
+
+    beam = np.zeros(2)
+
+    # Sample-detector distance (shortened by the detector tilt)
+    d = L * np.cos(theta)
+
+    # PC in microscope X-Y coordinates, with the screen normal pointing
+    # towards the interaction volume
+    det_normal = np.array([np.sin(azimuthal), np.cos(azimuthal)])
+    pc_pos = d * det_normal
+
+    # Unit vector along the detector width, perpendicular to the normal
+    width_dir = np.array([-np.cos(azimuthal), np.sin(azimuthal)])
+
+    # Detector endpoints
+    pcx = detector.pc_average[0]
+    left_extent = pcx * width
+    right_extent = (1 - pcx) * width
+    det_left = pc_pos - left_extent * width_dir
+    det_right = pc_pos + right_extent * width_dir
+
+    # Sample surface: a line along X at Y=0
+    sample_start = np.array([-sample_length / 2, 0])
+    sample_end = np.array([sample_length / 2, 0])
+
+    to_mm = 1e-3
+
+    ax.plot(
+        beam[0] * to_mm,
+        beam[1] * to_mm,
+        marker="o",
+        ms=8,
+        color=BEAM_COLOR,
+        zorder=5,
+        label="Beam",
+    )
+    ax.plot(
+        [sample_start[0] * to_mm, sample_end[0] * to_mm],
+        [sample_start[1] * to_mm, sample_end[1] * to_mm],
+        c=SAMPLE_COLOR,
+        lw=3,
+        label="Sample",
+        zorder=4,
+    )
+    ax.plot(
+        [det_left[0] * to_mm, det_right[0] * to_mm],
+        [det_left[1] * to_mm, det_right[1] * to_mm],
+        c=DETECTOR_COLOR,
+        lw=4,
+        label="Detector",
+        zorder=4,
+    )
+    ax.plot(
+        pc_pos[0] * to_mm,
+        pc_pos[1] * to_mm,
+        marker="+",
+        ms=15,
+        mec=PC_COLOR,
+        linestyle="None",
+        label="PC",
+        zorder=5,
+    )
+    ax.plot(
+        [beam[0] * to_mm, pc_pos[0] * to_mm],
+        [beam[1] * to_mm, pc_pos[1] * to_mm],
+        linestyle=":",
+        color=BEAM_COLOR,
+        alpha=0.5,
+        zorder=0,
+    )
+
+    ax.set_aspect("equal")
+    ax.invert_yaxis()
+    ax.invert_xaxis()
+
+    if annotate:
+        ax.text(
+            beam[0] * to_mm,
+            beam[1] * to_mm,
+            " Beam",
+            ha="left",
+            va="bottom",
+            label="beam_annotation",
+        )
+        ax.text(
+            sample_end[0] * to_mm,
+            sample_end[1] * to_mm,
+            " Sample",
+            ha="left",
+            va="center",
+            label="sample_annotation",
+        )
+        ax.annotate(
+            "Detector",
+            xy=(pc_pos[0] * to_mm, pc_pos[1] * to_mm),
+            xytext=(0, -12),
+            textcoords="offset points",
+            ha="center",
+            va="top",
+            label="detector_annotation",
+        )
+        ax.annotate(
+            "PC",
+            xy=(pc_pos[0] * to_mm, pc_pos[1] * to_mm),
+            xytext=(5, 5),
+            textcoords="offset points",
+            ha="left",
+            va="bottom",
+            label="pc_annotation",
+        )
+
+    if dimensionless:
+        ax.xaxis.set_ticks([])
+        ax.yaxis.set_ticks([])
+        unit = ""
+    else:
+        unit = " [mm]"
+    ax.set_xlabel(f"x microscope{unit}")
+    ax.set_ylabel(f"y microscope{unit}")
+
+    return fig
+
+
+def update_top_view(
+    detector: EBSDDetector,
+    ax: maxes.Axes,
+    annotate: bool = False,
+    dimensionless: bool = True,
+) -> None:
+    """Clear *ax* and redraw the top view for *detector*."""
+    ax.clear()
+    plot_ebsd_detector_geometry_top_view(
         detector, ax=ax, annotate=annotate, dimensionless=dimensionless
     )
 
@@ -598,6 +771,7 @@ def plot_ebsd_detector_geometry_side_view_interactive(
     det.pc = [pcx, pcy, pcz]
 
     fig, ax = set_up_figure_axis(ax=ax, **kwargs)
+    ax.set_title("Side view")
 
     sliders = make_detector_sliders(det)
 
@@ -605,36 +779,31 @@ def plot_ebsd_detector_geometry_side_view_interactive(
         update_side_view(det, ax, annotate=annotate, dimensionless=dimensionless)
         fig.canvas.draw_idle()
 
+    def update_detector_from_sliders():
+        det.sample_tilt = sliders["sample_tilt"].value
+        det.tilt = sliders["tilt"].value
+        det.azimuthal = sliders["azimuthal"].value
+        det.pc = [sliders["pcx"].value, sliders["pcy"].value, sliders["pcz"].value]
+
     if det._has_signals:
         det._sample_tilt_changed.connect(redraw)
         det._tilt_changed.connect(redraw)
+        det._azimuthal_changed.connect(redraw)
         det._pc_changed.connect(redraw)
 
         def on_slider_change(change: Any = None) -> None:
-            # Block signals while setting all values to avoid multiple
-            # redraws, then emit manually once
+            # Block to redraw only once
             with (
                 det._sample_tilt_changed.blocked(),
                 det._tilt_changed.blocked(),
+                det._azimuthal_changed.blocked(),
                 det._pc_changed.blocked(),
             ):
-                det.sample_tilt = sliders["sample_tilt"].value
-                det.tilt = sliders["tilt"].value
-                det.pc = [
-                    sliders["pcx"].value,
-                    sliders["pcy"].value,
-                    sliders["pcz"].value,
-                ]
+                update_detector_from_sliders()
     else:
 
         def on_slider_change(change: Any = None) -> None:
-            det.sample_tilt = sliders["sample_tilt"].value
-            det.tilt = sliders["tilt"].value
-            det.pc = [
-                sliders["pcx"].value,
-                sliders["pcy"].value,
-                sliders["pcz"].value,
-            ]
+            update_detector_from_sliders()
             redraw()
 
     for s in sliders.values():
@@ -656,8 +825,8 @@ def plot_ebsd_detector_combined_interactive(
     zoom: float = 1.0,
     **kwargs,
 ) -> "tuple[mfigure.Figure, ipywidgets.VBox]":
-    """Plot the side view and detector plane side by side with
-    interactive controls.
+    """Plot the side view, top view, and detector plane side by side
+    with interactive controls.
 
     Parameters
     ----------
@@ -708,29 +877,47 @@ def plot_ebsd_detector_combined_interactive(
 
     w, h = plt.rcParams["figure.figsize"]
     kwargs.setdefault("layout", "constrained")
-    kwargs.setdefault("figsize", (2 * w, h))
+    kwargs.setdefault("figsize", (3 * w, h))
     fig = plt.figure(**kwargs)
-    ax_side, ax_det = fig.subplots(1, 2)
+    ax_side, ax_top, ax_det = fig.subplots(1, 3)
 
     sliders = make_detector_sliders(det)
 
     def redraw_side(*args: Any) -> None:
         update_side_view(det, ax_side, annotate=annotate, dimensionless=dimensionless)
+        ax_side.set_title("Side view")
+
+    def redraw_top(*args: Any) -> None:
+        update_top_view(det, ax_top, annotate=annotate, dimensionless=dimensionless)
+        ax_top.set_title("Top view")
 
     def redraw_det(*args: Any) -> None:
         update_detector_plane(det, ax_det, coords_fmt=coords_fmt, zoom=zoom)
+        ax_det.set_title("Detector")
 
     def redraw_all() -> None:
         redraw_side()
+        redraw_top()
         redraw_det()
         fig.canvas.draw_idle()
 
+    def update_detector_from_sliders():
+        det.sample_tilt = sliders["sample_tilt"].value
+        det.tilt = sliders["tilt"].value
+        det.azimuthal = sliders["azimuthal"].value
+        det.pc = [sliders["pcx"].value, sliders["pcy"].value, sliders["pcz"].value]
+
     if det._has_signals:
         det._sample_tilt_changed.connect(redraw_side)
+        det._sample_tilt_changed.connect(redraw_top)
         det._sample_tilt_changed.connect(lambda *a: fig.canvas.draw_idle())
         det._tilt_changed.connect(redraw_side)
+        det._tilt_changed.connect(redraw_top)
         det._tilt_changed.connect(lambda *a: fig.canvas.draw_idle())
+        det._azimuthal_changed.connect(redraw_top)
+        det._azimuthal_changed.connect(lambda *a: fig.canvas.draw_idle())
         det._pc_changed.connect(redraw_side)
+        det._pc_changed.connect(redraw_top)
         det._pc_changed.connect(redraw_det)
         det._pc_changed.connect(lambda *a: fig.canvas.draw_idle())
 
@@ -738,26 +925,15 @@ def plot_ebsd_detector_combined_interactive(
             with (
                 det._sample_tilt_changed.blocked(),
                 det._tilt_changed.blocked(),
+                det._azimuthal_changed.blocked(),
                 det._pc_changed.blocked(),
             ):
-                det.sample_tilt = sliders["sample_tilt"].value
-                det.tilt = sliders["tilt"].value
-                det.pc = [
-                    sliders["pcx"].value,
-                    sliders["pcy"].value,
-                    sliders["pcz"].value,
-                ]
+                update_detector_from_sliders()
             redraw_all()
     else:
 
         def on_slider_change(change: Any = None) -> None:
-            det.sample_tilt = sliders["sample_tilt"].value
-            det.tilt = sliders["tilt"].value
-            det.pc = [
-                sliders["pcx"].value,
-                sliders["pcy"].value,
-                sliders["pcz"].value,
-            ]
+            update_detector_from_sliders()
             redraw_all()
 
     for s in sliders.values():
@@ -850,6 +1026,14 @@ def make_detector_sliders(
             max=pz_max,
             step=0.01,
             description="PCz",
+            style=style,
+        ),
+        "azimuthal": ipywidgets.FloatSlider(
+            value=detector.azimuthal,
+            min=-180,
+            max=180,
+            step=0.1,
+            description="Azimuthal",
             style=style,
         ),
     }
