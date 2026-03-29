@@ -48,6 +48,14 @@ for dep in deps_for_version_check:
     dependency_version[dep] = dep_version
 
 
+def verify_dependency_or_raise(package: str, reason: str) -> None:
+    """Raise an informative ImportError if a *package* required for some
+    *reason* is not installed.
+    """
+    if dependency_version[package] is None:
+        raise ImportError(f"{reason} requires that {package!r} is installed")
+
+
 # PyOpenCL context available for use with PyEBSDIndex? Required for
 # Hough indexing of Dask arrays.
 # PyOpenCL is an optional dependency of PyEBSDIndex, so it should not be

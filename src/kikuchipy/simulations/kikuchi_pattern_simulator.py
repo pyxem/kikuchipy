@@ -73,7 +73,7 @@ from orix.quaternion import Rotation
 from orix.vector import Vector3d
 from tqdm import tqdm
 
-from kikuchipy._constants import dependency_version
+from kikuchipy._constants import verify_dependency_or_raise
 from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
@@ -457,12 +457,8 @@ class KikuchiPatternSimulator:
             :class:`~matplotlib.figure.Figure` or a
             :class:`~pyvista.Plotter` is returned.
         """
-        if (
-            projection == "spherical"
-            and backend == "pyvista"
-            and dependency_version["pyvista"] is None
-        ):  # pragma: no cover
-            raise ImportError("PyVista is not installed")
+        if projection == "spherical" and backend == "pyvista":
+            verify_dependency_or_raise("pyvista", "3D spherical plot")
 
         ref = self._reflectors
 

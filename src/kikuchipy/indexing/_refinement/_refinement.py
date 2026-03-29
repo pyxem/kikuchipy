@@ -33,6 +33,7 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arr
 from orix.quaternion import Rotation
 import scipy.optimize
 
+from kikuchipy._constants import dependency_version, verify_dependency_or_raise
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.indexing._refinement._solvers import (
     _refine_orientation_pc_solver_nlopt,
@@ -47,7 +48,6 @@ from kikuchipy.signals.util._crystal_map import _get_indexed_points_in_data_in_x
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy._constants import dependency_version
     from kikuchipy.detectors._ebsd_detector import EBSDDetector
     from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
@@ -1083,7 +1083,7 @@ class _RefinementSetup:
 
         if method not in supported_methods:
             raise ValueError(
-                f"Method '{method}' not in the list of supported methods "
+                f"Method {method!r} not in the list of supported methods "
                 f"{supported_methods}"
             )
 
@@ -1093,14 +1093,8 @@ class _RefinementSetup:
         self.package = method_dict["package"]
 
         if self.package == "nlopt":
-            from kikuchipy._constants import dependency_version
-
             method_upper = method.upper()
-            if dependency_version["nlopt"] is None:
-                raise ImportError(  # pragma: no cover
-                    f"Package `nlopt`, required for method {method_upper}, is not "
-                    "installed"
-                )
+            verify_dependency_or_raise("nlopt", f"Optimization method {method_upper}!")
 
             import nlopt
 

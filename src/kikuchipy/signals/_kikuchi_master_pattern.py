@@ -25,11 +25,12 @@ from warnings import warn
 import hyperspy.api as hs
 import numpy as np
 from orix.crystal_map import Phase
-from orix.projections import StereographicProjection
+from orix.projections import InverseStereographicProjection, StereographicProjection
 from orix.vector import Vector3d
 from scipy.interpolate import interpn
 from tqdm import tqdm
 
+from kikuchipy._constants import verify_dependency_or_raise
 from kikuchipy._utils.vector import (
     ValidHemispheres,
     ValidProjections,
@@ -262,16 +263,9 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         >>> mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         >>> mp.plot_spherical()
         """
-        from kikuchipy._constants import dependency_version
+        verify_dependency_or_raise("pyvista", "3D plotting on the sphere")
 
-        if dependency_version["pyvista"] is None:  # pragma: no cover
-            raise ImportError(
-                "PyVista is required, see the installation guide for more information"
-            )
-        else:
-            from orix.projections import InverseStereographicProjection
-            from orix.vector import Vector3d
-            import pyvista as pv
+        import pyvista as pv
 
         if self.projection != "stereographic" or (
             self.hemisphere != "both" and not self.phase.point_group.contains_inversion
