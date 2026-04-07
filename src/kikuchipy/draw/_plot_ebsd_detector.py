@@ -17,7 +17,11 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Plotting an EBSD detector and projection centers."""
+"""Plotting an EBSD detector and projection centers.
+
+The interactive widgets require an optional dependency
+:mod:`ipywidgets`. It must only be imported if we know it's installed.
+"""
 
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -36,7 +40,7 @@ if TYPE_CHECKING:
     if dependency_version["ipywidgets"] is not None:
         import ipywidgets
 
-# Repeated in detector module
+# Repeated in detector module: keep in sync!
 DETECTOR_PLOT_FORMATS = Literal["detector", "gnomonic"]
 PROJECTION_CENTER_PLOT_MODES = Literal["map", "scatter", "3d"]
 
@@ -58,7 +62,7 @@ def plot_ebsd_detector(
     gnomonic_circles_kwargs: dict,
     gnomonic_angles: np.ndarray | list | None,
     ax: maxes.Axes | None = None,
-) -> mfigure.Figure:
+) -> mfigure.Figure | mfigure.SubFigure:
     sy, sx = detector.shape
     pcx, pcy = detector.pc_average[:2]
     bounds = detector.bounds
@@ -75,9 +79,9 @@ def plot_ebsd_detector(
         x_label = "x gnomonic"
         y_label = "y gnomonic"
 
-    fig, ax = set_up_figure_axis(ax=ax)
-    ax.axis(zoom * bounds)
-    ax.set(xlabel=x_label, ylabel=y_label, aspect="equal")
+    fig, axis = set_up_figure_axis(ax=ax)
+    axis.axis(zoom * bounds)
+    axis.set(xlabel=x_label, ylabel=y_label, aspect="equal")
 
     # Plot a pattern on the detector
     if isinstance(pattern, np.ndarray):
@@ -87,12 +91,12 @@ def plot_ebsd_detector(
                 f"{(sy, sx)}"
             )
         pattern_kwargs.setdefault("cmap", "gray")
-        ax.imshow(pattern, extent=bounds, **pattern_kwargs)
+        axis.imshow(pattern, extent=bounds, **pattern_kwargs)
     else:
         origin = (bounds[0], bounds[2])
         width = np.diff(bounds[:2])[0]
         height = np.diff(bounds[2:])[0]
-        ax.add_artist(
+        axis.add_artist(
             mpatches.Rectangle(origin, width, height, fc=DETECTOR_COLOR, zorder=-1)
         )
 
@@ -105,7 +109,7 @@ def plot_ebsd_detector(
         }
         for k, v in default_params_pc.items():
             pc_kwargs.setdefault(k, v)
-        ax.scatter(x=pcx, y=pcy, **pc_kwargs)
+        axis.scatter(x=pcx, y=pcy, **pc_kwargs)
 
     # Draw gnomonic circles centered on the projection center
     if draw_gnomonic_circles:
@@ -122,7 +126,7 @@ def plot_ebsd_detector(
         if gnomonic_angles is None:
             gnomonic_angles = np.arange(1, 9) * 10
         for angle in gnomonic_angles:
-            ax.add_patch(
+            axis.add_patch(
                 mpatches.Circle(
                     (pcx, pcy), np.tan(np.deg2rad(angle)), **gnomonic_circles_kwargs
                 )
@@ -187,12 +191,14 @@ def plot_projection_center_fit(
     kwargs.setdefault("figsize", (w, h))
 
     fig = plt.figure(**kwargs)
+
     # PCx v PCy
     ax0 = fig.add_subplot(221)
     ax0.set(xlabel="PCx", ylabel="PCy", aspect="equal")
     ax0.scatter(pcx_fit, pcy_fit, **fit_kw)
     ax0.scatter(pcx, pcy, **data_kw)
     ax0.invert_xaxis()
+
     # PCx v PCz
     ax1 = fig.add_subplot(222)
     ax1.set(xlabel="PCx", ylabel="PCz", aspect="equal")
@@ -200,6 +206,7 @@ def plot_projection_center_fit(
     ax1.scatter(pcx_fit, pcz_fit, **fit_kw)
     ax1.invert_xaxis()
     ax1.invert_yaxis()
+
     # PCz v PCy
     ax2 = fig.add_subplot(223)
     ax2.set(xlabel="PCz", ylabel="PCy", aspect="equal")
@@ -207,6 +214,7 @@ def plot_projection_center_fit(
     ax2.scatter(pcz_fit, pcy_fit, label="Fit", **fit_kw)
     ax2.plot(pcz_fit, pcy_fit_line, "r-", label="Linear fit")
     ax2.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+
     # Plot PC values in 3D
     ax3: Axes3D = fig.add_subplot(224, projection="3d")
     ax3.scatter(pcx, pcz, pcy, **data_kw)
@@ -257,11 +265,11 @@ def plot_all_projection_centers(
 
     fig = plt.figure(**figure_kwargs)
     if mode == "map":
-        fig = plot_all_projection_centers_in_map(
+        plot_all_projection_centers_in_map(
             pc=pc, labels=labels, fig=fig, subplots_kw=subplots_kw, **kwargs
         )
     elif mode == "scatter":
-        fig = plot_all_projection_centers_as_scatter(
+        plot_all_projection_centers_as_scatter(
             pc=pc,
             labels=labels,
             fig=fig,
@@ -270,7 +278,7 @@ def plot_all_projection_centers(
             **kwargs,
         )
     else:
-        fig = plot_all_projection_centers_in_3d(
+        plot_all_projection_centers_in_3d(
             pc=pc, labels=labels, fig=fig, annotate=annotate, **kwargs
         )
 
@@ -283,7 +291,7 @@ def plot_all_projection_centers_in_map(
     fig: mfigure.Figure,
     subplots_kw: dict[str, Any],
     **kwargs,
-) -> mfigure.Figure:
+) -> None:
     axes = fig.subplots(**subplots_kw)
     for i, ax in enumerate(axes):
         ax.set(xlabel="Column", ylabel="Row", aspect="equal")
@@ -291,7 +299,6 @@ def plot_all_projection_centers_in_map(
         divider = make_axes_locatable(ax)
         cax = divider.append_axes(position="right", size="5%", pad=0.1)
         fig.colorbar(im, cax=cax, label=labels[i])
-    return fig
 
 
 def plot_all_projection_centers_as_scatter(
@@ -301,7 +308,7 @@ def plot_all_projection_centers_as_scatter(
     subplots_kw: dict,
     annotate: bool,
     **kwargs,
-) -> mfigure.Figure:
+) -> None:
     pc_flattened = pc.reshape(-1, 3)
     axes = fig.subplots(**subplots_kw)
     for i, (j, k) in enumerate([[0, 1], [0, 2], [2, 1]]):
@@ -315,7 +322,6 @@ def plot_all_projection_centers_as_scatter(
     axes[0].invert_xaxis()
     axes[1].invert_xaxis()
     axes[1].invert_yaxis()
-    return fig
 
 
 def plot_all_projection_centers_in_3d(
@@ -324,7 +330,7 @@ def plot_all_projection_centers_in_3d(
     fig: mfigure.Figure,
     annotate: bool,
     **kwargs,
-) -> mfigure.Figure:
+) -> None:
     nav_shape = pc.shape[: pc.ndim - 1]
     nav_dim = len(nav_shape)
     pcx, pcy, pcz = pc.reshape(-1, 3).T
@@ -348,10 +354,8 @@ def plot_all_projection_centers_in_3d(
         for i, (x, z, y) in enumerate(zip(pcx, pcz, pcy)):
             ax.text(x, z, y, i)
 
-    return fig
 
-
-def plot_ebsd_detector_geometry_side_view(
+def plot_detector_sample_geometry_side_view(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
     annotate: bool = False,
@@ -511,7 +515,7 @@ def plot_ebsd_detector_geometry_side_view(
     return fig
 
 
-def update_side_view(
+def update_detector_sample_geometry_side_view(
     detector: EBSDDetector,
     ax: maxes.Axes,
     annotate: bool = False,
@@ -519,12 +523,12 @@ def update_side_view(
 ) -> None:
     """Clear *ax* and redraw the side view for *detector*."""
     ax.clear()
-    plot_ebsd_detector_geometry_side_view(
+    plot_detector_sample_geometry_side_view(
         detector, ax=ax, annotate=annotate, dimensionless=dimensionless
     )
 
 
-def plot_ebsd_detector_geometry_top_view(
+def plot_detector_sample_geometry_top_view(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
     annotate: bool = False,
@@ -550,17 +554,13 @@ def plot_ebsd_detector_geometry_top_view(
     L = detector.specimen_scintillator_distance[0]
     sample_length = L * 1.5
     azimuthal = np.deg2rad(detector.azimuthal)
-    theta = np.deg2rad(detector.tilt)
 
     beam = np.zeros(2)
-
-    # Sample-detector distance (shortened by the detector tilt)
-    d = L * np.cos(theta)
 
     # PC in microscope X-Y coordinates, with the screen normal pointing
     # towards the interaction volume
     det_normal = np.array([np.sin(azimuthal), np.cos(azimuthal)])
-    pc_pos = d * det_normal
+    pc_pos = L * det_normal
 
     # Unit vector along the detector width, perpendicular to the normal
     width_dir = np.array([-np.cos(azimuthal), np.sin(azimuthal)])
@@ -674,7 +674,7 @@ def plot_ebsd_detector_geometry_top_view(
     return fig
 
 
-def update_top_view(
+def update_detector_sample_geometry_top_view(
     detector: EBSDDetector,
     ax: maxes.Axes,
     annotate: bool = False,
@@ -682,7 +682,7 @@ def update_top_view(
 ) -> None:
     """Clear *ax* and redraw the top view for *detector*."""
     ax.clear()
-    plot_ebsd_detector_geometry_top_view(
+    plot_detector_sample_geometry_top_view(
         detector, ax=ax, annotate=annotate, dimensionless=dimensionless
     )
 
@@ -710,94 +710,65 @@ def update_detector_plane(
     )
 
 
-def plot_ebsd_detector_geometry_side_view_interactive(
+def plot_detector_sample_geometry_side_view_interactive(
     detector: EBSDDetector,
-    inplace: bool = False,
     ax: maxes.Axes | None = None,
     annotate: bool = False,
     dimensionless: bool = True,
     **kwargs,
-) -> "tuple[mfigure.Figure | mfigure.SubFigure, ipywidgets.VBox]":
-    """Plot an interactive EBSD detector geometry side view.
-
-    The plot allows interactive modification of the detector and sample
-    tilts and the projection center (PC) values.
-
-    Parameters
-    ----------
-    detector
-        EBSD detector.
-    inplace
-        Whether to edit the given *detector* inplace. The given detector
-        is not affected by default.
-    ax
-        The Matplotlib axis to plot in. If not given, a new figure
-        and axis are created.
-    annotate
-        Whether to annotate the various components of the geometry.
-        Default is False.
-    dimensionless
-        Whether to ignore the
-        :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
-        drawing the plot axes. Default is True.
-    **kwargs
-        Keyword arguments passed to
-        :func:`~matplotlib.pyplot.figure` if *ax* is not given.
-
-    Returns
-    -------
-    fig
-        Matplotlib figure.
-    controls
-        The widget controls. Required to display the interactive
-        controls.
-
-    Notes
-    -----
-    Requires that :mod:`ipywidgets` is installed. If :mod:`psygnal` is
-    installed, the plot is driven by signals emitted from the detector
-    property setters.
+) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]":
+    """See the docstring of
+    :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view` for
+    details.
     """
     verify_dependency_or_raise("ipywidgets", "Interactive detector plots")
     verify_dependency_or_raise("IPython", "Interactive detector plots")
 
     import ipywidgets
 
-    if inplace:
-        det = detector
-    else:
-        det = detector.deepcopy()
-    pcx, pcy, pcz = det.pc_average
-    det.pc = [pcx, pcy, pcz]
+    detector.pc = detector.pc_average
+    sample_tilt_slider = get_sample_tilt_slider(detector)
+    detector_tilt_slider = get_detector_tilt_slider(detector)
+    azimuthal_slider = get_detector_azimuthal_slider(detector)
+    pcy_slider = get_pcy_slider(detector)
+    pcz_slider = get_pcz_slider(detector)
+    sliders = [
+        sample_tilt_slider,
+        detector_tilt_slider,
+        azimuthal_slider,
+        pcy_slider,
+        pcz_slider,
+    ]
 
     fig, ax = set_up_figure_axis(ax=ax, **kwargs)
     ax.set_title("Side view")
 
-    sliders = make_detector_sliders(det)
-
     def redraw(*args: Any) -> None:
-        update_side_view(det, ax, annotate=annotate, dimensionless=dimensionless)
+        update_detector_sample_geometry_side_view(
+            detector, ax, annotate=annotate, dimensionless=dimensionless
+        )
         fig.canvas.draw_idle()
 
     def update_detector_from_sliders():
-        det.sample_tilt = sliders["sample_tilt"].value
-        det.tilt = sliders["tilt"].value
-        det.azimuthal = sliders["azimuthal"].value
-        det.pc = [sliders["pcx"].value, sliders["pcy"].value, sliders["pcz"].value]
+        detector.sample_tilt = sample_tilt_slider.value
+        detector.tilt = detector_tilt_slider.value
+        detector.azimuthal = azimuthal_slider.value
+        detector.pcy = pcy_slider.value
+        detector.pcz = pcz_slider.value
 
-    if det._has_signals:
-        det._sample_tilt_changed.connect(redraw)
-        det._tilt_changed.connect(redraw)
-        det._azimuthal_changed.connect(redraw)
-        det._pc_changed.connect(redraw)
+    if detector._has_signals:
+        detector._sample_tilt_changed.connect(redraw)
+        detector._tilt_changed.connect(redraw)
+        detector._azimuthal_changed.connect(redraw)
+        detector._pc_changed.connect(redraw)
 
         def on_slider_change(change: Any = None) -> None:
             # Block to redraw only once
             with (
-                det._sample_tilt_changed.blocked(),
-                det._tilt_changed.blocked(),
-                det._azimuthal_changed.blocked(),
-                det._pc_changed.blocked(),
+                detector._sample_tilt_changed.blocked(),
+                detector._tilt_changed.blocked(),
+                detector._azimuthal_changed.blocked(),
+                detector._pc_changed.blocked(),
             ):
                 update_detector_from_sliders()
     else:
@@ -806,17 +777,94 @@ def plot_ebsd_detector_geometry_side_view_interactive(
             update_detector_from_sliders()
             redraw()
 
-    for s in sliders.values():
-        s.observe(on_slider_change, names="value")
+    for slider in sliders:
+        slider.observe(on_slider_change, names="value")
 
     redraw()  # Initial draw
 
-    controls = ipywidgets.VBox(list(sliders.values()))
+    controls = ipywidgets.VBox(sliders)
 
-    return fig, controls
+    return controls, fig
 
 
-def plot_ebsd_detector_combined_interactive(
+def plot_detector_sample_geometry_top_view_interactive(
+    detector: EBSDDetector,
+    ax: maxes.Axes | None = None,
+    annotate: bool = False,
+    dimensionless: bool = True,
+    **kwargs,
+) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]":
+    """See the docstring of
+    :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view` for
+    details.
+    """
+    verify_dependency_or_raise("ipywidgets", "Interactive detector plots")
+    verify_dependency_or_raise("IPython", "Interactive detector plots")
+
+    import ipywidgets
+
+    detector.pc = detector.pc_average
+    sample_tilt_slider = get_sample_tilt_slider(detector)
+    detector_tilt_slider = get_detector_tilt_slider(detector)
+    azimuthal_slider = get_detector_azimuthal_slider(detector)
+    pcx_slider = get_pcx_slider(detector)
+    pcz_slider = get_pcz_slider(detector)
+    sliders = [
+        sample_tilt_slider,
+        detector_tilt_slider,
+        azimuthal_slider,
+        pcx_slider,
+        pcz_slider,
+    ]
+
+    fig, ax = set_up_figure_axis(ax=ax, **kwargs)
+    ax.set_title("Top view")
+
+    def redraw(*args: Any) -> None:
+        update_detector_sample_geometry_side_view(
+            detector, ax, annotate=annotate, dimensionless=dimensionless
+        )
+        fig.canvas.draw_idle()
+
+    def update_detector_from_sliders():
+        detector.sample_tilt = sample_tilt_slider.value
+        detector.tilt = detector_tilt_slider.value
+        detector.azimuthal = azimuthal_slider.value
+        detector.pcx = pcx_slider.value
+        detector.pcz = pcz_slider.value
+
+    if detector._has_signals:
+        detector._sample_tilt_changed.connect(redraw)
+        detector._tilt_changed.connect(redraw)
+        detector._azimuthal_changed.connect(redraw)
+        detector._pc_changed.connect(redraw)
+
+        def on_slider_change(change: Any = None) -> None:
+            # Block to redraw only once
+            with (
+                detector._sample_tilt_changed.blocked(),
+                detector._tilt_changed.blocked(),
+                detector._azimuthal_changed.blocked(),
+                detector._pc_changed.blocked(),
+            ):
+                update_detector_from_sliders()
+    else:
+
+        def on_slider_change(change: Any = None) -> None:
+            update_detector_from_sliders()
+            redraw()
+
+    for slider in sliders:
+        slider.observe(on_slider_change, names="value")
+
+    redraw()  # Initial draw
+
+    controls = ipywidgets.VBox(sliders)
+
+    return controls, fig
+
+
+def plot_detector_sample_geometry_interactive(
     detector: EBSDDetector,
     inplace: bool = False,
     annotate: bool = False,
@@ -872,8 +920,22 @@ def plot_ebsd_detector_combined_interactive(
         det = detector
     else:
         det = detector.deepcopy()
-    pcx, pcy, pcz = det.pc_average
-    det.pc = [pcx, pcy, pcz]
+    det.pc = det.pc_average
+
+    sample_tilt_slider = get_sample_tilt_slider(detector)
+    detector_tilt_slider = get_detector_tilt_slider(detector)
+    azimuthal_slider = get_detector_azimuthal_slider(detector)
+    pcx_slider = get_pcx_slider(detector)
+    pcy_slider = get_pcy_slider(detector)
+    pcz_slider = get_pcz_slider(detector)
+    sliders = [
+        sample_tilt_slider,
+        detector_tilt_slider,
+        azimuthal_slider,
+        pcx_slider,
+        pcy_slider,
+        pcz_slider,
+    ]
 
     w, h = plt.rcParams["figure.figsize"]
     kwargs.setdefault("layout", "constrained")
@@ -881,14 +943,16 @@ def plot_ebsd_detector_combined_interactive(
     fig = plt.figure(**kwargs)
     ax_side, ax_top, ax_det = fig.subplots(1, 3)
 
-    sliders = make_detector_sliders(det)
-
     def redraw_side(*args: Any) -> None:
-        update_side_view(det, ax_side, annotate=annotate, dimensionless=dimensionless)
+        update_detector_sample_geometry_side_view(
+            det, ax_side, annotate=annotate, dimensionless=dimensionless
+        )
         ax_side.set_title("Side view")
 
     def redraw_top(*args: Any) -> None:
-        update_top_view(det, ax_top, annotate=annotate, dimensionless=dimensionless)
+        update_detector_sample_geometry_top_view(
+            det, ax_top, annotate=annotate, dimensionless=dimensionless
+        )
         ax_top.set_title("Top view")
 
     def redraw_det(*args: Any) -> None:
@@ -902,24 +966,24 @@ def plot_ebsd_detector_combined_interactive(
         fig.canvas.draw_idle()
 
     def update_detector_from_sliders():
-        det.sample_tilt = sliders["sample_tilt"].value
-        det.tilt = sliders["tilt"].value
-        det.azimuthal = sliders["azimuthal"].value
-        det.pc = [sliders["pcx"].value, sliders["pcy"].value, sliders["pcz"].value]
+        det.sample_tilt = sample_tilt_slider.value
+        det.tilt = detector_tilt_slider.value
+        det.azimuthal = azimuthal_slider.value
+        det.pc = [pcx_slider.value, pcy_slider.value, pcz_slider.value]
 
     if det._has_signals:
         det._sample_tilt_changed.connect(redraw_side)
         det._sample_tilt_changed.connect(redraw_top)
-        det._sample_tilt_changed.connect(lambda *a: fig.canvas.draw_idle())
+        det._sample_tilt_changed.connect(lambda *_: fig.canvas.draw_idle())
         det._tilt_changed.connect(redraw_side)
         det._tilt_changed.connect(redraw_top)
-        det._tilt_changed.connect(lambda *a: fig.canvas.draw_idle())
+        det._tilt_changed.connect(lambda *_: fig.canvas.draw_idle())
         det._azimuthal_changed.connect(redraw_top)
-        det._azimuthal_changed.connect(lambda *a: fig.canvas.draw_idle())
+        det._azimuthal_changed.connect(lambda *_: fig.canvas.draw_idle())
         det._pc_changed.connect(redraw_side)
         det._pc_changed.connect(redraw_top)
         det._pc_changed.connect(redraw_det)
-        det._pc_changed.connect(lambda *a: fig.canvas.draw_idle())
+        det._pc_changed.connect(lambda *_: fig.canvas.draw_idle())
 
         def on_slider_change(change: Any = None) -> None:
             with (
@@ -936,12 +1000,12 @@ def plot_ebsd_detector_combined_interactive(
             update_detector_from_sliders()
             redraw_all()
 
-    for s in sliders.values():
-        s.observe(on_slider_change, names="value")
+    for slider in sliders:
+        slider.observe(on_slider_change, names="value")
 
     redraw_all()  # Initial draw
 
-    controls = ipywidgets.VBox(list(sliders.values()))
+    controls = ipywidgets.VBox(sliders)
 
     return fig, controls
 
@@ -960,82 +1024,136 @@ def set_up_figure_axis(
     return fig, ax
 
 
-def make_detector_sliders(
-    detector: EBSDDetector,
-) -> dict[str, "ipywidgets.FloatSlider"]:
-    """Return a dictionary of sliders for the *detector*.
+def get_detector_value_in_range(
+    value: float, vmin: float, vmax: float
+) -> tuple[float, float]:
+    margin = max((vmax - vmin) * 0.1, 0.1)
+    if value < vmin:
+        vmin = value - margin
+    if value > vmax:
+        vmax = value + margin
+    return vmin, vmax
 
-    Requires :mod:`ipywidgets`.
-    """
+
+def get_slider_style() -> dict[str, str]:
+    return {"description_width": "initial"}
+
+
+def get_sample_tilt_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
+    """Return an :mod:`ipywidgets` slider from a *detector*."""
     verify_dependency_or_raise("ipywidgets", "Interactive sliders require")
 
     import ipywidgets
 
-    def get_range(val, default_range):
-        vmin, vmax = default_range
-        margin = max((vmax - vmin) * 0.1, 0.1)
-        if val < vmin:
-            vmin = val - margin
-        if val > vmax:
-            vmax = val + margin
-        return vmin, vmax
+    style = get_slider_style()
+    widget = ipywidgets.FloatSlider(
+        value=detector.sample_tilt,
+        min=0,
+        max=180,
+        step=0.1,
+        description="Sample tilt",
+        style=style,
+    )
 
-    pcx, pcy, pcz = detector.pc_average
-    px_min, px_max = get_range(pcx, (0, 1))
-    py_min, py_max = get_range(pcy, (0, 1))
-    pz_min, pz_max = get_range(pcz, (0, 1))
+    return widget
 
-    style = {"description_width": "initial"}
 
-    sliders = {
-        "sample_tilt": ipywidgets.FloatSlider(
-            value=detector.sample_tilt,
-            min=0,
-            max=180,
-            step=0.1,
-            description="Sample tilt",
-            style=style,
-        ),
-        "tilt": ipywidgets.FloatSlider(
-            value=detector.tilt,
-            min=0,
-            max=180,
-            step=0.1,
-            description="Detector tilt",
-            style=style,
-        ),
-        "pcx": ipywidgets.FloatSlider(
-            value=pcx,
-            min=px_min,
-            max=px_max,
-            step=0.01,
-            description="PCx",
-            style=style,
-        ),
-        "pcy": ipywidgets.FloatSlider(
-            value=pcy,
-            min=py_min,
-            max=py_max,
-            step=0.01,
-            description="PCy",
-            style=style,
-        ),
-        "pcz": ipywidgets.FloatSlider(
-            value=pcz,
-            min=pz_min,
-            max=pz_max,
-            step=0.01,
-            description="PCz",
-            style=style,
-        ),
-        "azimuthal": ipywidgets.FloatSlider(
-            value=detector.azimuthal,
-            min=-180,
-            max=180,
-            step=0.1,
-            description="Azimuthal",
-            style=style,
-        ),
-    }
+def get_detector_tilt_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
+    """Return an :mod:`ipywidgets` slider from a *detector*."""
+    verify_dependency_or_raise("ipywidgets", "Interactive sliders require")
 
-    return sliders
+    import ipywidgets
+
+    style = get_slider_style()
+    widget = ipywidgets.FloatSlider(
+        value=detector.tilt,
+        min=0,
+        max=180,
+        step=0.1,
+        description="Detector tilt",
+        style=style,
+    )
+
+    return widget
+
+
+def get_detector_azimuthal_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
+    """Return an :mod:`ipywidgets` slider from a *detector*."""
+    verify_dependency_or_raise("ipywidgets", "Interactive sliders require")
+
+    import ipywidgets
+
+    style = get_slider_style()
+    widget = ipywidgets.FloatSlider(
+        value=detector.azimuthal,
+        min=-180,
+        max=180,
+        step=0.1,
+        description="Azimuthal",
+        style=style,
+    )
+
+    return widget
+
+
+def get_pcx_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
+    """Return an :mod:`ipywidgets` slider from a *detector*."""
+    verify_dependency_or_raise("ipywidgets", "Interactive sliders require")
+
+    import ipywidgets
+
+    pcx = detector.pc_average[0]
+    pcx_min, pcx_max = get_detector_value_in_range(pcx, 0, 1)
+    style = get_slider_style()
+    widget = ipywidgets.FloatSlider(
+        value=pcx,
+        min=pcx_min,
+        max=pcx_max,
+        step=0.01,
+        description="PCx",
+        style=style,
+    )
+
+    return widget
+
+
+def get_pcy_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
+    """Return an :mod:`ipywidgets` slider from a *detector*."""
+    verify_dependency_or_raise("ipywidgets", "Interactive sliders require")
+
+    import ipywidgets
+
+    pcy = detector.pc_average[1]
+    pcy_min, pcy_max = get_detector_value_in_range(pcy, 0, 1)
+    style = get_slider_style()
+    widget = ipywidgets.FloatSlider(
+        value=pcy,
+        min=pcy_min,
+        max=pcy_max,
+        step=0.01,
+        description="PCy",
+        style=style,
+    )
+
+    return widget
+
+
+def get_pcz_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
+    """Return an :mod:`ipywidgets` slider from a *detector*."""
+    verify_dependency_or_raise("ipywidgets", "Interactive sliders require")
+
+    import ipywidgets
+
+    pcz = detector.pc_average[2]
+    pcz_min, pcz_max = get_detector_value_in_range(pcz, 0, 1)
+    style = get_slider_style()
+    widget = ipywidgets.FloatSlider(
+        value=pcz,
+        min=pcz_min,
+        max=pcz_max,
+        step=0.01,
+        description="PCz",
+        style=style,
+    )
+
+    return widget

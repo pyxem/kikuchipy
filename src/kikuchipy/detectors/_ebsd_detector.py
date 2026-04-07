@@ -1790,6 +1790,12 @@ class EBSDDetector:
         -------
         fig
             Matplotlib figure instance, if *return_figure* is True.
+
+        See Also
+        --------
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
         """
         from kikuchipy.draw._plot_ebsd_detector import plot_ebsd_detector
 
@@ -1821,6 +1827,7 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         annotate: bool = False,
         dimensionless: bool = True,
+        interactive: Literal[False] = False,
         return_figure: Literal[False] = False,
         **kwargs,
     ) -> None: ...
@@ -1831,23 +1838,46 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         annotate: bool = False,
         dimensionless: bool = True,
+        interactive: Literal[True] = True,
+        return_figure: Literal[False] = False,
+        **kwargs,
+    ) -> "ipywidgets.VBox": ...
+
+    @overload
+    def plot_side_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        interactive: Literal[False] = False,
         return_figure: Literal[True] = True,
         **kwargs,
     ) -> "mfigure.Figure | mfigure.SubFigure": ...
+
+    @overload
+    def plot_side_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        interactive: Literal[True] = True,
+        return_figure: Literal[True] = True,
+        **kwargs,
+    ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
 
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
         annotate: bool = False,
         dimensionless: bool = True,
+        interactive: bool = False,
         return_figure: bool = False,
         **kwargs,
-    ) -> "mfigure.Figure | mfigure.SubFigure | None":
+    ) -> "None | ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure] | mfigure.Figure | mfigure.SubFigure":
         r"""Plot the EBSD detector-sample geometry in a 2D side-view.
 
         The view is looking down the microscope Z axis and shows the
-        X-Y plane. This is the view in which the detector azimuthal
-        angle :math:`\omega` is visible. The effect of
+        X-Y plane.
 
         Parameters
         ----------
@@ -1861,6 +1891,21 @@ class EBSDDetector:
             Whether to ignore the
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
             drawing the plot axes. Default is True.
+        interactive
+            Whether to return slider controls to interactively vary the
+            relevant detector-sample geometry parameters in the
+            side-view. Default is False. If True, the detector is varied
+            inplace. Requires that :mod:`ipywidgets` is installed. If
+            :mod:`psygnal` is installed, the plot is driven by signals
+            emitted from the detector property setters.
+
+            The following attributes can be varied:
+
+            - :attr:`pc`
+            - :attr:`sample_tilt`
+            - :attr:`tilt`
+
+            The remaining attributes are ignored.
         return_figure
             Whether to return the figure. Default is False.
         **kwargs
@@ -1869,23 +1914,44 @@ class EBSDDetector:
 
         Returns
         -------
+        controls
+            The slider controls. Must be displayed using IPython.
         fig
             Figure showing the detector-sample geometry.
+
+        See Also
+        --------
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
         """
         from kikuchipy.draw._plot_ebsd_detector import (
-            plot_ebsd_detector_geometry_side_view,
+            plot_detector_sample_geometry_side_view,
+            plot_detector_sample_geometry_side_view_interactive,
         )
 
-        fig = plot_ebsd_detector_geometry_side_view(
-            detector=self,
-            ax=ax,
-            annotate=annotate,
-            dimensionless=dimensionless,
-            **kwargs,
-        )
-
-        if return_figure:
-            return fig
+        if interactive:
+            controls, fig = plot_detector_sample_geometry_side_view_interactive(
+                detector=self,
+                ax=ax,
+                annotate=annotate,
+                dimensionless=dimensionless,
+                **kwargs,
+            )
+            if return_figure:
+                return controls, fig
+            else:
+                return controls
+        else:
+            fig = plot_detector_sample_geometry_side_view(
+                detector=self,
+                ax=ax,
+                annotate=annotate,
+                dimensionless=dimensionless,
+                **kwargs,
+            )
+            if return_figure:
+                return fig
 
     @overload
     def plot_top_view(
@@ -1893,6 +1959,7 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         annotate: bool = False,
         dimensionless: bool = True,
+        interactive: bool = False,
         return_figure: Literal[False] = False,
         **kwargs,
     ) -> None: ...
@@ -1903,18 +1970,42 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         annotate: bool = False,
         dimensionless: bool = True,
+        interactive: bool = False,
         return_figure: Literal[True] = True,
         **kwargs,
     ) -> "mfigure.Figure | mfigure.SubFigure": ...
+
+    @overload
+    def plot_top_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        interactive: Literal[True] = True,
+        return_figure: bool = False,
+        **kwargs,
+    ) -> "ipywidgets.VBox": ...
+
+    @overload
+    def plot_top_view(
+        self,
+        ax: "maxes.Axes | None" = None,
+        annotate: bool = False,
+        dimensionless: bool = True,
+        interactive: Literal[True] = True,
+        return_figure: Literal[True] = True,
+        **kwargs,
+    ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
 
     def plot_top_view(
         self,
         ax: "maxes.Axes | None" = None,
         annotate: bool = False,
         dimensionless: bool = True,
+        interactive: bool = False,
         return_figure: bool = False,
         **kwargs,
-    ) -> "mfigure.Figure | mfigure.SubFigure | None":
+    ) -> "None | ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure] | mfigure.Figure | mfigure.SubFigure":
         r"""Plot the EBSD detector-sample geometry in a 2D top-view.
 
         The view is looking down the microscope Z axis and shows the
@@ -1933,6 +2024,21 @@ class EBSDDetector:
             Whether to ignore the
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
             drawing the plot axes. Default is True.
+        interactive
+            Whether to return slider controls to interactively vary the
+            relevant detector-sample geometry parameters in the
+            top-view. Default is False. If True, the detector is varied
+            inplace. Requires that :mod:`ipywidgets` is installed. If
+            :mod:`psygnal` is installed, the plot is driven by signals
+            emitted from the detector property setters.
+
+            The following attributes can be varied:
+
+            - :attr:`pc`
+            - :attr:`azimuthal`
+            - :attr:`tilt`
+
+            The remaining attributes are ignored.
         return_figure
             Whether to return the figure. Default is False.
         **kwargs
@@ -1943,109 +2049,40 @@ class EBSDDetector:
         -------
         fig
             Figure showing the detector-sample geometry from the top.
-        """
-        from kikuchipy.draw._plot_ebsd_detector import (
-            plot_ebsd_detector_geometry_top_view,
-        )
-
-        fig = plot_ebsd_detector_geometry_top_view(
-            detector=self,
-            ax=ax,
-            annotate=annotate,
-            dimensionless=dimensionless,
-            **kwargs,
-        )
-
-        if return_figure:
-            return fig
-
-    @overload
-    def plot_side_view_interactive(
-        self,
-        inplace: bool = False,
-        ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
-        dimensionless: bool = True,
-        return_figure: Literal[False] = False,
-        **kwargs,
-    ) -> "ipywidgets.VBox": ...
-
-    @overload
-    def plot_side_view_interactive(
-        self,
-        inplace: bool = False,
-        ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
-        dimensionless: bool = True,
-        return_figure: Literal[True] = True,
-        **kwargs,
-    ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
-
-    def plot_side_view_interactive(
-        self,
-        inplace: bool = False,
-        ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
-        dimensionless: bool = True,
-        return_figure: bool = False,
-        **kwargs,
-    ) -> "ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]":
-        """Plot the EBSD detector-sample geometry in a 2D side-view
-        with controls for changing the sample and detector tilts and the
-        projection center coordinates.
-
-        Parameters
-        ----------
-        inplace
-            Whether the interactive changes affect the detector inplace.
-            Default is False.
-        ax
-            The Matplotlib axis to plot in. If not given, a new figure
-            and axis are created.
-        annotate
-            Whether to annotate the various components of the geometry.
-            Default is False.
-        dimensionless
-            Whether to ignore the
-            :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
-            drawing the plot axes. Default is True.
-        return_figure
-            Whether to return the figure. Default is False.
-        **kwargs
-            Keyword arguments passed to
-            :func:`~matplotlib.pyplot.figure` if *ax* is not given.
-
-        Returns
-        -------
-        widgets
-            The widget containing the sliders. Required to display the
-            interactive controls.
 
         See Also
         --------
-        plot_side_view
-
-        Notes
-        -----
-        Requires that :mod:`ipywidgets` is installed.
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
         """
         from kikuchipy.draw._plot_ebsd_detector import (
-            plot_ebsd_detector_geometry_side_view_interactive,
+            plot_detector_sample_geometry_top_view,
+            plot_detector_sample_geometry_top_view_interactive,
         )
 
-        fig, widgets = plot_ebsd_detector_geometry_side_view_interactive(
-            detector=self,
-            inplace=inplace,
-            ax=ax,
-            annotate=annotate,
-            dimensionless=dimensionless,
-            **kwargs,
-        )
-
-        if return_figure:
-            return widgets, fig
+        if interactive:
+            controls, fig = plot_detector_sample_geometry_top_view_interactive(
+                detector=self,
+                ax=ax,
+                annotate=annotate,
+                dimensionless=dimensionless,
+                **kwargs,
+            )
+            if return_figure:
+                return controls, fig
+            else:
+                return controls
         else:
-            return widgets
+            fig = plot_detector_sample_geometry_top_view(
+                detector=self,
+                ax=ax,
+                annotate=annotate,
+                dimensionless=dimensionless,
+                **kwargs,
+            )
+            if return_figure:
+                return fig
 
     @overload
     def plot_interactive(
@@ -2119,8 +2156,7 @@ class EBSDDetector:
         --------
         :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view_interactive`
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`
 
         Notes
         -----
@@ -2139,10 +2175,10 @@ class EBSDDetector:
         sliders will not affect the sliders.
         """
         from kikuchipy.draw._plot_ebsd_detector import (
-            plot_ebsd_detector_combined_interactive,
+            plot_detector_sample_geometry_interactive,
         )
 
-        fig, widgets = plot_ebsd_detector_combined_interactive(
+        fig, widgets = plot_detector_sample_geometry_interactive(
             detector=self,
             inplace=inplace,
             annotate=annotate,
@@ -2222,9 +2258,6 @@ class EBSDDetector:
         -------
         fig
             Figure is returned if *return_figure* is True.
-
-        See Also
-        --------
         """
         from kikuchipy.draw._plot_ebsd_detector import plot_all_projection_centers
 
