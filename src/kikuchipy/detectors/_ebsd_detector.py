@@ -1825,7 +1825,7 @@ class EBSDDetector:
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: Literal[False] = False,
         return_figure: Literal[False] = False,
@@ -1836,7 +1836,7 @@ class EBSDDetector:
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: Literal[True] = True,
         return_figure: Literal[False] = False,
@@ -1847,7 +1847,7 @@ class EBSDDetector:
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: Literal[False] = False,
         return_figure: Literal[True] = True,
@@ -1858,7 +1858,7 @@ class EBSDDetector:
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: Literal[True] = True,
         return_figure: Literal[True] = True,
@@ -1868,7 +1868,7 @@ class EBSDDetector:
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: bool = False,
         return_figure: bool = False,
@@ -1884,8 +1884,8 @@ class EBSDDetector:
         ax
             The Matplotlib axis to plot in. If not given, a new figure
             and axis are created.
-        annotate
-            Whether to annotate the various components of the geometry.
+        legend
+            Whether to show a legend in the upper right corner.
             Default is False.
         dimensionless
             Whether to ignore the
@@ -1901,9 +1901,9 @@ class EBSDDetector:
 
             The following attributes can be varied:
 
-            - :attr:`pc`
             - :attr:`sample_tilt`
             - :attr:`tilt`
+            - :attr:`pcy` and :attr:`pcz`
 
             The remaining attributes are ignored.
         return_figure
@@ -1934,7 +1934,7 @@ class EBSDDetector:
             controls, fig = plot_detector_sample_geometry_side_view_interactive(
                 detector=self,
                 ax=ax,
-                annotate=annotate,
+                legend=legend,
                 dimensionless=dimensionless,
                 **kwargs,
             )
@@ -1946,7 +1946,7 @@ class EBSDDetector:
             fig = plot_detector_sample_geometry_side_view(
                 detector=self,
                 ax=ax,
-                annotate=annotate,
+                legend=legend,
                 dimensionless=dimensionless,
                 **kwargs,
             )
@@ -1957,7 +1957,7 @@ class EBSDDetector:
     def plot_top_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: bool = False,
         return_figure: Literal[False] = False,
@@ -1968,7 +1968,7 @@ class EBSDDetector:
     def plot_top_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: bool = False,
         return_figure: Literal[True] = True,
@@ -1979,7 +1979,7 @@ class EBSDDetector:
     def plot_top_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: Literal[True] = True,
         return_figure: bool = False,
@@ -1990,7 +1990,7 @@ class EBSDDetector:
     def plot_top_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: Literal[True] = True,
         return_figure: Literal[True] = True,
@@ -2000,7 +2000,7 @@ class EBSDDetector:
     def plot_top_view(
         self,
         ax: "maxes.Axes | None" = None,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         interactive: bool = False,
         return_figure: bool = False,
@@ -2017,8 +2017,8 @@ class EBSDDetector:
         ax
             The Matplotlib axis to plot in. If not given, a new figure
             and axis are created.
-        annotate
-            Whether to annotate the various components of the geometry.
+        legend
+            Whether to show a legend in the upper right corner.
             Default is False.
         dimensionless
             Whether to ignore the
@@ -2034,8 +2034,8 @@ class EBSDDetector:
 
             The following attributes can be varied:
 
-            - :attr:`pcx` and :attr:`pcz`
             - :attr:`azimuthal`
+            - :attr:`pcx` and :attr:`pcz`
 
             The remaining attributes are ignored.
         return_figure
@@ -2064,7 +2064,7 @@ class EBSDDetector:
             controls, fig = plot_detector_sample_geometry_top_view_interactive(
                 detector=self,
                 ax=ax,
-                annotate=annotate,
+                legend=legend,
                 dimensionless=dimensionless,
                 **kwargs,
             )
@@ -2076,7 +2076,7 @@ class EBSDDetector:
             fig = plot_detector_sample_geometry_top_view(
                 detector=self,
                 ax=ax,
-                annotate=annotate,
+                legend=legend,
                 dimensionless=dimensionless,
                 **kwargs,
             )
@@ -2087,7 +2087,7 @@ class EBSDDetector:
     def plot_interactive(
         self,
         inplace: bool = True,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "detector",
         zoom: float = 1.0,
@@ -2099,7 +2099,7 @@ class EBSDDetector:
     def plot_interactive(
         self,
         inplace: bool = True,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "detector",
         zoom: float = 1.0,
@@ -2110,7 +2110,7 @@ class EBSDDetector:
     def plot_interactive(
         self,
         inplace: bool = True,
-        annotate: bool = False,
+        legend: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "detector",
         zoom: float = 1.0,
@@ -2125,9 +2125,9 @@ class EBSDDetector:
         inplace
             Whether the interactive changes affect the detector inplace.
             Default is True.
-        annotate
-            Whether to annotate the side-view components. Default is
-            False.
+        legend
+            Whether to show a legend in the upper right corner of the
+            side and top view plots. Default is False.
         dimensionless
             Whether to ignore the
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
@@ -2180,7 +2180,7 @@ class EBSDDetector:
         fig, widgets = plot_detector_sample_geometry_interactive(
             detector=self,
             inplace=inplace,
-            annotate=annotate,
+            legend=legend,
             dimensionless=dimensionless,
             coords_fmt=coordinates,
             zoom=zoom,

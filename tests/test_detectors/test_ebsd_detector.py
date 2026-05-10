@@ -551,8 +551,8 @@ class TestEBSDDetector:
             kwargs["coordinates"] = coordinates
         fig = detector.plot(**kwargs)
         ax = fig.axes[0]
-        assert ax.get_xlabel() == f"x {desired_label}"
-        assert ax.get_ylabel() == f"y {desired_label}"
+        assert ax.get_xlabel() == f"{desired_label.capitalize()} X"
+        assert ax.get_ylabel() == f"{desired_label.capitalize()} Y"
         if isinstance(pattern, np.ndarray):
             assert np.allclose(ax.get_images()[0].get_array(), pattern)
         plt.close("all")
@@ -788,18 +788,17 @@ class TestPlotDetector:
         fig1 = det.plot_side_view(return_figure=True)
         ax1 = fig1.axes[0]
         line_labels = [line.get_label() for line in ax1.lines]
-        for expected_label in ["Sample", "PC", "Detector"]:
-            assert expected_label in line_labels
+        assert all(expected in line_labels for expected in ["Sample", "Detector"])
+        assert "PC" in [coll.get_label() for coll in ax1.collections]
         assert len(ax1.texts) == 1
         assert ax1.get_xlabel() == "Microscope Y"
         assert ax1.get_ylabel() == "Microscope Z"
 
         fig2 = plt.figure()
         ax2 = fig2.add_subplot()
-        det.plot_side_view(ax=ax2, annotate=True, dimensionless=False)
-        annotation_labels = [text.get_label() for text in ax2.texts]
-        for expected_annotation_prefix in ["sample", "beam", "detector", "pc"]:
-            assert f"{expected_annotation_prefix}_annotation" in annotation_labels
+        det.plot_side_view(ax=ax2, legend=True, dimensionless=False)
+        legend = fig2.legend()
+        assert len(legend.legend_handles) == 3
         assert ax2.get_xlabel() == "Microscope Y [mm]"
         assert ax2.get_ylabel() == "Microscope Z [mm]"
 

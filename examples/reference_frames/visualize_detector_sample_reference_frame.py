@@ -18,27 +18,20 @@
 #
 
 """
-==================================
-Detector-sample geometry side-view
-==================================
+==============================
+Detector-sample geometry views
+==============================
 
 This example shows how to view the detector-sample geometry using the
 :class:`~kikuchipy.detectors.EBSDDetector`.
 This can be useful when understanding the geometry and the definition of the detector
 parameters.
-
-.. note::
-
-    This example only shows the side-view.
-    It ignores the detector :attr:`~kikuchipy.detectors.EBSDDetector.azimuthal` and
-    :attr:`~kikuchipy.detectors.EBSDDetector.twist`.
 """
 
 # %%
 # Imports and some reusable functions.
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 import kikuchipy as kp
 
@@ -59,55 +52,49 @@ def pc_string(detector: kp.detectors.EBSDDetector) -> str:
 
 # %%
 # Get the default detector.
-det1 = kp.detectors.EBSDDetector()
+det1 = kp.detectors.EBSDDetector(shape=(60, 60))
 print(det1)
 
 # %%
 # And view the detector-sample geometry.
-fig = det1.plot_side_view(annotate=True, return_figure=True)
+fig = det1.plot_side_view(legend=True, return_figure=True)
 _ = fig.suptitle(f"Default detector-sample geometry\n{tilt_string(det1)}")
 
 # %%
 # Changing sample tilt
 # ====================
 
-det2 = kp.detectors.EBSDDetector()
+det2 = kp.detectors.EBSDDetector(shape=(60, 60))
 
-sample_tilts = np.linspace(0, 90, num=9)
-nrows = 3
-ncols = int(np.ceil(sample_tilts.size / nrows))
+fig = plt.figure(figsize=(9, 6), layout="constrained")
+for i, stilt in enumerate([0, 45, 90]):
+    det2.sample_tilt = stilt
 
-fig = plt.figure(figsize=(3 * ncols, 3 * nrows), layout="constrained")
-for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
-    if i > sample_tilts.size - 1:
-        break
+    ax1 = fig.add_subplot(2, 3, i + 1)
+    ax1.set_title("Side view\n" + tilt_string(det2))
+    det2.plot_side_view(ax=ax1)
 
-    det2.sample_tilt = sample_tilts[i]
-
-    ax = fig.add_subplot(nrows, ncols, i + 1)
-    ax.set_title(tilt_string(det2))
-    det2.plot_side_view(ax=ax)
+    ax2 = fig.add_subplot(2, 3, i + 4)
+    ax2.set_title("Top view")
+    det2.plot_top_view(ax=ax2)
 
 # %%
 # Changing detector tilt
 # ======================
 
-det3 = kp.detectors.EBSDDetector()
+det3 = kp.detectors.EBSDDetector(shape=(60, 60))
 
-detector_tilts = np.linspace(0, 90, num=9)
-nrows = 3
-ncols = int(np.ceil(detector_tilts.size / nrows))
+fig = plt.figure(figsize=(9, 6), layout="constrained")
+for i, tilt in enumerate([0, 45, 90]):
+    det3.tilt = tilt
 
-fig = plt.figure(figsize=(3 * ncols, 3 * nrows), layout="constrained")
-for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
-    if i > detector_tilts.size - 1:
-        break
+    ax1 = fig.add_subplot(2, 3, i + 1)
+    ax1.set_title("Side view\n" + tilt_string(det3))
+    det3.plot_side_view(ax=ax1)
 
-    det3.tilt = detector_tilts[i]
-
-    ax = fig.add_subplot(nrows, ncols, i + 1)
-    ax.set_title(tilt_string(det3))
-    det3.plot_side_view(ax=ax)
+    ax2 = fig.add_subplot(2, 3, i + 4)
+    ax2.set_title("Top view")
+    det3.plot_top_view(ax=ax2)
 
 # %%
 # Changing sample and detector tilts
@@ -116,24 +103,23 @@ for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
 # Let's start with the sample tilt at :math:`\sigma = 90^{\circ}` and then decrease it
 # while increasing the detector tilt :math:`\theta` in steps of :math:`10^{\circ}`.
 
-det4 = kp.detectors.EBSDDetector()
+det4 = kp.detectors.EBSDDetector(shape=(60, 60))
 
-sample_tilts = np.linspace(90, 0, num=9)
-detector_tilts = np.linspace(0, 90, num=9)
-nrows = 3
-ncols = int(np.ceil(detector_tilts.size / nrows))
+sample_tilts = [90, 45, 0]
+detector_tilts = sample_tilts[::-1]
 
-fig = plt.figure(figsize=(3 * ncols, 3 * nrows), layout="constrained")
-for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
-    if i > detector_tilts.size - 1:
-        break
+fig = plt.figure(figsize=(9, 6), layout="constrained")
+for i, (stilt, tilt) in enumerate(zip(sample_tilts, detector_tilts)):
+    det4.sample_tilt = stilt
+    det4.tilt = tilt
 
-    det4.sample_tilt = sample_tilts[i]
-    det4.tilt = detector_tilts[i]
+    ax1 = fig.add_subplot(2, 3, i + 1)
+    ax1.set_title("Side view\n" + tilt_string(det4))
+    det4.plot_side_view(ax=ax1)
 
-    ax = fig.add_subplot(nrows, ncols, i + 1)
-    ax.set_title(tilt_string(det4))
-    det4.plot_side_view(ax=ax)
+    ax2 = fig.add_subplot(2, 3, i + 4)
+    ax2.set_title("Top view")
+    det4.plot_top_view(ax=ax2)
 
 # %%
 # Changing projection center
@@ -141,10 +127,26 @@ for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
 #
 # See the documentation for the :class:`~kikuchipy.detectors.EBSDDetector` for a
 # definition of the projection center (PC).
+
+# %%
+# Changing PCx
+# ------------
 #
-# Since we're looking at the geometry in side-view along the microscope X, which is
-# parallel to the detector X (and since we keep the detector azimuthal angle
-# :math:`0^{\circ}`), a change in the PCx won't show.
+# Vary PCx from :math:`0 \rightarrow 1` (top :math:`\rightarrow` bottom).
+
+det5 = kp.detectors.EBSDDetector(shape=(60, 60))
+
+fig = plt.figure(figsize=(9, 6), layout="constrained")
+for i, pcx in enumerate([0, 0.5, 1]):
+    det5.pcx = pcx
+
+    ax1 = fig.add_subplot(2, 3, i + 1)
+    ax1.set_title("Side view\n" + pc_string(det5))
+    det5.plot_side_view(ax=ax1)
+
+    ax2 = fig.add_subplot(2, 3, i + 4)
+    ax2.set_title("Top view")
+    det5.plot_top_view(ax=ax2)
 
 # %%
 # Changing PCy
@@ -152,22 +154,19 @@ for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
 #
 # Vary PCy from :math:`0 \rightarrow 1` (top :math:`\rightarrow` bottom).
 
-det5 = kp.detectors.EBSDDetector()
+det6 = kp.detectors.EBSDDetector(shape=(60, 60))
 
-pcy = np.linspace(0, 1, num=9)
-nrows = 3
-ncols = int(np.ceil(pcy.size / nrows))
+fig = plt.figure(figsize=(9, 6), layout="constrained")
+for i, pcy in enumerate([0, 0.5, 1]):
+    det6.pcy = pcy
 
-fig = plt.figure(figsize=(3 * ncols, 3 * nrows), layout="constrained")
-for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
-    if i > pcy.size - 1:
-        break
+    ax1 = fig.add_subplot(2, 3, i + 1)
+    ax1.set_title("Side view\n" + pc_string(det6))
+    det6.plot_side_view(ax=ax1)
 
-    det5.pcy = pcy[i]
-
-    ax = fig.add_subplot(nrows, ncols, i + 1)
-    ax.set_title(pc_string(det5))
-    det5.plot_side_view(ax=ax)
+    ax2 = fig.add_subplot(2, 3, i + 4)
+    ax2.set_title("Top view")
+    det6.plot_top_view(ax=ax2)
 
 # %%
 # Changing PCz
@@ -175,28 +174,25 @@ for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
 #
 # Vary PCz from :math:`0.2 \rightarrow 1` (increasing distance from the detector)
 
-det6 = kp.detectors.EBSDDetector(px_size=560)
+det7 = kp.detectors.EBSDDetector(shape=(60, 60), px_size=560)
 
-pcz = np.linspace(0.2, 1, num=9)
-nrows = 3
-ncols = int(np.ceil(pcz.size / nrows))
+fig = plt.figure(figsize=(9, 6), layout="constrained")
+for i, pcz in enumerate([0.2, 0.6, 1]):
+    det7.pcz = pcz
 
-fig = plt.figure(figsize=(3 * ncols, 3 * nrows), layout="tight")
-for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
-    if i > pcz.size - 1:
-        break
+    ax1 = fig.add_subplot(2, 3, i + 1)
+    ax1.set_title("Side view\n" + pc_string(det7))
+    det7.plot_side_view(ax=ax1)
 
-    det6.pcz = pcz[i]
-
-    ax = fig.add_subplot(nrows, ncols, i + 1)
-    ax.set_title(pc_string(det6))
-    det6.plot_side_view(ax=ax)
+    ax2 = fig.add_subplot(2, 3, i + 4)
+    ax2.set_title("Top view")
+    det7.plot_top_view(ax=ax2)
 
 # %%
 # Interactive changes
 # ===================
 #
-# We can also change the sample and detector tilts and the PC values interactively.
+# We can also show both views at the same time and change all parameters interactively.
 #
 # .. note::
 #
@@ -206,6 +202,7 @@ for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
 # The default behavior is not to affect the detector.
 # Here, we want the changes to affect the detector inplace.
 
-det6.plot_side_view(interactive=True)
+det8 = kp.detectors.EBSDDetector(shape=(60, 60))
+_, fig = det8.plot_interactive(figsize=(9, 3), legend=True, return_figure=True)
 
 plt.show()

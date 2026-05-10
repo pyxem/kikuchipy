@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import matplotlib.axes as maxes
 import matplotlib.figure as mfigure
+import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -71,13 +72,13 @@ def plot_ebsd_detector(
         pcy *= sy - 1
         pcx *= sx - 1
         bounds[2:] = bounds[2:][::-1]
-        x_label = "x detector"
-        y_label = "y detector"
+        x_label = "Detector X"
+        y_label = "Detector Y"
     else:
         pcy, pcx = (0, 0)
         bounds = detector._average_gnomonic_bounds
-        x_label = "x gnomonic"
-        y_label = "y gnomonic"
+        x_label = "Gnomonic X"
+        y_label = "Gnomonic Y"
 
     fig, axis = set_up_figure_axis(ax=ax)
     axis.axis(zoom * bounds)
@@ -358,7 +359,7 @@ def plot_all_projection_centers_in_3d(
 def plot_detector_sample_geometry_side_view(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
-    annotate: bool = False,
+    legend: bool = False,
     dimensionless: bool = False,
     **kwargs,
 ) -> mfigure.Figure | mfigure.SubFigure:
@@ -432,6 +433,15 @@ def plot_detector_sample_geometry_side_view(
         label="Sample",
         zorder=4,
     )
+    ax.scatter(
+        pc_pos[0],
+        pc_pos[1],
+        marker="+",
+        s=200,
+        fc=PC_COLOR,
+        label="PC",
+        zorder=5,
+    )
     ax.plot(
         [detector_start[0], detector_end[0]],
         [detector_start[1], detector_end[1]],
@@ -439,16 +449,6 @@ def plot_detector_sample_geometry_side_view(
         lw=4,
         label="Detector",
         zorder=4,
-    )
-    ax.plot(
-        pc_pos[0],
-        pc_pos[1],
-        marker="+",
-        ms=15,
-        mec=PC_COLOR,
-        linestyle="None",
-        label="PC",
-        zorder=5,
     )
     ax.plot(
         [source_pos[0], pc_pos[0]],
@@ -468,40 +468,11 @@ def plot_detector_sample_geometry_side_view(
     ax.set_xlim(pad, -pad)
     ax.set_ylim(-pad, pad)
 
-    if annotate:
-        ax.text(
-            beam_start[0],
-            beam_start[1],
-            "Beam",
-            ha="center",
-            va="bottom",
-            label="beam_annotation",
-        )
-        ax.text(
-            sample_start[0],
-            sample_start[1],
-            "Sample",
-            ha="right",
-            va="center",
-            label="sample_annotation",
-        )
-        ax.annotate(
-            "Detector",
-            xy=(detector_start[0], detector_start[1]),
-            xytext=(0, -12),
-            textcoords="offset points",
-            ha="center",
-            va="top",
-            label="detector_annotation",
-        )
-        ax.annotate(
-            "PC",
-            xy=(pc_pos[0], pc_pos[1]),
-            xytext=(5, 5),
-            textcoords="offset points",
-            ha="left",
-            va="bottom",
-            label="pc_annotation",
+    if legend:
+        beam_handle = mlines.Line2D([], [], color=BEAM_COLOR, label="Beam")
+        ax.legend(
+            handles=[beam_handle, *ax.get_legend_handles_labels()[0]],
+            loc="best",
         )
 
     if dimensionless:
@@ -519,20 +490,20 @@ def plot_detector_sample_geometry_side_view(
 def update_detector_sample_geometry_side_view(
     detector: EBSDDetector,
     ax: maxes.Axes,
-    annotate: bool = False,
+    legend: bool = False,
     dimensionless: bool = True,
 ) -> None:
     """Clear *ax* and redraw the side view for *detector*."""
     ax.clear()
     plot_detector_sample_geometry_side_view(
-        detector, ax=ax, annotate=annotate, dimensionless=dimensionless
+        detector, ax=ax, legend=legend, dimensionless=dimensionless
     )
 
 
 def plot_detector_sample_geometry_top_view(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
-    annotate: bool = False,
+    legend: bool = False,
     dimensionless: bool = False,
     **kwargs,
 ) -> mfigure.Figure | mfigure.SubFigure:
@@ -577,12 +548,13 @@ def plot_detector_sample_geometry_top_view(
 
     to_mm = 1e-3
 
-    ax.plot(
+    ax.scatter(
         beam[0] * to_mm,
         beam[1] * to_mm,
         marker="o",
-        ms=8,
-        color=BEAM_COLOR,
+        s=70,
+        fc=BEAM_COLOR,
+        ec="k",
         zorder=5,
         label="Beam",
     )
@@ -594,6 +566,15 @@ def plot_detector_sample_geometry_top_view(
         label="Sample",
         zorder=4,
     )
+    ax.scatter(
+        pc_pos[0] * to_mm,
+        pc_pos[1] * to_mm,
+        marker="+",
+        s=200,
+        fc=PC_COLOR,
+        label="PC",
+        zorder=5,
+    )
     ax.plot(
         [det_left[0] * to_mm, det_right[0] * to_mm],
         [det_left[1] * to_mm, det_right[1] * to_mm],
@@ -601,16 +582,6 @@ def plot_detector_sample_geometry_top_view(
         lw=4,
         label="Detector",
         zorder=4,
-    )
-    ax.plot(
-        pc_pos[0] * to_mm,
-        pc_pos[1] * to_mm,
-        marker="+",
-        ms=15,
-        mec=PC_COLOR,
-        linestyle="None",
-        label="PC",
-        zorder=5,
     )
     ax.plot(
         [beam[0] * to_mm, pc_pos[0] * to_mm],
@@ -628,41 +599,8 @@ def plot_detector_sample_geometry_top_view(
     ax.set_xlim(pad, -pad)
     ax.set_ylim(pad, -pad)
 
-    if annotate:
-        ax.text(
-            beam[0] * to_mm,
-            beam[1] * to_mm,
-            " Beam",
-            ha="left",
-            va="bottom",
-            label="beam_annotation",
-        )
-        ax.text(
-            sample_end[0] * to_mm,
-            sample_end[1] * to_mm,
-            " Sample",
-            ha="left",
-            va="center",
-            label="sample_annotation",
-        )
-        ax.annotate(
-            "Detector",
-            xy=(pc_pos[0] * to_mm, pc_pos[1] * to_mm),
-            xytext=(0, -12),
-            textcoords="offset points",
-            ha="center",
-            va="top",
-            label="detector_annotation",
-        )
-        ax.annotate(
-            "PC",
-            xy=(pc_pos[0] * to_mm, pc_pos[1] * to_mm),
-            xytext=(5, 5),
-            textcoords="offset points",
-            ha="left",
-            va="bottom",
-            label="pc_annotation",
-        )
+    if legend:
+        ax.legend(loc="best")
 
     if dimensionless:
         ax.xaxis.set_ticks([])
@@ -670,8 +608,8 @@ def plot_detector_sample_geometry_top_view(
         unit = ""
     else:
         unit = " [mm]"
-    ax.set_xlabel(f"x microscope{unit}")
-    ax.set_ylabel(f"y microscope{unit}")
+    ax.set_xlabel(f"Microscope X{unit}")
+    ax.set_ylabel(f"Microscope Y{unit}")
 
     return fig
 
@@ -688,13 +626,13 @@ def get_axis_limit_pad(width: float) -> float:
 def update_detector_sample_geometry_top_view(
     detector: EBSDDetector,
     ax: maxes.Axes,
-    annotate: bool = False,
+    legend: bool = False,
     dimensionless: bool = True,
 ) -> None:
     """Clear *ax* and redraw the top view for *detector*."""
     ax.clear()
     plot_detector_sample_geometry_top_view(
-        detector, ax=ax, annotate=annotate, dimensionless=dimensionless
+        detector, ax=ax, legend=legend, dimensionless=dimensionless
     )
 
 
@@ -724,7 +662,7 @@ def update_detector_plane(
 def plot_detector_sample_geometry_side_view_interactive(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
-    annotate: bool = False,
+    legend: bool = False,
     dimensionless: bool = True,
     **kwargs,
 ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]":
@@ -740,13 +678,11 @@ def plot_detector_sample_geometry_side_view_interactive(
     detector.pc = detector.pc_average
     sample_tilt_slider = get_sample_tilt_slider(detector)
     detector_tilt_slider = get_detector_tilt_slider(detector)
-    azimuthal_slider = get_detector_azimuthal_slider(detector)
     pcy_slider = get_pcy_slider(detector)
     pcz_slider = get_pcz_slider(detector)
     sliders = [
         sample_tilt_slider,
         detector_tilt_slider,
-        azimuthal_slider,
         pcy_slider,
         pcz_slider,
     ]
@@ -756,22 +692,17 @@ def plot_detector_sample_geometry_side_view_interactive(
 
     def redraw(*args: Any) -> None:
         update_detector_sample_geometry_side_view(
-            detector, ax, annotate=annotate, dimensionless=dimensionless
+            detector, ax, legend=legend, dimensionless=dimensionless
         )
         fig.canvas.draw_idle()
 
     def update_detector_from_sliders():
         detector.sample_tilt = sample_tilt_slider.value
         detector.tilt = detector_tilt_slider.value
-        detector.azimuthal = azimuthal_slider.value
         detector.pcy = pcy_slider.value
         detector.pcz = pcz_slider.value
 
     if detector._has_signals:
-        detector._sample_tilt_changed.connect(redraw)
-        detector._tilt_changed.connect(redraw)
-        detector._azimuthal_changed.connect(redraw)
-        detector._pc_changed.connect(redraw)
 
         def on_slider_change(change: Any = None) -> None:
             # Block to redraw only once
@@ -802,7 +733,7 @@ def plot_detector_sample_geometry_side_view_interactive(
 def plot_detector_sample_geometry_top_view_interactive(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
-    annotate: bool = False,
+    legend: bool = False,
     dimensionless: bool = True,
     **kwargs,
 ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]":
@@ -830,7 +761,7 @@ def plot_detector_sample_geometry_top_view_interactive(
 
     def redraw(*args: Any) -> None:
         update_detector_sample_geometry_top_view(
-            detector, ax, annotate=annotate, dimensionless=dimensionless
+            detector, ax, legend=legend, dimensionless=dimensionless
         )
         fig.canvas.draw_idle()
 
@@ -870,7 +801,7 @@ def plot_detector_sample_geometry_top_view_interactive(
 def plot_detector_sample_geometry_interactive(
     detector: EBSDDetector,
     inplace: bool = False,
-    annotate: bool = False,
+    legend: bool = False,
     dimensionless: bool = True,
     coords_fmt: DETECTOR_PLOT_FORMATS = "detector",
     zoom: float = 1.0,
@@ -886,9 +817,9 @@ def plot_detector_sample_geometry_interactive(
     inplace
         Whether to edit the given *detector* inplace. The given detector
         is not affected by default.
-    annotate
-        Whether to annotate the side-view components.
-        Default is False.
+    legend
+        Whether to show a legend in the upper right corner of the side
+        and top view plots. Default is False.
     dimensionless
         Whether to ignore
         :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
@@ -948,13 +879,13 @@ def plot_detector_sample_geometry_interactive(
 
     def redraw_side(*args: Any) -> None:
         update_detector_sample_geometry_side_view(
-            det, ax_side, annotate=annotate, dimensionless=dimensionless
+            det, ax_side, legend=legend, dimensionless=dimensionless
         )
         ax_side.set_title("Side view")
 
     def redraw_top(*args: Any) -> None:
         update_detector_sample_geometry_top_view(
-            det, ax_top, annotate=annotate, dimensionless=dimensionless
+            det, ax_top, legend=legend, dimensionless=dimensionless
         )
         ax_top.set_title("Top view")
 
