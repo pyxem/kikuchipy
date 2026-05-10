@@ -791,7 +791,8 @@ class TestPlotDetector:
         for expected_label in ["Sample", "PC", "Detector"]:
             assert expected_label in line_labels
         assert len(ax1.texts) == 1
-        assert ax1.get_xlabel() == ""
+        assert ax1.get_xlabel() == "Microscope Y"
+        assert ax1.get_ylabel() == "Microscope Z"
 
         fig2 = plt.figure()
         ax2 = fig2.add_subplot()
@@ -799,8 +800,8 @@ class TestPlotDetector:
         annotation_labels = [text.get_label() for text in ax2.texts]
         for expected_annotation_prefix in ["sample", "beam", "detector", "pc"]:
             assert f"{expected_annotation_prefix}_annotation" in annotation_labels
-        assert ax2.get_xlabel() == "Microscope Y axis [mm]"
-        assert ax2.get_ylabel() == "Microscope Z axis [mm]"
+        assert ax2.get_xlabel() == "Microscope Y [mm]"
+        assert ax2.get_ylabel() == "Microscope Z [mm]"
 
     @pytest.mark.skipif(
         dependency_version["ipywidgets"] is None, reason="Needs ipywidgets"

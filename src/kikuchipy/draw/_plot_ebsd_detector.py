@@ -509,8 +509,8 @@ def plot_detector_sample_geometry_side_view(
         unit = ""
     else:
         unit = " [mm]"
-    ax.set_xlabel(f"y microscope{unit}")
-    ax.set_ylabel(f"z microscope{unit}")
+    ax.set_xlabel(f"Microscope Y{unit}")
+    ax.set_ylabel(f"Microscope Z{unit}")
 
     return fig
 
