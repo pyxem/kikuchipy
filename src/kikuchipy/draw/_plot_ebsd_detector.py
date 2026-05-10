@@ -771,6 +771,7 @@ def plot_detector_sample_geometry_side_view_interactive(
                 detector._pc_changed.blocked(),
             ):
                 update_detector_from_sliders()
+            redraw()
     else:
 
         def on_slider_change(change: Any = None) -> None:
@@ -848,6 +849,7 @@ def plot_detector_sample_geometry_top_view_interactive(
                 detector._pc_changed.blocked(),
             ):
                 update_detector_from_sliders()
+            redraw()
     else:
 
         def on_slider_change(change: Any = None) -> None:
