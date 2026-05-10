@@ -37,6 +37,7 @@ parameters.
 # %%
 # Imports and some reusable functions.
 
+from IPython.display import display
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -206,6 +207,7 @@ for i, (j, k) in enumerate(np.ndindex(nrows, ncols)):
 # The default behavior is not to affect the detector.
 # Here, we want the changes to affect the detector inplace.
 
-det6.plot_side_view_interactive(inplace=True)
+widgets = det6.plot_side_view(interactive=True)
+display(widgets)
 
 plt.show()
