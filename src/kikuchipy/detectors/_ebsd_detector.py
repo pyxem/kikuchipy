@@ -2034,9 +2034,8 @@ class EBSDDetector:
 
             The following attributes can be varied:
 
-            - :attr:`pc`
+            - :attr:`pcx` and :attr:`pcz`
             - :attr:`azimuthal`
-            - :attr:`tilt`
 
             The remaining attributes are ignored.
         return_figure
@@ -2087,7 +2086,7 @@ class EBSDDetector:
     @overload
     def plot_interactive(
         self,
-        inplace: bool = False,
+        inplace: bool = True,
         annotate: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "detector",
@@ -2099,7 +2098,7 @@ class EBSDDetector:
     @overload
     def plot_interactive(
         self,
-        inplace: bool = False,
+        inplace: bool = True,
         annotate: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "detector",
@@ -2110,7 +2109,7 @@ class EBSDDetector:
 
     def plot_interactive(
         self,
-        inplace: bool = False,
+        inplace: bool = True,
         annotate: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "detector",
@@ -2125,7 +2124,7 @@ class EBSDDetector:
         ----------
         inplace
             Whether the interactive changes affect the detector inplace.
-            Default is False.
+            Default is True.
         annotate
             Whether to annotate the side-view components. Default is
             False.

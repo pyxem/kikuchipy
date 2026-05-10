@@ -371,17 +371,14 @@ def plot_detector_sample_geometry_side_view(
     The figure plane is given by the microscope reference frame: Y west
     and Z north. Coordinates for elements are transformed to this
     reference frame after they are defined.
-
-    See the docstring of the EBSD detector method using this function
-    for further details.
     """
     fig, ax = set_up_figure_axis(ax=ax, **kwargs)
 
     # Dimensions in mm and angles in radians
     height = detector.height
     L = detector.specimen_scintillator_distance[0]
-    beam_length = L * 0.5
-    half_sample_length = (L * 1.5) / 2
+    beam_length = height * 0.5
+    half_sample_length = height * 0.3
     sigma = np.deg2rad(detector.sample_tilt)
     theta = np.deg2rad(detector.tilt)
 
@@ -431,7 +428,7 @@ def plot_detector_sample_geometry_side_view(
         [sample_start[0], sample_end[0]],
         [sample_start[1], sample_end[1]],
         c=SAMPLE_COLOR,
-        lw=3,
+        lw=6,
         label="Sample",
         zorder=4,
     )
@@ -465,7 +462,11 @@ def plot_detector_sample_geometry_side_view(
     # Handle axis orientation: Y axis as x-coordinate (inverted so
     # detector appears on the left), Z as y-coordinate pointing up
     ax.set_aspect("equal")
-    ax.invert_xaxis()
+
+    # Fix axis limits
+    pad = get_axis_limit_pad(height)
+    ax.set_xlim(pad, -pad)
+    ax.set_ylim(-pad, pad)
 
     if annotate:
         ax.text(
@@ -535,24 +536,22 @@ def plot_detector_sample_geometry_top_view(
     dimensionless: bool = False,
     **kwargs,
 ) -> mfigure.Figure | mfigure.SubFigure:
-    r"""Plot the EBSD detector-sample geometry in a 2D top-view.
+    """See the docstring of the EBSD detector method using this function
+    for further details.
 
     Coordinates are calculated in microns relative to the beam-sample
     interaction volume (0, 0).
 
-    The figure plane is given by the microscope reference frame: x west
-    and y south. Coordinates for elements are transformed to this
+    The figure plane is given by the microscope reference frame: X west
+    and Y south. Coordinates for elements are transformed to this
     reference frame after they are defined.
-
-    See the docstring of the EBSD detector method using this function
-    for further details.
     """
     fig, ax = set_up_figure_axis(ax=ax, **kwargs)
 
     # Dimensions in microns and angles in radians
     width = detector.width
     L = detector.specimen_scintillator_distance[0]
-    sample_length = L * 1.5
+    sample_length = width * 0.6
     azimuthal = np.deg2rad(detector.azimuthal)
 
     beam = np.zeros(2)
@@ -591,7 +590,7 @@ def plot_detector_sample_geometry_top_view(
         [sample_start[0] * to_mm, sample_end[0] * to_mm],
         [sample_start[1] * to_mm, sample_end[1] * to_mm],
         c=SAMPLE_COLOR,
-        lw=3,
+        lw=6,
         label="Sample",
         zorder=4,
     )
@@ -623,8 +622,11 @@ def plot_detector_sample_geometry_top_view(
     )
 
     ax.set_aspect("equal")
-    ax.invert_yaxis()
-    ax.invert_xaxis()
+
+    # Fix axis limits
+    pad = get_axis_limit_pad(width)
+    ax.set_xlim(pad, -pad)
+    ax.set_ylim(pad, -pad)
 
     if annotate:
         ax.text(
@@ -672,6 +674,15 @@ def plot_detector_sample_geometry_top_view(
     ax.set_ylabel(f"y microscope{unit}")
 
     return fig
+
+
+def get_axis_limit_pad(width: float) -> float:
+    """Return sufficient axis limits for the detector to move around
+    without moving outside the axis.
+    """
+    width_mm = width * 1e-3
+    pad = 1.1 * width_mm
+    return pad
 
 
 def update_detector_sample_geometry_top_view(
@@ -805,14 +816,10 @@ def plot_detector_sample_geometry_top_view_interactive(
     import ipywidgets
 
     detector.pc = detector.pc_average
-    sample_tilt_slider = get_sample_tilt_slider(detector)
-    detector_tilt_slider = get_detector_tilt_slider(detector)
     azimuthal_slider = get_detector_azimuthal_slider(detector)
     pcx_slider = get_pcx_slider(detector)
     pcz_slider = get_pcz_slider(detector)
     sliders = [
-        sample_tilt_slider,
-        detector_tilt_slider,
         azimuthal_slider,
         pcx_slider,
         pcz_slider,
@@ -822,29 +829,23 @@ def plot_detector_sample_geometry_top_view_interactive(
     ax.set_title("Top view")
 
     def redraw(*args: Any) -> None:
-        update_detector_sample_geometry_side_view(
+        update_detector_sample_geometry_top_view(
             detector, ax, annotate=annotate, dimensionless=dimensionless
         )
         fig.canvas.draw_idle()
 
     def update_detector_from_sliders():
-        detector.sample_tilt = sample_tilt_slider.value
-        detector.tilt = detector_tilt_slider.value
         detector.azimuthal = azimuthal_slider.value
         detector.pcx = pcx_slider.value
         detector.pcz = pcz_slider.value
 
     if detector._has_signals:
-        detector._sample_tilt_changed.connect(redraw)
-        detector._tilt_changed.connect(redraw)
         detector._azimuthal_changed.connect(redraw)
         detector._pc_changed.connect(redraw)
 
         def on_slider_change(change: Any = None) -> None:
             # Block to redraw only once
             with (
-                detector._sample_tilt_changed.blocked(),
-                detector._tilt_changed.blocked(),
                 detector._azimuthal_changed.blocked(),
                 detector._pc_changed.blocked(),
             ):
@@ -1026,9 +1027,10 @@ def set_up_figure_axis(
     return fig, ax
 
 
-def get_detector_value_in_range(
+def get_detector_value_range(
     value: float, vmin: float, vmax: float
 ) -> tuple[float, float]:
+    """Return an appropriate range containing *value*."""
     margin = max((vmax - vmin) * 0.1, 0.1)
     if value < vmin:
         vmin = value - margin
@@ -1047,11 +1049,14 @@ def get_sample_tilt_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
 
     import ipywidgets
 
+    stilt = detector.sample_tilt
+    stilt_min, stilt_max = get_detector_value_range(stilt, 0, 180)
+
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
-        value=detector.sample_tilt,
-        min=0,
-        max=180,
+        value=stilt,
+        min=stilt_min,
+        max=stilt_max,
         step=0.1,
         description="Sample tilt",
         style=style,
@@ -1066,11 +1071,14 @@ def get_detector_tilt_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider"
 
     import ipywidgets
 
+    tilt = detector.tilt
+    tilt_min, tilt_max = get_detector_value_range(tilt, 0, 180)
+
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
-        value=detector.tilt,
-        min=0,
-        max=180,
+        value=tilt,
+        min=tilt_min,
+        max=tilt_max,
         step=0.1,
         description="Detector tilt",
         style=style,
@@ -1085,12 +1093,15 @@ def get_detector_azimuthal_slider(detector: EBSDDetector) -> "ipywidgets.FloatSl
 
     import ipywidgets
 
+    azim = detector.azimuthal
+    azim_min, azim_max = get_detector_value_range(azim, -10, 10)
+
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
-        value=detector.azimuthal,
-        min=-180,
-        max=180,
-        step=0.1,
+        value=azim,
+        min=azim_min,
+        max=azim_max,
+        step=0.01,
         description="Azimuthal",
         style=style,
     )
@@ -1105,7 +1116,8 @@ def get_pcx_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
     import ipywidgets
 
     pcx = detector.pc_average[0]
-    pcx_min, pcx_max = get_detector_value_in_range(pcx, 0, 1)
+    pcx_min, pcx_max = get_detector_value_range(pcx, 0, 1)
+
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
         value=pcx,
@@ -1126,7 +1138,8 @@ def get_pcy_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
     import ipywidgets
 
     pcy = detector.pc_average[1]
-    pcy_min, pcy_max = get_detector_value_in_range(pcy, 0, 1)
+    pcy_min, pcy_max = get_detector_value_range(pcy, -0.5, 1.5)
+
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
         value=pcy,
@@ -1147,7 +1160,8 @@ def get_pcz_slider(detector: EBSDDetector) -> "ipywidgets.FloatSlider":
     import ipywidgets
 
     pcz = detector.pc_average[2]
-    pcz_min, pcz_max = get_detector_value_in_range(pcz, 0, 1)
+    pcz_min, pcz_max = get_detector_value_range(pcz, 0.2, 1)
+
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
         value=pcz,
