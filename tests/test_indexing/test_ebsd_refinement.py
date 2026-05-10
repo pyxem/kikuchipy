@@ -227,7 +227,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         )
         det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
 
-        with pytest.raises(ImportError, match="Package `nlopt`, required for method "):
+        with pytest.raises(ImportError, match="Optimization method 'LN_NELDERMEAD' "):
             _ = s.refine_orientation_projection_center(
                 xmap=xmap,
                 master_pattern=self.mp,

@@ -1094,7 +1094,7 @@ class _RefinementSetup:
 
         if self.package == "nlopt":
             method_upper = method.upper()
-            verify_dependency_or_raise("nlopt", f"Optimization method {method_upper}!")
+            verify_dependency_or_raise("nlopt", f"Optimization method {method_upper!r}")
 
             import nlopt
 
