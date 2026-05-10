@@ -631,7 +631,7 @@ class TestEBSDDetector:
         """Pass PC kwargs to scatter()."""
         fig = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_figure=True)
         if pc_kwargs is None:
-            pc_kwargs = {"facecolor": "gold"}
+            pc_kwargs = {"facecolor": "C1"}
         assert np.allclose(
             fig.axes[0].collections[0].get_facecolor().squeeze()[:3],
             mcolors.to_rgb(pc_kwargs["facecolor"]),
