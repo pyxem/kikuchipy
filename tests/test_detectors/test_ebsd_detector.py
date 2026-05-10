@@ -810,17 +810,15 @@ class TestPlotDetector:
         import ipywidgets
 
         det = kp.detectors.EBSDDetector()
-        widgets1 = det.plot_side_view_interactive()
+        widgets1 = det.plot_side_view(interactive=True)
         assert isinstance(widgets1, ipywidgets.VBox)
 
-        widgets2, fig1 = det.plot_side_view_interactive(
-            inplace=True, return_figure=True
-        )
+        widgets2, fig1 = det.plot_side_view(interactive=True, return_figure=True)
         assert isinstance(widgets2, ipywidgets.VBox)
         assert isinstance(fig1, mfigure.Figure)
 
         _, ax = plt.subplots()
-        _, fig3 = det.plot_side_view_interactive(ax=ax, return_figure=True)
+        _, fig3 = det.plot_side_view(interactive=True, ax=ax, return_figure=True)
         assert fig3.axes[0] is ax
 
 
