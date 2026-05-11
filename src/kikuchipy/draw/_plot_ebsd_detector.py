@@ -473,6 +473,7 @@ def plot_detector_sample_geometry_side_view(
         ax.legend(
             handles=[beam_handle, *ax.get_legend_handles_labels()[0]],
             loc="best",
+            borderpad=max([plt.rcParams["legend.borderpad"], 0.6]),
         )
 
     if dimensionless:
