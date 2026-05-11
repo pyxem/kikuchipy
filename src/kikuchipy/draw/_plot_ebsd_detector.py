@@ -25,6 +25,7 @@ The interactive widgets require an optional dependency
 
 from typing import TYPE_CHECKING, Any, Literal
 
+from matplotlib import ticker
 import matplotlib.axes as maxes
 import matplotlib.figure as mfigure
 import matplotlib.lines as mlines
@@ -68,6 +69,8 @@ def plot_ebsd_detector(
     pcx, pcy = detector.pc_average[:2]
     bounds = detector.bounds
 
+    fig, axis = set_up_figure_axis(ax=ax)
+
     if coords_fmt == "detector":
         pcy *= sy - 1
         pcx *= sx - 1
@@ -79,8 +82,10 @@ def plot_ebsd_detector(
         bounds = detector._average_gnomonic_bounds
         x_label = "Gnomonic X"
         y_label = "Gnomonic Y"
+        formatter = ticker.StrMethodFormatter("{x:.2f}")
+        axis.xaxis.set_major_formatter(formatter)
+        axis.yaxis.set_major_formatter(formatter)
 
-    fig, axis = set_up_figure_axis(ax=ax)
     axis.axis(zoom * bounds)
     axis.set(xlabel=x_label, ylabel=y_label, aspect="equal")
 
@@ -640,8 +645,8 @@ def update_detector_sample_geometry_top_view(
 def update_detector_plane(
     detector: EBSDDetector,
     ax: maxes.Axes,
-    coords_fmt: DETECTOR_PLOT_FORMATS = "detector",
-    zoom: float = 1.0,
+    coords_fmt: DETECTOR_PLOT_FORMATS,
+    zoom: float,
 ) -> None:
     """Clear *ax* and redraw the detector plane for *detector*."""
     ax.clear()
@@ -650,7 +655,7 @@ def update_detector_plane(
         coords_fmt=coords_fmt,
         zoom=zoom,
         show_pc=True,
-        draw_gnomonic_circles=False,
+        draw_gnomonic_circles=coords_fmt == "gnomonic",
         pattern=None,
         pattern_kwargs={},
         pc_kwargs={},
@@ -804,7 +809,7 @@ def plot_detector_sample_geometry_interactive(
     inplace: bool = False,
     legend: bool = False,
     dimensionless: bool = True,
-    coords_fmt: DETECTOR_PLOT_FORMATS = "detector",
+    coords_fmt: DETECTOR_PLOT_FORMATS = "gnomonic",
     zoom: float = 1.0,
     **kwargs,
 ) -> "tuple[mfigure.Figure, ipywidgets.VBox]":
@@ -826,8 +831,8 @@ def plot_detector_sample_geometry_interactive(
         :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
         drawing the side-view plot axes. Default is True.
     coords_fmt
-        Detector plane coordinate format: ``"detector"`` (default) or
-        ``"gnomonic"``.
+        Detector plane coordinate format: "gnomonic" (default) or
+        "detector".
     zoom
         Zoom factor for the detector plane. Default is 1.0.
     **kwargs

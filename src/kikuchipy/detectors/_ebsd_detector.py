@@ -2089,7 +2089,7 @@ class EBSDDetector:
         inplace: bool = True,
         legend: bool = False,
         dimensionless: bool = True,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
         zoom: float = 1.0,
         return_figure: Literal[False] = False,
         **kwargs,
@@ -2101,7 +2101,7 @@ class EBSDDetector:
         inplace: bool = True,
         legend: bool = False,
         dimensionless: bool = True,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
         zoom: float = 1.0,
         return_figure: Literal[True] = True,
         **kwargs,
@@ -2112,7 +2112,7 @@ class EBSDDetector:
         inplace: bool = True,
         legend: bool = False,
         dimensionless: bool = True,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
         zoom: float = 1.0,
         return_figure: bool = False,
         **kwargs,
@@ -2133,8 +2133,8 @@ class EBSDDetector:
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
             drawing the side-view plot axes. Default is True.
         coordinates
-            Detector plane coordinate format: "detector" (default) or
-            "gnomonic".
+            Detector plane coordinate format: "gnomonic" (default) or
+            "detector".
         zoom
             Zoom factor for the detector plane. Default is 1.0.
         return_figure
