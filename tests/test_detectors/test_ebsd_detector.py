@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
 from orix.quaternion import Rotation
+from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
@@ -798,7 +799,10 @@ class TestPlotDetector:
         ax2 = fig2.add_subplot()
         det.plot_side_view(ax=ax2, legend=True, dimensionless=False)
         legend = fig2.legend()
-        assert len(legend.legend_handles) == 3
+        if dependency_version["matplotlib"] >= Version("3.7"):
+            assert len(legend.legend_handles) == 3
+        else:
+            assert len(legend.legendHandles) == 3
         assert ax2.get_xlabel() == "Microscope Y [mm]"
         assert ax2.get_ylabel() == "Microscope Z [mm]"
 
