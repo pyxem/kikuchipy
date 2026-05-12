@@ -165,7 +165,7 @@ def _get_indexer_from_detector(
     Requires that :mod:`pyebsdindex` is installed, which is an optional
     dependency of kikuchipy. See :ref:`dependencies` for details.
     """
-    verify_dependency_or_raise("pyebsdindex", "Getting a PyEBSDIndex indexer")
+    verify_dependency_or_raise("pyebsdindex", "Getting an indexer")
 
     from pyebsdindex.ebsd_index import EBSDIndexer
 

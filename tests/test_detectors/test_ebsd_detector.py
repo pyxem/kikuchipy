@@ -1249,7 +1249,7 @@ class TestGetIndexer:
     )
     def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
-        with pytest.raises(ValueError, match="pyebsdindex must be installed. Install "):
+        with pytest.raises(ImportError, match="requires that 'pyebsdindex'"):
             _ = self.det.get_indexer(pl)
 
     @pytest.mark.skipif(
