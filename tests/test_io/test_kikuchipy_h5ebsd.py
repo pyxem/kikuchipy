@@ -137,7 +137,9 @@ class TestKikuchipyH5EBSD:
 
         with pytest.warns(UserWarning) as warninfo:
             s_reload = kp.load(save_path_hdf5, lazy=lazy)
-        assert len(warninfo) == 2
+        messages = [str(w.message) for w in warninfo]
+        for expected_message in ["Signal shape (60, 60)", "Data navigation shape"]:
+            assert any(expected_message in msg for msg in messages)
 
         ni_small_axes_manager["axis-1"]["size"] = new_n_columns
         assert_dictionary_func(
