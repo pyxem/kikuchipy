@@ -114,3 +114,6 @@ dask-worker-space
 
 # Other
 .scratch/
+
+# uv
+uv.lock

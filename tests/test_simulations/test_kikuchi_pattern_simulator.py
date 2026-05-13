@@ -340,7 +340,7 @@ class TestPlot:
         """Appropriate error message is raised when PyVista is
         unavailable.
         """
-        with pytest.raises(ImportError, match="PyVista is not installed"):
+        with pytest.raises(ImportError, match="3D spherical plot requires that"):
             _ = self.simulator.plot("spherical", backend="pyvista")
 
     def test_plot_scaling(self):

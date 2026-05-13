@@ -43,7 +43,7 @@ from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy._constants import dependency_version, pyopencl_context_available
+from kikuchipy._constants import pyopencl_context_available, verify_dependency_or_raise
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
@@ -403,6 +403,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.axes_manager['x'].scale
         2.0
         """
+        # TODO: Update crystal map step size too
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ("x", "y")
         x.scale, y.scale = (step_x, step_y)
@@ -431,6 +432,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.axes_manager['dx'].scale
         70.0
         """
+        # TODO: Update detector pixel size too
         center = delta * np.array(self.axes_manager.signal_shape) / 2
         dx, dy = self.axes_manager.signal_axes
         dx.units, dy.units = ["um"] * 2
@@ -1668,12 +1670,8 @@ class EBSD(KikuchipySignal2D):
         uses a single thread. If you need the fastest indexing, refer to
         the PyEBSDIndex documentation for multi-threading and more.
         """
-        if dependency_version["pyebsdindex"] is None:  # pragma: no cover
-            raise ValueError(
-                "Hough indexing requires pyebsdindex to be installed. Install it with "
-                "pip install pyebsdindex. See "
-                "https://kikuchipy.org/en/stable/user/installation.html for details"
-            )
+        verify_dependency_or_raise("pyebsdindex", "Hough indexing")
+
         if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "
@@ -1766,12 +1764,10 @@ class EBSD(KikuchipySignal2D):
         Requires :mod:`pyebsdindex` to be installed. See
         :ref:`dependencies` for further details.
         """
-        if dependency_version["pyebsdindex"] is None:  # pragma: no cover
-            raise ValueError(
-                "Hough indexing requires pyebsdindex to be installed. Install it with "
-                "pip install pyebsdindex. See "
-                "https://kikuchipy.org/en/stable/user/installation.html for details"
-            )
+        verify_dependency_or_raise(
+            "pyebsdindex", "Projection center optimization with Hough indexing"
+        )
+
         if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "

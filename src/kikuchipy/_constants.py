@@ -23,15 +23,19 @@ from importlib.metadata import version
 
 from packaging.version import Version
 
+# TODO: Create this list dynamically using importlib.metadata.require
 deps_for_version_check = [
-    # Core
+    # Required
     "hyperspy",
     "matplotlib",
     "numpy",
     "rosettasciio",
     "scikit-image",
     # Optional
+    "IPython",
+    "ipywidgets",
     "nlopt",
+    "psygnal",
     "pyvista",
     "pyebsdindex",
 ]
@@ -42,6 +46,14 @@ for dep in deps_for_version_check:
     except ImportError:  # pragma: no cover
         dep_version = None
     dependency_version[dep] = dep_version
+
+
+def verify_dependency_or_raise(package: str, reason: str) -> None:
+    """Raise an informative ImportError if a *package* required for some
+    *reason* is not installed.
+    """
+    if dependency_version[package] is None:
+        raise ImportError(f"{reason} requires that {package!r} is installed")
 
 
 # PyOpenCL context available for use with PyEBSDIndex? Required for

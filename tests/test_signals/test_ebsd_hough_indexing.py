@@ -377,13 +377,13 @@ class TestHoughIndexingNoPyEBSDIndex:
         self.signal = s
 
     def test_get_indexer(self):
-        with pytest.raises(ValueError, match="pyebsdindex must be installed"):
+        with pytest.raises(ImportError, match="requires that 'pyebsdindex'"):
             _ = self.signal.detector.get_indexer(None)
 
     def test_hough_indexing_raises_pyebsdindex(self):
-        with pytest.raises(ValueError, match="pyebsdindex to be installed"):
+        with pytest.raises(ImportError, match="requires that 'pyebsdindex'"):
             _ = self.signal.hough_indexing(None, None)
 
     def test_optimize_pc_raises_pyebsdindex(self):
-        with pytest.raises(ValueError, match="pyebsdindex to be installed"):
+        with pytest.raises(ImportError, match="requires that 'pyebsdindex' "):
             _ = self.signal.hough_indexing_optimize_pc(None, None)

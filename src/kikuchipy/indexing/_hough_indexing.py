@@ -32,7 +32,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 
-from kikuchipy._constants import dependency_version
+from kikuchipy._constants import dependency_version, verify_dependency_or_raise
 
 if TYPE_CHECKING:  # pragma: no cover
     if dependency_version["pyebsdindex"] is not None:
@@ -165,11 +165,7 @@ def _get_indexer_from_detector(
     Requires that :mod:`pyebsdindex` is installed, which is an optional
     dependency of kikuchipy. See :ref:`dependencies` for details.
     """
-    if dependency_version["pyebsdindex"] is None:  # pragma: no cover
-        raise ValueError(
-            "pyebsdindex must be installed. Install with pip install pyebsdindex. "
-            "See https://kikuchipy.org/en/stable/user/installation.html for details."
-        )
+    verify_dependency_or_raise("pyebsdindex", "Getting an indexer")
 
     from pyebsdindex.ebsd_index import EBSDIndexer
 

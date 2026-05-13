@@ -21,11 +21,13 @@ from copy import deepcopy
 
 import matplotlib.collections as mcollections
 import matplotlib.colors as mcolors
+import matplotlib.figure as mfigure
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
 from orix.quaternion import Rotation
+from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
@@ -550,8 +552,8 @@ class TestEBSDDetector:
             kwargs["coordinates"] = coordinates
         fig = detector.plot(**kwargs)
         ax = fig.axes[0]
-        assert ax.get_xlabel() == f"x {desired_label}"
-        assert ax.get_ylabel() == f"y {desired_label}"
+        assert ax.get_xlabel() == f"{desired_label.capitalize()} X"
+        assert ax.get_ylabel() == f"{desired_label.capitalize()} Y"
         if isinstance(pattern, np.ndarray):
             assert np.allclose(ax.get_images()[0].get_array(), pattern)
         plt.close("all")
@@ -630,7 +632,7 @@ class TestEBSDDetector:
         """Pass PC kwargs to scatter()."""
         fig = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_figure=True)
         if pc_kwargs is None:
-            pc_kwargs = {"facecolor": "gold"}
+            pc_kwargs = {"facecolor": "C1"}
         assert np.allclose(
             fig.axes[0].collections[0].get_facecolor().squeeze()[:3],
             mcolors.to_rgb(pc_kwargs["facecolor"]),
@@ -778,6 +780,49 @@ class TestEBSDDetector:
         det = kp.detectors.EBSDDetector()
         with pytest.raises(ValueError, match=r"Invalid binning \(3, 4\). Must be an "):
             det.binning = (3, 4)
+
+
+class TestPlotDetector:
+    def test_plot_side_view(self):
+        det = kp.detectors.EBSDDetector()
+
+        fig1 = det.plot_side_view(return_figure=True)
+        ax1 = fig1.axes[0]
+        line_labels = [line.get_label() for line in ax1.lines]
+        assert all(expected in line_labels for expected in ["Sample", "Detector"])
+        assert "PC" in [coll.get_label() for coll in ax1.collections]
+        assert len(ax1.texts) == 1
+        assert ax1.get_xlabel() == "Microscope Y"
+        assert ax1.get_ylabel() == "Microscope Z"
+
+        fig2 = plt.figure()
+        ax2 = fig2.add_subplot()
+        det.plot_side_view(ax=ax2, legend=True, dimensionless=False)
+        legend = fig2.legend()
+        if dependency_version["matplotlib"] >= Version("3.7"):
+            assert len(legend.legend_handles) == 3
+        else:
+            assert len(legend.legendHandles) == 3
+        assert ax2.get_xlabel() == "Microscope Y [mm]"
+        assert ax2.get_ylabel() == "Microscope Z [mm]"
+
+    @pytest.mark.skipif(
+        dependency_version["ipywidgets"] is None, reason="Needs ipywidgets"
+    )
+    def test_plot_side_view_interactive(self):
+        import ipywidgets
+
+        det = kp.detectors.EBSDDetector()
+        widgets1 = det.plot_side_view(interactive=True)
+        assert isinstance(widgets1, ipywidgets.VBox)
+
+        widgets2, fig1 = det.plot_side_view(interactive=True, return_figure=True)
+        assert isinstance(widgets2, ipywidgets.VBox)
+        assert isinstance(fig1, mfigure.Figure)
+
+        _, ax = plt.subplots()
+        _, fig3 = det.plot_side_view(interactive=True, ax=ax, return_figure=True)
+        assert fig3.axes[0] is ax
 
 
 class TestPlotPC:
@@ -1204,7 +1249,7 @@ class TestGetIndexer:
     )
     def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
-        with pytest.raises(ValueError, match="pyebsdindex must be installed. Install "):
+        with pytest.raises(ImportError, match="requires that 'pyebsdindex'"):
             _ = self.det.get_indexer(pl)
 
     @pytest.mark.skipif(
