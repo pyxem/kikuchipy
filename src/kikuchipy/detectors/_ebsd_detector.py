@@ -308,8 +308,8 @@ class EBSDDetector:
 
     @property
     def azimuthal(self) -> float:
-        r"""Return the detector tilt :math:`\omega` about the detector
-        vertial :math:`Y_d`, pointing downwards, in degrees.
+        r"""Return or set the detector tilt :math:`\omega` about the
+        detector vertial :math:`Y_d`, pointing downwards, in degrees.
 
         A positive angle means features on the detector appear to move
         toward the right (assuming all other defaults).
@@ -336,6 +336,10 @@ class EBSDDetector:
         detector normal :math:`Z_d`, pointing towards the sample, in
         degrees.
 
+        A positive angle means features on the detector appear to move
+        counter-clockwise about the detector center (assuming all other
+        defaults).
+
         Parameters
         ----------
         value : float
@@ -359,9 +363,9 @@ class EBSDDetector:
 
         The Euler angles are given by the :attr:`azimuthal`,
         :attr:`tilt`, and the :attr:`twist`,
-        :math:`(-\omega, 90^{\circ} + \theta, \gamma)`.
+        :math:`(-\omega, 90^{\circ} + \theta, -\gamma)`.
         """
-        return np.array([-self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
+        return np.array([-self.azimuthal, 90.0 + self.tilt, -self.twist], dtype=float)
 
     # ----------------- Projection center properties ----------------- #
 
