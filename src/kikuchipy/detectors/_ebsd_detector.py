@@ -267,6 +267,17 @@ class EBSDDetector:
 
     @property
     def azimuthal(self) -> float:
+        r"""Return the detector tilt :math:`\omega` about the detector
+        vertial :math:`Y_d`, pointing downwards, in degrees.
+
+        A positive angle means features on the detector appear to move
+        toward the right (assuming all other defaults).
+
+        Parameters
+        ----------
+        value : float
+            Azimuthal detector tilt in degrees.
+        """
         return self._azimuthal
 
     @azimuthal.setter
@@ -304,10 +315,14 @@ class EBSDDetector:
 
     @property
     def euler(self) -> np.ndarray:
-        """Return the detector Euler angles in the Bunge convention
+        r"""Return the detector Euler angles in the Bunge convention
         (ZXZ) in degrees.
+
+        The Euler angles are given by the :attr:`azimuthal`,
+        :attr:`tilt`, and the :attr:`twist`,
+        :math:`(-\omega, 90^{\circ} + \theta, \gamma)`.
         """
-        return np.array([self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
+        return np.array([-self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
 
     @property
     def gnomonic_bounds(self) -> np.ndarray:

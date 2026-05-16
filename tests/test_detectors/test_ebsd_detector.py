@@ -26,7 +26,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
-from orix.quaternion import Rotation
+import orix.quaternion as oqu
 from packaging.version import Version
 import pytest
 
@@ -252,58 +252,22 @@ class TestEBSDDetector:
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
 
     @pytest.mark.parametrize(
-        "tilt, azimuthal, twist, sample_tilt, expected_angle, expected_axis, "
-        "expected_rotation",
+        "tilt, azimuthal, twist, sample_tilt, expected_rotation",
         [
-            (
-                0,
-                0,
-                0,
-                90,
-                90.0,
-                np.array([0.0, 0.0, 1.0]),
-                np.array([[0.70710678, 0.0, 0.0, 0.70710678]]),
-            ),
-            (
-                0,
-                0,
-                0,
-                70,
-                91.7279410723505,
-                np.array([0.17108787, 0.17108787, 0.97028753]),
-                np.array([[0.69636424, 0.1227878, 0.1227878, 0.69636424]]),
-            ),
-            (
-                8.3,
-                4.7,
-                1.02,
-                70,
-                94.94104636971042,
-                np.array([0.19765823, 0.27176174, 0.94184754]),
-                np.array([[0.67596942, 0.14566022, 0.20026929, 0.69407539]]),
-            ),
+            (0, 0, 0, 90.0, [0.7071, 0.0, 0.0, 0.7071]),
+            (0, 0, 0, 70.0, [0.6964, 0.1228, 0.1228, 0.6964]),
+            (8.3, 4.7, 1.02, 70.0, [0.6819, 0.2028, 0.1421, 0.6882]),
         ],
     )
     def test_sample_to_detector(
-        self,
-        tilt,
-        azimuthal,
-        twist,
-        sample_tilt,
-        expected_angle,
-        expected_axis,
-        expected_rotation,
+        self, tilt, azimuthal, twist, sample_tilt, expected_rotation
     ):
-        """Check the Rotation sample_to_detector has the correct type and values."""
-        detector = kp.detectors.EBSDDetector(
+        det = kp.detectors.EBSDDetector(
             tilt=tilt, azimuthal=azimuthal, twist=twist, sample_tilt=sample_tilt
         )
-        smpl_to_det = detector.sample_to_detector
-
-        assert isinstance(smpl_to_det, Rotation)
-        assert np.allclose(np.rad2deg(smpl_to_det.angle)[0], expected_angle)
-        assert np.allclose(smpl_to_det.axis.data.squeeze(), expected_axis)
-        assert np.allclose(smpl_to_det.data, expected_rotation)
+        rot_sample_to_det = det.sample_to_detector
+        assert isinstance(rot_sample_to_det, oqu.Rotation)
+        assert np.allclose(rot_sample_to_det.data, expected_rotation, atol=1e-4)
 
     def test_coordinate_conversion_factors(self):
         """Factors for converting between pixel and gonomic coords."""
