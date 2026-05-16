@@ -375,10 +375,7 @@ class TestProjectFromLambert:
         with pytest.raises(ValueError, match="`rotations` can only have one or two "):
             _ = mp.get_patterns(rotations=r, detector=detector, energy=20)
 
-    def test_detector_azimuthal(self):
-        """Test that setting an azimuthal angle of a detector results in
-        different patterns.
-        """
+    def test_detector_azimuthal_effect(self):
         det1 = self.detector
 
         # Looking from the detector toward the sample, the left part of
@@ -394,14 +391,14 @@ class TestProjectFromLambert:
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation.identity()
 
-        kwargs = dict(rotations=r, energy=20, compute=True, dtype_out=np.uint8)
+        kwargs = {"rotations": r, "energy": 20, "compute": True, "dtype_out": np.uint8}
         sim1 = mp.get_patterns(detector=det1, **kwargs)
         sim2 = mp.get_patterns(detector=det2, **kwargs)
         sim3 = mp.get_patterns(detector=det3, **kwargs)
 
         assert not np.allclose(sim1.data, sim2.data)
-        assert np.allclose(sim2.data.mean(), 43.51, atol=1e-2)
-        assert np.allclose(sim3.data.mean(), 43.30, atol=1e-2)
+        assert np.allclose(sim2.data.mean(), 43.31, atol=1e-2)
+        assert np.allclose(sim3.data.mean(), 43.52, atol=1e-2)
 
     def test_project_patterns_from_master_pattern(self):
         """Cover the Numba functions."""
@@ -817,7 +814,12 @@ class TestFitPatternDetectorOrientation:
 
         return det, sim_lines, u_os
 
-    def setup_za_and_cds(self, zone_axes, sim_lines, det):
+    def setup_za_and_cds(
+        self,
+        zone_axes: list[list[int]],
+        sim_lines: kp.simulations.GeometricalKikuchiPatternSimulation,
+        det: kp.detectors.EBSDDetector,
+    ):
         """Find the indices of the zone_axes in the
         GeometricalKikuchiPatternSimulation (sim_lines).
         Find the gnomonic coordinates of these zone axes.
@@ -978,7 +980,9 @@ class TestFitPatternDetectorOrientation:
 
         return r_ang, n_ang
 
-    def calculate_fit(self, tilt, azimuthal, twist, zone_axes):
+    def calculate_fit(
+        self, tilt: float, azimuthal: float, twist: float, zone_axes: list[list[int]]
+    ):
         """
          Calculates four sets of angles with which the fit
          between the EBSD pattern simulated from a master
@@ -1098,64 +1102,51 @@ class TestFitPatternDetectorOrientation:
             (0.0, 0.0, 1.2, [[1, 0, 1], [0, 0, 1], [1, 1, 2]]),
             (40.0, 0.0, 0.0, [[1, 0, 1], [1, 0, 0], [1, -2, 1]]),
             (40.0, 0.0, 1.2, [[1, 0, 1], [1, 0, 0], [1, -2, 1]]),
-            (0.0, 40.0, 0.0, [[1, 0, 1], [1, 1, 0], [1, 2, 1]]),
-            (0.0, 40.0, 1.2, [[1, 0, 1], [1, 1, 0], [1, 2, 1]]),
-            (40.0, 40.0, 0.0, [[1, 0, 1], [1, 0, 0], [3, 1, 0]]),
-            (40.0, 40.0, 1.2, [[1, 0, 1], [1, 0, 0], [3, 1, 0]]),
+            (0.0, -40.0, 0.0, [[1, 0, 1], [1, 1, 0], [1, 2, 1]]),
+            (0.0, -40.0, 1.2, [[1, 0, 1], [1, 1, 0], [1, 2, 1]]),
+            (40.0, -40.0, 0.0, [[1, 0, 1], [1, 0, 0], [3, 1, 0]]),
+            (40.0, -40.0, 1.2, [[1, 0, 1], [1, 0, 0], [3, 1, 0]]),
         ],
     )
     def test_fit_detector_orientation(self, tilt, azimuthal, twist, zone_axes):
-        """
-        Check that the EBSD pattern simulated from a master
-        pattern and the associated
-        GeometricalKikuchiPatternSimulation match perfectly,
-        for various detector orientations.
+        """Check that the EBSD pattern simulated from a master pattern
+        and the associated geometrical simulation match for various
+        detectors.
 
-        4 sets of angles are returned by self.calculate_fit().
-        See the doctstring of that function for details.
+        Four sets of angles are returned by self.calculate_fit(). See
+        the doctstring of that function for details.
 
-        Here we assert that the first set of angles are all
-        zero, that the second and third sets are equal, and
-        that the fourth set are all zero. If these conditions
-        are all met, the GeometricalKikuchiPatternSimulation
-        should match the EBSD pattern simulated from a
-        master pattern perfectly for the given detector
-        orientations.
-
+        Here we assert that the first set of angles are all zero, that
+        the second and third sets are equal, and that the fourth set are
+        all zero. If these conditions are all met, the geometrical
+        simulation should match the EBSD pattern simulated from a
+        master pattern perfectly for the given detector orientations.
 
         Parameters
         ----------
-        tilt : Float
-            The detector tilt angle in degrees (i.e. detector.tilt).
-            Detector Euler angle PHI (EBSDDetector.euler[1]) == 90 + tilt
-        azimuthal : Float
-            The detector azimuthal angle in degrees (i.e. detector.azimuthal).
-            Detector Euler angle phi1 (EBSDDetector.euler[0]) == azimuthal
-        twist : Float
-            The detector twist angle (EBSDDetector.euler[2]) in deg.
-        zone_axes : List or np.ndarray
-            List/array containing three lists, each containing a set
-            of uvw indices describing a zone axis on the pattern,
-            e.g. [[0,0,1], [1,1,0], [1,2,3]].
-
-        Returns
-        -------
-        None.
-
+        tilt : float
+            The detector tilt angle in degrees.
+        azimuthal : float
+            The detector azimuthal angle in degrees.
+        twist : float
+            The detector twist angle in degrees.
+        zone_axes : list
+            List containing three lists, each containing a set of uvw
+            indices describing a zone axis on the pattern, e.g.
+            [[0, 0, 1], [1, 1, 0], [1, 2, 3]].
         """
         angles = self.calculate_fit(tilt, azimuthal, twist, zone_axes)
-
         assert np.allclose(angles[0], 0.0)
         assert np.allclose(angles[1], angles[2])
         assert np.allclose(angles[3], 0.0)
 
 
-def index_row_in_array(myarray, myrow):
-    """Check if the row "myrow" is present in the array "myarray".
-    If it is, return an int containing the row index of the first
-    occurrence. If the row is not present, return None.
+def index_row_in_array(arr: np.ndarray, row: list[int]) -> int | None:
+    """Check if *row* is present in *arr*. If it is, return an integer
+    containing the row index of the first occurrence. If the row is not
+    present, return None.
     """
-    loc = np.where((myarray == myrow).all(-1))[0]
+    loc = np.where((arr == row).all(-1))[0]
     if len(loc) > 0:
         return loc[0]
-    return None
+    return
