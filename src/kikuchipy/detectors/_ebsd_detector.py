@@ -1164,14 +1164,14 @@ class EBSDDetector:
         --------
         sklearn.linear_model.LinearRegression,
         sklearn.linear_model.RANSACRegressor,
-        estimate_xtilt_ztilt,
-        fit_pc
+        :meth:`~kikuchipy.detectors.EBSDDetector.estimate_xtilt_ztilt`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.fit_pc`
         """
         from kikuchipy.detectors._fit_projection_center import (
             estimate_xtilt_linear,
             estimate_xtilt_linear_robust,
         )
-        from kikuchipy.draw._plot_ebsd_detector import plot_xtilt_estimate
+        from kikuchipy.draw._projection_center_plot import plot_xtilt_estimate
 
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
@@ -1482,7 +1482,9 @@ class EBSDDetector:
 
         See Also
         --------
-        estimate_xtilt, estimate_xtilt_ztilt, extrapolate_pc
+        :meth:`~kikuchipy.detectors.EBSDDetector.estimate_xtilt`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.estimate_xtilt_ztilt`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.extrapolate_pc`
 
         Notes
         -----
@@ -1495,7 +1497,7 @@ class EBSDDetector:
         transformation.
         """
         from kikuchipy.detectors._fit_projection_center import fit_plane_to_pc
-        from kikuchipy.draw._plot_ebsd_detector import plot_projection_center_fit
+        from kikuchipy.draw._projection_center_plot import plot_projection_center_fit
 
         n_pc = self.navigation_size
         if n_pc == 1:
@@ -1764,7 +1766,7 @@ class EBSDDetector:
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = ...,
         return_figure: Literal[True] = ...,
-    ) -> "None | mfigure.Figure": ...
+    ) -> "None | mfigure.Figure | mfigure.SubFigure": ...
 
     def plot(
         self,
@@ -1774,11 +1776,11 @@ class EBSDDetector:
         pattern: np.ndarray | None = None,
         pattern_kwargs: dict | None = None,
         draw_gnomonic_circles: bool = False,
-        gnomonic_angles: np.ndarray | list | None = None,
+        gnomonic_angles: np.ndarray | list[float] | None = None,
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = 1.0,
         return_figure: bool = False,
-    ) -> "None | mfigure.Figure":
+    ) -> "None | mfigure.Figure | mfigure.SubFigure":
         """Plot the detector screen viewed from the detector towards the
         sample.
 
@@ -1817,8 +1819,8 @@ class EBSDDetector:
             :meth:`matplotlib.patches.Circle`.
         zoom
             Whether to zoom in/out from the detector, e.g. to show the
-            extent of the gnomonic projection circles. A zoom > 1 zooms
-            out. Default is 1, i.e. no zoom.
+            extent of the gnomonic projection circles. Note that a zoom
+            > 1 zooms out. Default is 1 (no zoom).
         return_figure
             Whether to return the figure. Default is False.
 
@@ -1829,11 +1831,12 @@ class EBSDDetector:
 
         See Also
         --------
+        :class:`~kikuchipy.draw.EBSDDetectorPlotter`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
         """
-        from kikuchipy.draw._plot_ebsd_detector import plot_ebsd_detector
+        from kikuchipy.draw._ebsd_detector_plot import plot_ebsd_detector
 
         if pattern_kwargs is None:
             pattern_kwargs = {}
@@ -1961,8 +1964,10 @@ class EBSDDetector:
         :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
         """
-        from kikuchipy.draw._plot_ebsd_detector import (
+        from kikuchipy.draw._ebsd_detector_plot import (
             plot_detector_sample_geometry_side_view,
+        )
+        from kikuchipy.draw._ebsd_detector_plot_widgets import (
             plot_detector_sample_geometry_side_view_interactive,
         )
 
@@ -2091,8 +2096,10 @@ class EBSDDetector:
         :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
         """
-        from kikuchipy.draw._plot_ebsd_detector import (
+        from kikuchipy.draw._ebsd_detector_plot import (
             plot_detector_sample_geometry_top_view,
+        )
+        from kikuchipy.draw._ebsd_detector_plot_widgets import (
             plot_detector_sample_geometry_top_view_interactive,
         )
 
@@ -2126,10 +2133,9 @@ class EBSDDetector:
         legend: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
-        zoom: float = 1.0,
         return_figure: Literal[False] = False,
         **kwargs,
-    ) -> "ipywidgets.VBox": ...
+    ) -> "ipywidgets.Widget": ...
 
     @overload
     def plot_interactive(
@@ -2138,10 +2144,9 @@ class EBSDDetector:
         legend: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
-        zoom: float = 1.0,
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "tuple[ipywidgets.VBox, mfigure.Figure]": ...
+    ) -> "tuple[ipywidgets.Widget, mfigure.Figure]": ...
 
     def plot_interactive(
         self,
@@ -2149,10 +2154,9 @@ class EBSDDetector:
         legend: bool = False,
         dimensionless: bool = True,
         coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
-        zoom: float = 1.0,
         return_figure: bool = False,
         **kwargs,
-    ) -> "ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure]":
+    ) -> "ipywidgets.Widget | tuple[ipywidgets.Widget, mfigure.Figure]":
         """Plot the side view, top view, and detector plane side by
         side with interactive slider controls.
 
@@ -2171,8 +2175,6 @@ class EBSDDetector:
         coordinates
             Detector plane coordinate format: "gnomonic" (default) or
             "detector".
-        zoom
-            Zoom factor for the detector plane. Default is 1.0.
         return_figure
             Whether to return the figure. Default is False. If False,
             :meth:`matplotlib.figure.Figure.show` is called before
@@ -2189,6 +2191,7 @@ class EBSDDetector:
 
         See Also
         --------
+        :class:`~kikuchipy.draw.EBSDDetectorPlotter`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`
@@ -2209,19 +2212,16 @@ class EBSDDetector:
         via the slider controls. However, any change not done via the
         sliders will not affect the sliders.
         """
-        from kikuchipy.draw._plot_ebsd_detector import (
-            plot_detector_sample_geometry_interactive,
-        )
+        from kikuchipy.draw._ebsd_detector_plot_widgets import EBSDDetectorPlotter
 
-        fig, widgets = plot_detector_sample_geometry_interactive(
-            detector=self,
+        plotter = EBSDDetectorPlotter(
+            self,
             inplace=inplace,
             legend=legend,
             dimensionless=dimensionless,
             coords_fmt=coordinates,
-            zoom=zoom,
-            **kwargs,
         )
+        fig, widgets = plotter.show(**kwargs)
 
         if return_figure:
             return widgets, fig
@@ -2294,7 +2294,7 @@ class EBSDDetector:
         fig
             Figure is returned if *return_figure* is True.
         """
-        from kikuchipy.draw._plot_ebsd_detector import plot_all_projection_centers
+        from kikuchipy.draw._projection_center_plot import plot_all_projection_centers
 
         # Ensure there are PCs to plot
         if self.navigation_size == 1:

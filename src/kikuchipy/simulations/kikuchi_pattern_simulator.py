@@ -60,7 +60,7 @@ import sys
 from typing import TYPE_CHECKING, Literal
 
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.colors as mcolors
 import matplotlib.figure as mfigure
