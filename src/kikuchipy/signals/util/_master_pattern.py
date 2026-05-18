@@ -109,7 +109,7 @@ def _get_direction_cosines_from_detector(
         func = _get_direction_cosines_for_varying_pc
 
     if signal_mask is None:
-        # Required since the Numba functions expect a boolean array
+        # Required since the Numba functions expects a boolean array
         signal_mask = np.ones(detector.size, dtype=bool)
 
     dc = func(

@@ -27,7 +27,7 @@ from time import time
 from typing import TYPE_CHECKING, Callable
 
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
