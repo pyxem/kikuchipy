@@ -199,7 +199,11 @@ select = [
     "I",  # isort
 ]
 # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
-extend-ignore = ["E501"]
+# https://docs.astral.sh/ruff/rules/#error-e
+extend-ignore = [
+    "E501",
+    "E402",
+]
 # https://docs.astral.sh/ruff/settings/#lintisort
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
