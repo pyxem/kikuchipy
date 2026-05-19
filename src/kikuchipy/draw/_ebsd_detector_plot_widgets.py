@@ -76,7 +76,7 @@ def get_slider_style() -> dict[str, str]:
 def get_sample_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
     """Return an :mod:`ipywidgets` slider from a *detector*."""
     stilt = detector.sample_tilt
-    stilt_min, stilt_max = get_detector_value_range(stilt, -90, 180)
+    stilt_min, stilt_max = get_detector_value_range(stilt, 0, 180)
 
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
@@ -94,7 +94,7 @@ def get_sample_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
 def get_detector_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
     """Return an :mod:`ipywidgets` slider from a *detector*."""
     tilt = detector.tilt
-    tilt_min, tilt_max = get_detector_value_range(tilt, 0, 180)
+    tilt_min, tilt_max = get_detector_value_range(tilt, -90, 270)
 
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(

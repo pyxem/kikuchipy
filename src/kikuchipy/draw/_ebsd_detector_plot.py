@@ -70,9 +70,21 @@ def get_projection_center_scatter_kwargs(
     default_kwds = {"s": 100, "zorder": 10}
     for k, v in default_kwds.items():
         kwargs.setdefault(k, v)
-    circle_kwargs = {"marker": "o", "facecolor": "w", "edgecolor": "k", **kwargs}
+    circle_kwargs = {
+        "marker": "o",
+        "facecolor": "w",
+        "edgecolor": "k",
+        "label": "_pc_circle",
+        **kwargs,
+    }
     kwargs["s"] *= 0.5
-    cross_kwargs = {"marker": "x", "color": "k", "linewidth": 1, **kwargs}
+    cross_kwargs = {
+        "marker": "x",
+        "color": "k",
+        "linewidth": 1,
+        "label": "_pc_cross",
+        **kwargs,
+    }
     return circle_kwargs, cross_kwargs
 
 
@@ -280,7 +292,7 @@ def plot_detector_sample_geometry_side_view(
     else:
         unit = " [mm]"
     ax.set_xlabel(f"\u2190 Microscope Y{unit}")
-    ax.set_ylabel(f"Microscope Z{unit} \u2191")
+    ax.set_ylabel(f"Microscope Z{unit} \u2192")
 
     return fig
 
@@ -401,7 +413,7 @@ def plot_detector_sample_geometry_top_view(
     else:
         unit = " [mm]"
     ax.set_xlabel(f"\u2190 Microscope X{unit}")
-    ax.set_ylabel(f"Microscope Y{unit} \u2193")
+    ax.set_ylabel(f"Microscope Y{unit} \u2190")
 
     return fig
 
