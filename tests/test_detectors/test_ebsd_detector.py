@@ -743,7 +743,8 @@ class TestEBSDDetector:
             det.binning = (3, 4)
 
 
-class TestPlotDetector:
+@pytest.mark.skipif(dependency_version["ipywidgets"] is None, reason="Needs ipywidgets")
+class TestPlotEBSDDetectorViews:
     def test_plot_side_view(self):
         det = kp.detectors.EBSDDetector()
 
@@ -768,9 +769,6 @@ class TestPlotDetector:
         assert "[mm]" in ax2.get_xlabel()
         assert "[mm]" in ax2.get_ylabel()
 
-    @pytest.mark.skipif(
-        dependency_version["ipywidgets"] is None, reason="Needs ipywidgets"
-    )
     def test_plot_side_view_interactive(self):
         import ipywidgets
 
