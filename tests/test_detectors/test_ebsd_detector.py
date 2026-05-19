@@ -589,18 +589,15 @@ class TestEBSDDetector:
         assert fig.axes[0].images[0].cmap.name == pattern_kwargs["cmap"]
         plt.close("all")
 
-    @pytest.mark.parametrize(
-        "pc_kwargs", [None, {"facecolor": "r"}, {"facecolor": "b"}]
-    )
-    def test_plot_pc_kwargs(self, detector, pc_kwargs):
-        """Pass PC kwargs to scatter()."""
-        fig = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_figure=True)
-        if pc_kwargs is None:
-            pc_kwargs = {"facecolor": "C1"}
-        assert np.allclose(
-            fig.axes[0].collections[0].get_facecolor().squeeze()[:3],
-            mcolors.to_rgb(pc_kwargs["facecolor"]),
-        )
+    def test_plot_pc_style(self, detector):
+        fig = detector.plot(show_pc=True, return_figure=True)
+        colls = fig.axes[0].collections
+
+        # White circle with a black cross
+        assert len(colls) == 2
+        assert np.allclose(colls[0].get_facecolor(), mcolors.to_rgba("w"))
+        assert np.allclose(colls[1].get_facecolor(), mcolors.to_rgba("k"))
+
         plt.close("all")
 
     @pytest.mark.parametrize("coordinates", ["detector", "gnomonic"])
