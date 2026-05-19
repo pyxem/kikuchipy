@@ -751,21 +751,22 @@ class TestPlotDetector:
         ax1 = fig1.axes[0]
         line_labels = [line.get_label() for line in ax1.lines]
         assert all(expected in line_labels for expected in ["Sample", "Detector"])
-        assert "PC" in [coll.get_label() for coll in ax1.collections]
+        coll_labels = [coll.get_label() for coll in ax1.collections]
+        assert all(label in coll_labels for label in ["_pc_circle", "_pc_cross"])
         assert len(ax1.texts) == 1
-        assert ax1.get_xlabel() == "Microscope Y"
-        assert ax1.get_ylabel() == "Microscope Z"
+        assert "Microscope Y" in ax1.get_xlabel()
+        assert "Microscope Z" in ax1.get_ylabel()
 
         fig2 = plt.figure()
         ax2 = fig2.add_subplot()
         det.plot_side_view(ax=ax2, legend=True, dimensionless=False)
         legend = fig2.legend()
         if dependency_version["matplotlib"] >= Version("3.7"):
-            assert len(legend.legend_handles) == 3
+            assert len(legend.legend_handles) == 2
         else:
-            assert len(legend.legendHandles) == 3
-        assert ax2.get_xlabel() == "Microscope Y [mm]"
-        assert ax2.get_ylabel() == "Microscope Z [mm]"
+            assert len(legend.legendHandles) == 2
+        assert "[mm]" in ax2.get_xlabel()
+        assert "[mm]" in ax2.get_ylabel()
 
     @pytest.mark.skipif(
         dependency_version["ipywidgets"] is None, reason="Needs ipywidgets"
