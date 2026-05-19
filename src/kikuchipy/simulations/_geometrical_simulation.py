@@ -66,9 +66,11 @@ def _bands_and_zone_axes_kernel(
         dx = v_h * u_kstar[0, 0] + v_k * u_kstar[1, 0] + v_l * u_kstar[2, 0]
         dy = v_h * u_kstar[0, 1] + v_k * u_kstar[1, 1] + v_l * u_kstar[2, 1]
         dz = v_h * u_kstar[0, 2] + v_k * u_kstar[1, 2] + v_l * u_kstar[2, 2]
-        if dz <= 0.0:
+        if dz < 0.0:
             continue
         xy_norm = np.sqrt(dx * dx + dy * dy)
+        if xy_norm == 0.0:
+            continue
         hesse = dz / xy_norm
         if np.abs(hesse) >= max_r:
             continue
