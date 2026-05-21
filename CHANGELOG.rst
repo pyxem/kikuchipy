@@ -22,20 +22,22 @@ Added
 - Download from conda-forge of ``kikuchipy-base`` without optional dependencies.
 - Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
   (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
-- Added error handling for setting various properties of the
-  ``kikuchipy.detectors.EBSDDetector``.
+- Added error handling for setting various properties of the ``EBSDDetector``.
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 - Dependency on typing-extensions for type hints only available from Python >= 3.11.
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 - Optional dependency on ipywidgets and IPython for IPython widgets.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 - Optional dependency on psygnal to allow triggering actions based on state changes.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- A mutable ``EBSDDetector.twist`` attribute which represents the angle about the
+  detector normal, pointing towards the sample, in degrees.
+  A positive angle means features on the detector appear to move counter-clockwise about
+  the detector center (assuming all other defaults).
 
 Changed
 -------
-- Made the string representation of the ``kikuchipy.detectors.EBSDDetector`` more
-  informative.
+- Made the string representation of the ``EBSDDetector`` more informative.
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 Removed
