@@ -706,6 +706,7 @@ class EBSDDetectorPlotter:
             :meth:`~matplotlib.axes.Axes.scatter`.
         """
         self._raise_if_no_rotation()
+        self._raise_if_has_overlay("geometrical")
         self._overlays.append(
             GeometricalSimulationOverlay(reflectors, bands_kwargs, zone_axes_kwargs)
         )
@@ -736,6 +737,7 @@ class EBSDDetectorPlotter:
             :meth:`~matplotlib.axes.Axes.imshow`.
         """
         self._raise_if_no_rotation()
+        self._raise_if_has_overlay("master_pattern")
         self._overlays.append(MasterPatternOverlay(master_pattern, energy, **kwargs))
 
     def show(
@@ -943,4 +945,4 @@ class EBSDDetectorPlotter:
         if overlay == "geometrical" and GeometricalSimulationOverlay in overlay_types:
             raise ValueError("Plotter already has a geometrical simulation")
         if overlay == "master_pattern" and MasterPatternOverlay in overlay_types:
-            raise ValueError("Plotter already has a matter pattern")
+            raise ValueError("Plotter already has a master pattern")

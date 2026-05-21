@@ -165,12 +165,18 @@ class TestEBSDDetectorPlotter:
         assert len(plotter._overlays) == 1
         assert isinstance(plotter._overlays[0], GeometricalSimulationOverlay)
 
+        fig, controls = plotter.show()
+        assert isinstance(fig, mfigure.Figure)
+        assert isinstance(controls, ipywidgets.HBox)
+        assert len(fig.axes) == 3
+        plt.close("all")
+
         # Raises when plotter has no rotation
         plotter2 = EBSDDetectorPlotter(kp.detectors.EBSDDetector())
         with pytest.raises(RuntimeError, match="Plotter must be made with a rotation"):
             plotter2.set_geometrical_simulation(ref)
 
-    def test_add_master_pattern(self):
+    def test_set_master_pattern(self):
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         rot = oqu.Rotation.from_axes_angles([0, 0, 1], 0)
 
@@ -178,6 +184,16 @@ class TestEBSDDetectorPlotter:
         plotter.set_master_pattern(mp)
         assert len(plotter._overlays) == 1
         assert isinstance(plotter._overlays[0], MasterPatternOverlay)
+
+        fig, controls = plotter.show()
+        assert isinstance(fig, mfigure.Figure)
+        assert isinstance(controls, ipywidgets.HBox)
+        assert len(fig.axes) == 3
+        plt.close("all")
+
+        # Raises if there's already a master pattern added
+        with pytest.raises(ValueError, match="Plotter already has a master pattern"):
+            plotter.set_master_pattern(mp)
 
         # Raises when plotter has no rotation
         plotter2 = EBSDDetectorPlotter(kp.detectors.EBSDDetector())
