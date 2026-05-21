@@ -74,7 +74,7 @@ def _bands_and_zone_axes_kernel(
         hesse = dz / xy_norm
         if np.abs(hesse) >= max_r:
             continue
-        alpha = np.acos(hesse / max_r)
+        alpha = np.arccos(hesse / max_r)
         az = np.atan2(dy, dx) - np.pi
         a1 = az + alpha
         a2 = az - alpha
