@@ -132,20 +132,16 @@ for i, (stilt, tilt) in enumerate(zip(sample_tilts, detector_tilts)):
 # Changing PCx
 # ------------
 #
-# Vary PCx from :math:`0 \rightarrow 1` (top :math:`\rightarrow` bottom).
+# Vary PCx from :math:`0 \rightarrow 1` (left :math:`\rightarrow` right).
 
 det5 = kp.detectors.EBSDDetector(shape=(60, 60))
 
-fig = plt.figure(figsize=(9, 6), layout="constrained")
+fig = plt.figure(figsize=(9, 3), layout="constrained")
 for i, pcx in enumerate([0, 0.5, 1]):
     det5.pcx = pcx
 
-    ax1 = fig.add_subplot(2, 3, i + 1)
-    ax1.set_title("Side view\n" + pc_string(det5))
-    det5.plot_side_view(ax=ax1)
-
-    ax2 = fig.add_subplot(2, 3, i + 4)
-    ax2.set_title("Top view")
+    ax2 = fig.add_subplot(2, 3, i + 1)
+    ax2.set_title("top view\n" + pc_string(det5))
     det5.plot_top_view(ax=ax2)
 
 # %%
