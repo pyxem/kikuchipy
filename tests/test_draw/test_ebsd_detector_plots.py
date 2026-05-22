@@ -267,9 +267,9 @@ class TestPlotPC:
 
         axes = fig.axes
         assert len(axes) == 3
-        for ax, label in zip(axes[3:], ["x", "y", "z"]):
-            assert ax.get_xlabel() == f"PC{label}"
-            assert ax.get_ylabel() == f"PC{label}"
+        for ax, (label_x, label_y) in zip(axes, [("x", "y"), ("x", "z"), ("z", "y")]):
+            assert ax.get_xlabel() == f"PC{label_x}"
+            assert ax.get_ylabel() == f"PC{label_y}"
 
         texts = axes[0].texts
         assert len(texts) == self.det.navigation_size
@@ -283,12 +283,6 @@ class TestPlotPC:
 
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) < 1
-
-        axes = fig.axes
-        assert len(axes) == 3
-        for ax, label in zip(axes[3:], ["x", "y", "z"]):
-            assert ax.get_xlabel() == f"PC{label}"
-            assert ax.get_ylabel() == f"PC{label}"
 
         plt.close(fig)
 
