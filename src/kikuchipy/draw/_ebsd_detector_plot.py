@@ -64,26 +64,24 @@ def get_gnomonic_circles(
 
 
 @cache
-def get_projection_center_scatter_kwargs(
-    **kwargs,
+def get_default_projection_center_scatter_kwargs(
+    s: float, zorder: int
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    default_kwds = {"s": 100, "zorder": 10}
-    for k, v in default_kwds.items():
-        kwargs.setdefault(k, v)
     circle_kwargs = {
         "marker": "o",
         "facecolor": "w",
         "edgecolor": "k",
         "label": "_pc_circle",
-        **kwargs,
+        "s": s,
+        "zorder": zorder,
     }
-    kwargs["s"] *= 0.5
     cross_kwargs = {
         "marker": "x",
         "color": "k",
         "linewidth": 1,
         "label": "_pc_cross",
-        **kwargs,
+        "s": 0.5 * s,
+        "zorder": zorder,
     }
     return circle_kwargs, cross_kwargs
 
@@ -155,7 +153,11 @@ def plot_ebsd_detector(
         axis.add_artist(rect)
 
     if show_pc:
-        circle_kwargs, cross_kwargs = get_projection_center_scatter_kwargs(**pc_kwargs)
+        s = pc_kwargs.get("s", 100)
+        zorder = pc_kwargs.get("zorder", 10)
+        circle_kwargs, cross_kwargs = get_default_projection_center_scatter_kwargs(
+            s=s, zorder=zorder
+        )
         axis.scatter(x=pcx, y=pcy, **circle_kwargs)
         axis.scatter(x=pcx, y=pcy, **cross_kwargs)
 
@@ -248,7 +250,9 @@ def plot_detector_sample_geometry_side_view(
         label="Sample",
         zorder=4,
     )
-    pc_circle_kwargs, pc_cross_kwargs = get_projection_center_scatter_kwargs(s=75)
+    pc_circle_kwargs, pc_cross_kwargs = get_default_projection_center_scatter_kwargs(
+        s=75
+    )
     ax.scatter(x=pc_pos[0], y=pc_pos[1], **pc_circle_kwargs)
     ax.scatter(x=pc_pos[0], y=pc_pos[1], **pc_cross_kwargs)
     ax.plot(
@@ -376,7 +380,9 @@ def plot_detector_sample_geometry_top_view(
         label="Sample",
         zorder=4,
     )
-    pc_circle_kwargs, pc_cross_kwargs = get_projection_center_scatter_kwargs(s=75)
+    pc_circle_kwargs, pc_cross_kwargs = get_default_projection_center_scatter_kwargs(
+        s=75
+    )
     ax.scatter(x=pc_pos[0] * to_mm, y=pc_pos[1] * to_mm, **pc_circle_kwargs)
     ax.scatter(x=pc_pos[0] * to_mm, y=pc_pos[1] * to_mm, **pc_cross_kwargs)
     ax.plot(

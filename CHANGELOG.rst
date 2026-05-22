@@ -39,6 +39,10 @@ Changed
 -------
 - Made the string representation of the ``EBSDDetector`` more informative.
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Styling of the projection center (PC) in EBSD detector plot changed to a white filled
+  circle with a black cross overlayed.
+  The only PC keyword arguments used when given in a dictionary to a plot method is
+  the size ("s") and the z-order ("zorder").
 
 Removed
 -------

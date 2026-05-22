@@ -309,7 +309,7 @@ class EBSDDetector:
     @property
     def azimuthal(self) -> float:
         r"""Return or set the detector tilt :math:`\omega` about the
-        detector vertial :math:`Y_d`, pointing downwards, in degrees.
+        detector vertical :math:`Y_d`, pointing downwards, in degrees.
 
         A positive angle means features on the detector appear to move
         toward the right (assuming all other defaults).
@@ -1797,8 +1797,10 @@ class EBSDDetector:
             Show the average projection center in the Bruker convention.
             Default is True.
         pc_kwargs
-            Keyword arguments passed to
-            :meth:`matplotlib.axes.Axes.scatter`.
+            The following arguments are used:
+
+            - "s": PC size. Default is 100.
+            - "zorder": The z-order. Default is 10.
         pattern
             A pattern to put on the detector. If not given, no pattern
             is displayed. The pattern array must have the same shape as
