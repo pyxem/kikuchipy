@@ -160,7 +160,9 @@ class TestEBSDDetectorPlotter:
         ref = ReciprocalLatticeVector(phase, hkl=[[1, 1, 1], [2, 0, 0], [2, 2, 0]])
         rot = oqu.Rotation.from_axes_angles([0, 0, 1], 0)
 
-        plotter = EBSDDetectorPlotter(kp.detectors.EBSDDetector(), rotation=rot)
+        det = kp.detectors.EBSDDetector(shape=(10, 10))
+
+        plotter = EBSDDetectorPlotter(det, rotation=rot)
         plotter.set_geometrical_simulation(ref)
         assert len(plotter._overlays) == 1
         assert isinstance(plotter._overlays[0], GeometricalSimulationOverlay)
@@ -172,7 +174,7 @@ class TestEBSDDetectorPlotter:
         plt.close("all")
 
         # Raises when plotter has no rotation
-        plotter2 = EBSDDetectorPlotter(kp.detectors.EBSDDetector())
+        plotter2 = EBSDDetectorPlotter(det)
         with pytest.raises(RuntimeError, match="Plotter must be made with a rotation"):
             plotter2.set_geometrical_simulation(ref)
 

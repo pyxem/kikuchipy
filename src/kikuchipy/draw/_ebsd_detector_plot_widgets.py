@@ -610,12 +610,14 @@ class MasterPatternOverlay(EBSDDetectorOverlay):
         )
         pattern = pattern_1d.reshape(detector.shape)
 
-        extent = (
-            detector._average_gnomonic_bounds
-            if coords_fmt == "gnomonic"
-            else detector.bounds
-        )
-        ax.imshow(pattern, extent=extent, **self._imshow_kwargs)
+        imshow_kwargs = self._imshow_kwargs
+        if coords_fmt == "gnomonic":
+            extent = detector._average_gnomonic_bounds
+        else:
+            extent = detector.bounds
+            imshow_kwargs["origin"] = "lower"
+
+        ax.imshow(pattern, extent=extent, **imshow_kwargs)
 
 
 class EBSDDetectorPlotter:

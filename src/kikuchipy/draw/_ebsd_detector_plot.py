@@ -251,7 +251,7 @@ def plot_detector_sample_geometry_side_view(
         zorder=4,
     )
     pc_circle_kwargs, pc_cross_kwargs = get_default_projection_center_scatter_kwargs(
-        s=75
+        s=75, zorder=10
     )
     ax.scatter(x=pc_pos[0], y=pc_pos[1], **pc_circle_kwargs)
     ax.scatter(x=pc_pos[0], y=pc_pos[1], **pc_cross_kwargs)
@@ -381,7 +381,7 @@ def plot_detector_sample_geometry_top_view(
         zorder=4,
     )
     pc_circle_kwargs, pc_cross_kwargs = get_default_projection_center_scatter_kwargs(
-        s=75
+        s=75, zorder=10
     )
     ax.scatter(x=pc_pos[0] * to_mm, y=pc_pos[1] * to_mm, **pc_circle_kwargs)
     ax.scatter(x=pc_pos[0] * to_mm, y=pc_pos[1] * to_mm, **pc_cross_kwargs)
