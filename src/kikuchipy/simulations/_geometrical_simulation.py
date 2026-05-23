@@ -193,7 +193,7 @@ def _get_geometrical_simulation(
     detector: EBSDDetector,
     rotation: Rotation,
     uvw: np.ndarray | None = None,
-    coords_fmt: Literal["detector", "gnomonic"] = "detector",
+    coords_fmt: Literal["pixel", "gnomonic"] = "pixel",
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return coordinates of visible Kikuchi bands and zone axes.
 
@@ -215,7 +215,7 @@ def _get_geometrical_simulation(
     coords_fmt
         Coordinate format for the returned arrays:
 
-        - "detector" (default) returns uncalibrated detector-pixel
+        - "pixel" (default) returns uncalibrated detector-pixel
           coordinates
         - "gnomonic" returns gnomonic coordinates with the origin at the
           projection center

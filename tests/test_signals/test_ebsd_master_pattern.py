@@ -28,10 +28,6 @@ import pytest
 
 import kikuchipy as kp
 from kikuchipy._constants import dependency_version
-from kikuchipy._utils._detector_coordinates import (
-    convert_coordinates,
-    get_coordinate_conversions,
-)
 from kikuchipy._utils.numba import rotate_vector
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_fixed_pc,
@@ -829,7 +825,6 @@ class TestFitPatternDetectorOrientation:
         Then obtain convert these into pixel coordinates
         on the detector and round to the nearest pixel.
         Return the indices of the zone axes, the
-        conversion dict from pix to gn and back, and
         the coordinates of the nearest detector pixels
         to the three zone axes.
         """
@@ -839,14 +834,13 @@ class TestFitPatternDetectorOrientation:
 
         x_gn = sim_lines._zone_axes.x_gnomonic[0, za_idx]
         y_gn = sim_lines._zone_axes.y_gnomonic[0, za_idx]
-        cds_gn = np.stack((x_gn, y_gn), axis=1)
+        cds_gn = np.stack((y_gn, x_gn), axis=1)
 
-        conversions = get_coordinate_conversions(det.gnomonic_bounds, det.bounds)
-        cds_px = convert_coordinates(cds_gn, "gn_to_pix", conversions)
+        cds_px = det.to_pixel_coords(cds_gn)
 
         cds_px_int = np.squeeze(np.around(cds_px, decimals=0).astype(int))
 
-        return za_idx, conversions, cds_px_int
+        return za_idx, cds_px_int
 
     def get_a_angles(self, sim_lines, za_idx, u_os):
         """Check that the GeometricalKikuchiPatternSimulation
@@ -890,7 +884,7 @@ class TestFitPatternDetectorOrientation:
 
         return a_ang, d_vec_n
 
-    def get_d_ang(self, cds_px_int, conversions, u_os, d_vec_n, det):
+    def get_d_ang(self, cds_px_int, u_os, d_vec_n, det):
         """Find the gnomonic coordinates of the nearest
         pixel centre to each of the 3 zone axes. Turn them
         into vectors and transform them from CSd to CSc using
@@ -903,13 +897,12 @@ class TestFitPatternDetectorOrientation:
         # Here we add 0.5 because pixel centres are used by the direction
         # cosines method and we need to take the same coords for this
         # alternative approach.
-        cds_gn_int = np.squeeze(
-            convert_coordinates(cds_px_int + 0.5, "pix_to_gn", conversions)
-        )
+        cds_gn_int = np.squeeze(det.to_gnomonic_coords(cds_px_int + 0.5))
 
         vecs = np.hstack(
             (
-                cds_gn_int * det.pcz,
+                np.expand_dims(cds_gn_int[:, 1] * det.pcz, axis=1),
+                np.expand_dims(cds_gn_int[:, 0] * det.pcz, axis=1),
                 np.repeat(np.atleast_2d(det.pcz), cds_gn_int.shape[0], axis=0),
             )
         )
@@ -948,16 +941,13 @@ class TestFitPatternDetectorOrientation:
         cosines and for the GeometricalKikuchiPatternSimulation
         are the same (this is tested later).
         """
-        # swap columns for i,j array indexing:
-        cds_px_int_ij = cds_px_int[:, ::-1]
-
         # all detector pixels:
         r_g_array = _get_direction_cosines_from_detector(det)
         r_g_array_rot = rotate_vector(self.rotations.data[0], r_g_array)
         rgarrrot_reshaped = r_g_array_rot.reshape((*self.detector.shape, 3))
 
         # select vectors corresponding to the nearest pixels to the chosen zone axes
-        rgrar_vec = rgarrrot_reshaped[cds_px_int_ij[:, 0], cds_px_int_ij[:, 1]]
+        rgrar_vec = rgarrrot_reshaped[cds_px_int[:, 0], cds_px_int[:, 1]]
 
         r_ang = np.array(
             [
@@ -1089,11 +1079,9 @@ class TestFitPatternDetectorOrientation:
              match.
         """
         det, sim_lines, u_os = self.setup_detector_sim_and_u_os(tilt, azimuthal, twist)
-        za_idx, conversions, cds_px_int = self.setup_za_and_cds(
-            zone_axes, sim_lines, det
-        )
+        za_idx, cds_px_int = self.setup_za_and_cds(zone_axes, sim_lines, det)
         a_ang, d_vec_n = self.get_a_angles(sim_lines, za_idx, u_os)
-        d_ang, dddd = self.get_d_ang(cds_px_int, conversions, u_os, d_vec_n, det)
+        d_ang, dddd = self.get_d_ang(cds_px_int, u_os, d_vec_n, det)
         r_ang, n_ang = self.get_r_ang_and_n_ang(cds_px_int, det, d_vec_n, dddd)
 
         return a_ang, d_ang, r_ang, n_ang

@@ -47,15 +47,17 @@ import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
-from kikuchipy._utils._detector_coordinates import (
-    convert_coordinates,
-    get_coordinate_conversions,
-)
 from kikuchipy._utils.deprecated import VisibleDeprecationWarning
+from kikuchipy.detectors._convert_detector_coordinates import (
+    convert_gnomonic_to_pixel_coords,
+    convert_pixel_to_gnomonic_coords,
+    parse_coordinate_format,
+)
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 # Repeated in plotting module
-DETECTOR_PLOT_FORMATS = Literal["detector", "gnomonic"]
+# TODO: Remove deprecated "detector" format once 0.12 is released
+DETECTOR_PLOT_FORMATS = Literal["pixel", "gnomonic", "detector"]
 PROJECTION_CENTER_PLOT_MODES = Literal["map", "scatter", "3d"]
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -826,28 +828,6 @@ class EBSDDetector:
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     @property
-    def coordinate_conversion_factors(self) -> dict:
-        """Return factors for converting coordinates on the detector
-        from pixel units to gnomonic units or vice versa.
-
-        The dict returned contains the keys "pix_to_gn",
-        containing factors for converting pixel to gnomonic
-        coordinates, and "gn_to_pix", containing factors for
-        converting gnomonic to pixel coordinates.
-        Under each of these keys is a further dict with the
-        keys: "m_x", "c_x", "m_y" and "c_y". These are the
-        slope (m) and y-intercept (c) corresponding to
-        y = mx + c, which describes the linear conversion
-        of the coordinates. A (different) linear relationship
-        is required for x (column) and y(row) coordinates,
-        hence the two sets of m and c parameters.
-        The shape of each array of conversion factors
-        typically corresponds to the navigation shape
-        of an EBSDDetector.
-        """
-        return get_coordinate_conversions(self.gnomonic_bounds, self.bounds)
-
-    @property
     def sample_to_detector(self) -> oqu.Rotation:
         """Return a rotation that transforms vectors in the sample
         reference frame to the detector reference frame.
@@ -928,95 +908,87 @@ class EBSDDetector:
 
         return detector
 
-    def convert_detector_coordinates(
+    def to_gnomonic_coords(
         self,
         coords: np.ndarray,
-        direction: str,
-        detector_index: int | tuple | None = None,
+        pos: int | tuple | None = None,
     ) -> np.ndarray:
-        """Convert between gnomonic and pixel coordinates on the detector screen.
-
+        """Return the corresponding gnomonic coordinates for the given
+        detector pixel coordinates.
 
         Parameters
         ----------
         coords
-            A 2D array of coordinates of any shape whereby the
-            x and y coordinates to be converted are stored in
-            the last axis.
-        direction
-            Either "pix_to_gn" or "gn_to_pix", depending on the
-            direction of conversion needed.
-        detector_index
-            Index showing which conversion factors in *conversions[direction]*
-            should be applied to *coords*.
-            If None, **all** conversion factors in *conversions[direction]*
-            are applied to *coords*.
-            If an int is supplied, this refers to an index in a 1D dataset.
-            A 1D tuple *e.g.* (3,) can also be passed for a 1D dataset.
-            A 2D index can be specified by supplying a tuple *e.g.* (2, 3).
-            The default value is None
+            A 2D array of coordinates of any shape whereby the pixel
+            coordinates *(y, x)* are stored in the last axis.
+        pos
+            Sample position(s) (pattern(s)) to convert coordinates for:
+
+            - If not given, coordinates are returned for each sample
+              position
+            - If an integer or a 1D tuple, :attr:`ndim` must be 1 and
+              coordinates for that sample position is returned
+            - If a 2D tuple, :attr:`ndim` must be 2 and coordinates for
+              each sample position is returned
 
         Returns
         -------
         coords_out
-            Array of coords but with values converted as specified
-            by direction. The shape is either the same as the input
-            or is the navigation shape then the shape of the input.
+            Array with gnomonic coordinates *(gy, gx)* of a shape given
+            by *pos*. The coordinates are in the last axis.
 
-        Examples
+        See Also
         --------
-
-        Convert a single point on the detector in pixel coordinates into
-        gnomonic coordinates for all patterns in the dataset.
-
-        >>> import numpy as np
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> det = s.detector
-        >>> det.navigation_shape
-        (3, 3)
-        >>> coords = np.array([[36.2, 12.7]])
-        >>> coords.shape
-        (1, 2)
-        >>> coords_out = det.convert_detector_coordinates(coords, "pix_to_gn", None)
-        >>> coords_out.shape
-        (3, 3, 1, 2)
-        >>> coords_out.squeeze()
-        array([[[ 0.36223464,  0.00664684],
-                [ 0.35762801, -0.00304659],
-                [ 0.35361398, -0.00042112]],
-        <BLANKLINE>
-               [[ 0.36432453,  0.00973461],
-                [ 0.35219231,  0.00567801],
-                [ 0.34417285,  0.00404584]],
-        <BLANKLINE>
-               [[ 0.36296371,  0.00072557],
-                [ 0.34447751,  0.00538137],
-                [ 0.36136688,  0.00180754]]])
-
-        Convert three points on the detector in pixel coordinates into
-        gnomonic coordinates for the pattern at navigation index (1, 2)
-        in the dataset.
-
-        >>> import numpy as np
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> det = s.detector
-        >>> det.navigation_shape
-        (3, 3)
-        >>> coords = np.array([[36.2, 12.7], [2.5, 43.7], [8.2, 27.7]])
-        >>> coords.shape
-        (3, 2)
-        >>> coords_out = det.convert_detector_coordinates(coords, "pix_to_gn", (1, 2))
-        >>> coords_out.shape
-        (3, 2)
-        >>> coords_out
-        array([[ 0.34417285,  0.00404584],
-               [-0.77639565, -1.02674418],
-               [-0.58686329, -0.49472353]])
+        to_pixel_coords
         """
-        coords_out = convert_coordinates(
-            coords, direction, self.coordinate_conversion_factors, detector_index
+        pos = self._parse_sample_position(pos)
+        coords_out = convert_pixel_to_gnomonic_coords(
+            self.gnomonic_bounds,
+            self.bounds,
+            coords,
+            pos,
+        )
+        return coords_out
+
+    def to_pixel_coords(
+        self,
+        coords: np.ndarray,
+        pos: int | tuple | None = None,
+    ) -> np.ndarray:
+        """Return the corresponding detector pixel coordinates for the
+        given gnomonic coordinates.
+
+        Parameters
+        ----------
+        coords
+            A 2D array of coordinates of any shape whereby the gnomonic
+            coordinates *(gy, gx)* are stored in the last axis.
+        pos
+            Sample position(s) (pattern(s)) to convert coordinates for:
+
+            - If not given, coordinates are returned for each sample
+              position
+            - If an integer or a 1D tuple, :attr:`ndim` must be 1 and
+              coordinates for that sample position is returned
+            - If a 2D tuple, :attr:`ndim` must be 2 and coordinates for
+              each sample position is returned
+
+        Returns
+        -------
+        coords_out
+            Array with detector pixel coordinates *(y, x)* of a shape
+            given by *pos*. The coordinates are in the last axis.
+
+        See Also
+        --------
+        to_gnomonic_coords
+        """
+        pos = self._parse_sample_position(pos)
+        coords_out = convert_gnomonic_to_pixel_coords(
+            self.gnomonic_bounds,
+            self.bounds,
+            coords,
+            pos,
         )
         return coords_out
 
@@ -1795,7 +1767,7 @@ class EBSDDetector:
     @overload
     def plot(
         self,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "pixel",
         show_pc: bool = ...,
         pc_kwargs: dict | None = None,
         pattern: np.ndarray | None = None,
@@ -1810,7 +1782,7 @@ class EBSDDetector:
     @overload
     def plot(
         self,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "pixel",
         show_pc: bool = ...,
         pc_kwargs: dict | None = None,
         pattern: np.ndarray | None = None,
@@ -1824,7 +1796,7 @@ class EBSDDetector:
 
     def plot(
         self,
-        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "pixel",
         show_pc: bool = True,
         pc_kwargs: dict | None = None,
         pattern: np.ndarray | None = None,
@@ -1845,8 +1817,10 @@ class EBSDDetector:
         Parameters
         ----------
         coordinates
-            Which coordinates to use, "detector" (default) or
-            "gnomonic".
+            Which coordinates to use, "pixel" (default) or "gnomonic".
+
+            Passing "detector" is deprecated and will raise an error
+            in version 0.13.0.
         show_pc
             Show the average projection center in the Bruker convention.
             Default is True.
@@ -1892,6 +1866,8 @@ class EBSDDetector:
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`
         """
         from kikuchipy.draw._ebsd_detector_plot import plot_ebsd_detector
+
+        coordinates = parse_coordinate_format(coordinates)
 
         if pattern_kwargs is None:
             pattern_kwargs = {}
@@ -2354,3 +2330,48 @@ class EBSDDetector:
         self, convention: PC_CONVENTIONS = "bruker"
     ) -> None:
         self.pc = self._get_pc_in_bruker_convention(convention)
+
+    def _parse_sample_position(self, pos: int | tuple | None) -> tuple | None:
+        """Validate and parse given sample *pos*."""
+        if pos is None:
+            return
+
+        nav_ndim = self.navigation_dimension
+
+        if isinstance(pos, (int, np.integer)):
+            if nav_ndim != 1:
+                raise ValueError(
+                    "An integer sample position is only valid when the detector "
+                    "navigation dimension is 1"
+                )
+            return (int(pos),)
+
+        if isinstance(pos, tuple):
+            if len(pos) == 1:
+                if nav_ndim != 1:
+                    raise ValueError(
+                        "A 1D sample position tuple is only valid when the detector "
+                        "navigation dimension is 1"
+                    )
+                if not isinstance(pos[0], (int, np.integer)):
+                    raise TypeError(
+                        "A 1D sample position tuple must contain a single integer"
+                    )
+                return (int(pos[0]),)
+
+            if len(pos) == 2:
+                if nav_ndim != 2:
+                    raise ValueError(
+                        "A 2D sample position tuple is only valid when the detector "
+                        "navigation dimension is 2"
+                    )
+                return pos
+
+            raise ValueError(
+                "Sample position tuple must have length 1 or 2, matching detector "
+                "navigation dimensionality"
+            )
+
+        raise TypeError(
+            "Sample position must be None, an integer, or a tuple with length 1 or 2"
+        )
