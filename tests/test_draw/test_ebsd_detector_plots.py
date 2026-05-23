@@ -18,7 +18,6 @@
 #
 
 import matplotlib.colors as mcolors
-import matplotlib.figure as mfigure
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -159,9 +158,6 @@ class TestEBSDDetectorPlot:
         plt.close("all")
 
 
-@pytest.mark.skipif(
-    dependency_version["ipywidgets"] is None, reason="ipywidgets is not installed"
-)
 class TestPlotEBSDDetectorViews:
     def test_plot_side_view(self):
         det = kp.detectors.EBSDDetector()
@@ -187,20 +183,28 @@ class TestPlotEBSDDetectorViews:
         assert "[mm]" in ax2.get_xlabel()
         assert "[mm]" in ax2.get_ylabel()
 
-    def test_plot_side_view_interactive(self):
-        import ipywidgets
-
+    def test_plot_top_view(self):
         det = kp.detectors.EBSDDetector()
-        widgets1 = det.plot_side_view(interactive=True)
-        assert isinstance(widgets1, ipywidgets.VBox)
 
-        widgets2, fig1 = det.plot_side_view(interactive=True, return_figure=True)
-        assert isinstance(widgets2, ipywidgets.VBox)
-        assert isinstance(fig1, mfigure.Figure)
+        fig1 = det.plot_top_view(return_figure=True)
+        ax1 = fig1.axes[0]
+        line_labels = [line.get_label() for line in ax1.lines]
+        assert all(expected in line_labels for expected in ["Sample", "Detector"])
+        coll_labels = [coll.get_label() for coll in ax1.collections]
+        assert all(label in coll_labels for label in ["_pc_circle", "_pc_cross"])
+        assert "Microscope X" in ax1.get_xlabel()
+        assert "Microscope Y" in ax1.get_ylabel()
 
-        _, ax = plt.subplots()
-        _, fig3 = det.plot_side_view(interactive=True, ax=ax, return_figure=True)
-        assert fig3.axes[0] is ax
+        fig2 = plt.figure()
+        ax2 = fig2.add_subplot()
+        det.plot_top_view(ax=ax2, legend=True, dimensionless=False)
+        legend = fig2.legend()
+        if dependency_version["matplotlib"] >= Version("3.7"):
+            assert len(legend.legend_handles) == 3
+        else:
+            assert len(legend.legendHandles) == 3
+        assert "[mm]" in ax2.get_xlabel()
+        assert "[mm]" in ax2.get_ylabel()
 
 
 class TestPlotPC:
