@@ -165,6 +165,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
             binning=header.get("binning", 1),
             tilt=header.get("elevation_angle", 0.0),
             azimuthal=header.get("azimuth_angle", 0.0),
+            twist=header.get("twist_angle", 0.0),
             sample_tilt=header.get("sample_tilt", 70.0),
             pc=pc,
         )
@@ -424,6 +425,7 @@ class KikuchipyH5EBSDWriter:
         _dict2hdf5group(
             {
                 "azimuth_angle": detector.azimuthal,
+                "twist_angle": detector.twist,
                 "binning": detector._binning,
                 "elevation_angle": detector.tilt,
                 "n_columns": nx,
