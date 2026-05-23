@@ -256,14 +256,8 @@ class KikuchiPatternSimulator:
         hkl = ref.hkl
 
         # Transformation from detector reference frame CSd to sample
-        # reference frame CSs
-        u_sample = Rotation.from_euler([0, detector.sample_tilt, 0], degrees=True)
-        u_d = Rotation.from_euler(detector.euler, degrees=True)
-        u_d_g = u_d.to_matrix().squeeze()
-        u_detector = Rotation.from_matrix(u_d_g.T)
-        u_s_bruker = u_sample * u_detector
-        u_s_rot = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
-        u_s = da.from_array(u_s_rot.to_matrix().squeeze())
+        # reference frame CSs.
+        u_s = da.from_array(detector.sample_to_detector.to_matrix().squeeze())
 
         # Transformation from CSs to cartesian crystal reference frame
         # CSc

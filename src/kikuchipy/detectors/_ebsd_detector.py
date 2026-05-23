@@ -40,9 +40,10 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import warnings
 
 from diffsims.crystallography import ReciprocalLatticeVector
+import numba as nb
 import numpy as np
-from orix.crystal_map import PhaseList
-from orix.quaternion import Rotation
+import orix.crystal_map as ocm
+import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
@@ -86,6 +87,59 @@ PC_CONVENTIONS_ALIASES: dict[PC_CONVENTIONS_SINGLE, list[PC_CONVENTIONS]] = {
     "oxford": ["oxford", "aztec"],
     "emsoft": ["emsoft", "emsoft4", "emsoft5"],
 }
+
+
+@nb.njit(
+    "float64[:, :](float64, float64, float64, float64)",
+    cache=True,
+    fastmath=True,
+    nogil=True,
+)
+def _detector_to_sample_intrinsic_matrix(
+    sigma: float, theta: float, omega: float, gamma: float
+) -> np.ndarray:
+    """Return detector axes in sample frame from intrinsic rotations."""
+    # Rows are detector (X_d, Y_d, Z_d) in sample coordinates.
+    basis = np.array(
+        [
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 0, 0],
+        ],
+        dtype=np.float64,
+    )
+
+    # Sample tilt, detector tilt, azimuthal, twist
+    angles = np.array((-sigma, theta, -omega, -gamma), dtype=np.float64)
+
+    for i, angle in zip([0, 0, 1, 2], angles):
+        ux = basis[i, 0]
+        uy = basis[i, 1]
+        uz = basis[i, 2]
+        norm = np.sqrt(ux * ux + uy * uy + uz * uz)
+        ux /= norm
+        uy /= norm
+        uz /= norm
+
+        c = np.cos(angle)
+        s = np.sin(angle)
+        one_minus_c = 1.0 - c
+
+        for j in range(3):
+            vx = basis[j, 0]
+            vy = basis[j, 1]
+            vz = basis[j, 2]
+
+            dot = ux * vx + uy * vy + uz * vz
+            cx = uy * vz - uz * vy
+            cy = uz * vx - ux * vz
+            cz = ux * vy - uy * vx
+
+            basis[j, 0] = vx * c + cx * s + ux * dot * one_minus_c
+            basis[j, 1] = vy * c + cy * s + uy * dot * one_minus_c
+            basis[j, 2] = vz * c + cz * s + uz * dot * one_minus_c
+
+    return basis
 
 
 class EBSDDetector:
@@ -794,35 +848,29 @@ class EBSDDetector:
         return get_coordinate_conversions(self.gnomonic_bounds, self.bounds)
 
     @property
-    def sample_to_detector(self) -> Rotation:
-        """Return the orientation matrix which transforms
-        vectors in the sample reference frame, CSs, to the
-        detector reference frame, CSd.
+    def sample_to_detector(self) -> oqu.Rotation:
+        """Return a rotation that transforms vectors in the sample
+        reference frame to the detector reference frame.
 
-        Notes
-        -----
+        Examples
+        --------
+        Get both transformations as rotations and orientation matrices
 
-        This is the matrix U_s as defined in the paper by
-        Britton et al. :cite:`britton2016tutorial`.
-
-        The return value has type orix.quaternion.Rotation.
-        To obtain a np.ndarray from this, call
-        u_s_rot.to_matrix(), or u_s_rot.to_matrix().squeeze(),
-        to obtain a 2D, 3x3 array.
-
-        The matrix describing the reverse transformation, i.e.
-        from the detector reference frame, CSd, to the sample
-        reference frame, CSs, can be obtained like this:
-        ~EBSDDetector.sample_to_detector
+        >>> import kikuchipy as kp
+        >>> det = kp.detectors.EBSDDetector()
+        >>> R_s2d = det.sample_to_detector
+        >>> om_s2d = R_s2d.to_matrix().squeeze()
+        >>> R_d2s = ~R_s2d
+        >>> om_d2s = om_s2d.T
         """
-        u_sample = Rotation.from_euler([0, self.sample_tilt, 0], degrees=True)
-        u_d = Rotation.from_euler(self.euler, degrees=True)
-        u_d_g = u_d.to_matrix().squeeze()
-        u_detector = Rotation.from_matrix(u_d_g.T)
-        u_s_bruker = u_sample * u_detector
-        sample_to_detector = (
-            Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
+        sigma = np.deg2rad(self.sample_tilt)
+        theta = np.deg2rad(self.tilt)
+        omega = np.deg2rad(self.azimuthal)
+        gamma = np.deg2rad(self.twist)
+        detector_to_sample = _detector_to_sample_intrinsic_matrix(
+            sigma, theta, omega, gamma
         )
+        sample_to_detector = oqu.Rotation.from_matrix(detector_to_sample.T)
         return sample_to_detector
 
     @property
@@ -1571,7 +1619,7 @@ class EBSDDetector:
 
     def get_indexer(
         self,
-        phase_list: PhaseList,
+        phase_list: ocm.PhaseList,
         reflectors: (
             list[ReciprocalLatticeVector | np.ndarray | list | tuple | None] | None
         ) = None,

@@ -397,8 +397,8 @@ class TestProjectFromLambert:
         sim3 = mp.get_patterns(detector=det3, **kwargs)
 
         assert not np.allclose(sim1.data, sim2.data)
-        assert np.allclose(sim2.data.mean(), 43.31, atol=1e-2)
-        assert np.allclose(sim3.data.mean(), 43.52, atol=1e-2)
+        assert np.allclose(sim2.data.mean(), 43.39, atol=1e-2)
+        assert np.allclose(sim3.data.mean(), 43.56, atol=1e-2)
 
     def test_project_patterns_from_master_pattern(self):
         """Cover the Numba functions."""

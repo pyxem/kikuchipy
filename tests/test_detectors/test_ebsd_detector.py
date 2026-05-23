@@ -259,7 +259,7 @@ class TestEBSDDetector:
         [
             (0, 0, 0, 90.0, [0.7071, 0.0, 0.0, 0.7071]),
             (0, 0, 0, 70.0, [0.6964, 0.1228, 0.1228, 0.6964]),
-            (8.3, 4.7, -1.02, 70.0, [0.6819, 0.2028, 0.1421, 0.6882]),
+            (8.3, 4.7, -1.02, 70.0, [0.6861, 0.2021, 0.1428, 0.6841]),
         ],
     )
     def test_sample_to_detector(
@@ -271,6 +271,21 @@ class TestEBSDDetector:
         rot_sample_to_det = det.sample_to_detector
         assert isinstance(rot_sample_to_det, oqu.Rotation)
         assert np.allclose(rot_sample_to_det.data, expected_rotation, atol=1e-4)
+
+    @pytest.mark.parametrize("sample_tilt", [0.0, 70.0])
+    def test_sample_to_detector_azimuthal_about_detector_y(self, sample_tilt):
+        det = kp.detectors.EBSDDetector(
+            sample_tilt=sample_tilt,
+            tilt=40.0,
+            azimuthal=0.0,
+            twist=0.0,
+        )
+        y0 = (~det.sample_to_detector).to_matrix().squeeze()[1]
+
+        for azimuthal in [20.0, -40.0]:
+            det.azimuthal = azimuthal
+            y = (~det.sample_to_detector).to_matrix().squeeze()[1]
+            assert np.allclose(y, y0, atol=1e-8)
 
     def test_coordinate_conversion_factors(self):
         """Factors for converting between pixel and gonomic coords."""
