@@ -349,10 +349,14 @@ def plot_detector_sample_geometry_top_view_interactive(
     details.
     """
     detector.pc = detector.pc_average
+    sample_tilt_slider = get_sample_tilt_slider(detector)
+    detector_tilt_slider = get_detector_tilt_slider(detector)
     azimuthal_slider = get_detector_azimuthal_slider(detector)
     pcx_slider = get_pcx_slider(detector)
     pcz_slider = get_pcz_slider(detector)
     sliders = [
+        sample_tilt_slider,
+        detector_tilt_slider,
         azimuthal_slider,
         pcx_slider,
         pcz_slider,
@@ -368,17 +372,23 @@ def plot_detector_sample_geometry_top_view_interactive(
         fig.canvas.draw_idle()
 
     def update_detector_from_sliders():
+        detector.sample_tilt = sample_tilt_slider.value
+        detector.tilt = detector_tilt_slider.value
         detector.azimuthal = azimuthal_slider.value
         detector.pcx = pcx_slider.value
         detector.pcz = pcz_slider.value
 
     if detector._has_signals:
+        detector._sample_tilt_changed.connect(redraw)
+        detector._tilt_changed.connect(redraw)
         detector._azimuthal_changed.connect(redraw)
         detector._pc_changed.connect(redraw)
 
         def on_slider_change(change: Any = None) -> None:
             # Block to redraw only once
             with (
+                detector._sample_tilt_changed.blocked(),
+                detector._tilt_changed.blocked(),
                 detector._azimuthal_changed.blocked(),
                 detector._pc_changed.blocked(),
             ):

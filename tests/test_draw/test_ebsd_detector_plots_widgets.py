@@ -132,6 +132,13 @@ class TestEBSDDetectorPlotWidgets:
         controls, fig = plot_detector_sample_geometry_top_view_interactive(det)
 
         assert isinstance(controls, ipywidgets.VBox)
+        assert len(controls.children) == 5
+        descriptions = [widget.description for widget in controls.children]
+        assert "Sample tilt [\u00b0]" in descriptions
+        assert "Detector tilt [\u00b0]" in descriptions
+        assert "Azimuthal [\u00b0]" in descriptions
+        assert "PCx" in descriptions
+        assert "PCz" in descriptions
         assert isinstance(fig, mfigure.Figure)
         plt.close("all")
 

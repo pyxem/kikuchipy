@@ -1898,7 +1898,7 @@ class EBSDDetector:
         r"""Plot the EBSD detector-sample geometry in a 2D side-view.
 
         The side is viewed along the negative microscope X :math:`X_m`
-        axis and shows the Y-Z plane. Changes in the following
+        axis and shows the Y-Z plane. Changes to the following
         attributes are visible in this view:
 
         - :attr:`~kikuchipy.detectors.EBSDDetector.tilt`
@@ -1983,12 +1983,15 @@ class EBSDDetector:
         r"""Plot the EBSD detector-sample geometry in a 2D top-view.
 
         The view is looking down the microscope Z axis and shows the
-        X-Y plane. Changes in the following attributes are visible in
+        X-Y plane. Changes to the following attributes are visible in
         this view:
 
-        - :attr:`~kikuchipy.detectors.EBSDDetector.pcx`
-        - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.sample_tilt`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.tilt`
         - :attr:`~kikuchipy.detectors.EBSDDetector.azimuthal`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcx`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcy`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
 
         The :class:`~kikuchipy.draw.EBSDDetectorPlotter` provides an
         interactive top view.

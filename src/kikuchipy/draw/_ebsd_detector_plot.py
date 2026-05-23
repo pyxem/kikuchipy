@@ -28,6 +28,7 @@ import matplotlib.figure as mfigure
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+import numba as nb
 import numpy as np
 
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
@@ -314,6 +315,19 @@ def update_detector_sample_geometry_side_view(
     )
 
 
+@nb.njit(
+    "float64[:](float64[:], float64[:], float64)", cache=True, fastmath=True, nogil=True
+)
+def rotate_about_axis(vector: np.ndarray, axis: np.ndarray, angle: float) -> np.ndarray:
+    """Rotate *vector* about *axis* by *angle* (radians)."""
+    axis = axis / np.linalg.norm(axis)
+    return (
+        vector * np.cos(angle)
+        + np.cross(axis, vector) * np.sin(angle)
+        + axis * np.dot(axis, vector) * (1 - np.cos(angle))
+    )
+
+
 def plot_detector_sample_geometry_top_view(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
@@ -335,30 +349,90 @@ def plot_detector_sample_geometry_top_view(
 
     # Dimensions in microns and angles in radians
     width = detector.width
+    height = detector.height
     L = detector.specimen_scintillator_distance[0]
-    sample_length = width * 0.6
+    sample_size = height * 0.6
+    sigma = np.deg2rad(detector.sample_tilt)
+    theta = np.deg2rad(detector.tilt)
     azimuthal = np.deg2rad(detector.azimuthal)
 
-    beam = np.zeros(2)
+    beam = np.zeros(2, dtype=np.float64)
 
-    # PC in microscope X-Y coordinates, with the screen normal pointing
-    # towards the interaction volume
-    det_normal = np.array([np.sin(azimuthal), np.cos(azimuthal)])
-    pc_pos = L * det_normal
+    # Detector local basis in microscope coordinates at zero detector
+    # tilt and zero azimuthal: X_d (width) points west, Y_d (height)
+    # points down in side view, and Z_d is the detector normal.
+    x_d = np.array([-1.0, 0.0, 0.0], dtype=np.float64)
+    y_d = np.array([0.0, 0.0, 1.0], dtype=np.float64)
+    z_d = np.array([0.0, 1.0, 0.0], dtype=np.float64)
 
-    # Unit vector along the detector width, perpendicular to the normal
-    width_dir = np.array([-np.cos(azimuthal), np.sin(azimuthal)])
+    # Apply intrinsic rotations: detector tilt about X_d followed by
+    # azimuthal tilt about Y_d.
+    y_d = rotate_about_axis(y_d, x_d, -theta)
+    z_d = rotate_about_axis(z_d, x_d, -theta)
+    x_d = rotate_about_axis(x_d, y_d, -azimuthal)
+    z_d = rotate_about_axis(z_d, y_d, -azimuthal)
 
-    # Detector endpoints
-    pcx = detector.pc_average[0]
+    width_dir_3d = x_d
+    height_dir_3d = y_d
+    det_normal_3d = z_d
+
+    pc_pos_3d = L * det_normal_3d
+    pc_pos = pc_pos_3d[:2]
+
+    # Sample surface projection: a square of side sample_size at 0 deg
+    # sample tilt, collapsing to a line at 90 deg sample tilt.
+    half_sample = sample_size * 0.5
+    sample_half_y = half_sample * np.cos(sigma)
+    sample_corners = np.array(
+        [
+            [-half_sample, -sample_half_y],
+            [half_sample, -sample_half_y],
+            [half_sample, sample_half_y],
+            [-half_sample, sample_half_y],
+        ],
+        dtype=np.float64,
+    )
+
+    # Detector corners from PC position and extents along width/height.
+    pcx, pcy = detector.pc_average[:2]
     left_extent = pcx * width
     right_extent = (1 - pcx) * width
-    det_left = pc_pos - left_extent * width_dir
-    det_right = pc_pos + right_extent * width_dir
+    top_extent = pcy * height
+    bottom_extent = (1 - pcy) * height
+    det_corners_3d = np.array(
+        [
+            pc_pos_3d - left_extent * width_dir_3d - top_extent * height_dir_3d,
+            pc_pos_3d + right_extent * width_dir_3d - top_extent * height_dir_3d,
+            pc_pos_3d + right_extent * width_dir_3d + bottom_extent * height_dir_3d,
+            pc_pos_3d - left_extent * width_dir_3d + bottom_extent * height_dir_3d,
+        ],
+        dtype=np.float64,
+    )
+    det_corners = det_corners_3d[:, :2]
 
-    # Sample surface: a line along X at Y=0
-    sample_start = np.array([-sample_length / 2, 0])
-    sample_end = np.array([sample_length / 2, 0])
+    # Keep both outlines visible at overlaps by using semi-transparent
+    # black strokes with fixed linewidth.
+    outline_alpha = 0.5
+    outline_lw = 1.5
+
+    # Detector tilt sign controls whether the detector is below or above
+    # the sample in this top-view projection.
+    if detector.tilt > 0:
+        sample_zorder = 5
+        detector_zorder = 4
+    elif detector.tilt < 0:
+        sample_zorder = 4
+        detector_zorder = 5
+    else:
+        sample_zorder = 4
+        detector_zorder = 4
+
+    if detector.tilt < 0:
+        beam_line_zorder = detector_zorder - 0.2
+        beam_marker_zorder = detector_zorder - 0.1
+    else:
+        beam_line_zorder = max(sample_zorder, detector_zorder) + 1
+        beam_marker_zorder = beam_line_zorder + 1
 
     to_mm = 1e-3
 
@@ -369,43 +443,55 @@ def plot_detector_sample_geometry_top_view(
         s=70,
         fc=BEAM_COLOR,
         ec="k",
-        zorder=5,
+        zorder=beam_marker_zorder,
         label="Beam",
     )
-    ax.plot(
-        [sample_start[0] * to_mm, sample_end[0] * to_mm],
-        [sample_start[1] * to_mm, sample_end[1] * to_mm],
-        c=SAMPLE_COLOR,
-        lw=6,
+
+    sample_patch = mpatches.Polygon(
+        sample_corners * to_mm,
+        closed=True,
+        fill=True,
+        facecolor=SAMPLE_COLOR,
+        edgecolor="k",
+        linewidth=outline_lw,
+        alpha=outline_alpha,
         label="Sample",
-        zorder=4,
+        zorder=sample_zorder,
     )
+    ax.add_patch(sample_patch)
+
     pc_circle_kwargs, pc_cross_kwargs = get_default_projection_center_scatter_kwargs(
         s=75, zorder=10
     )
     ax.scatter(x=pc_pos[0] * to_mm, y=pc_pos[1] * to_mm, **pc_circle_kwargs)
     ax.scatter(x=pc_pos[0] * to_mm, y=pc_pos[1] * to_mm, **pc_cross_kwargs)
-    ax.plot(
-        [det_left[0] * to_mm, det_right[0] * to_mm],
-        [det_left[1] * to_mm, det_right[1] * to_mm],
-        c=DETECTOR_COLOR,
-        lw=4,
+
+    detector_patch = mpatches.Polygon(
+        det_corners * to_mm,
+        closed=True,
+        fill=True,
+        facecolor=DETECTOR_COLOR,
+        edgecolor="k",
+        linewidth=outline_lw,
+        alpha=outline_alpha,
         label="Detector",
-        zorder=4,
+        zorder=detector_zorder,
     )
+    ax.add_patch(detector_patch)
+
     ax.plot(
         [beam[0] * to_mm, pc_pos[0] * to_mm],
         [beam[1] * to_mm, pc_pos[1] * to_mm],
         linestyle=":",
         color=BEAM_COLOR,
         alpha=0.5,
-        zorder=0,
+        zorder=beam_line_zorder,
     )
 
     ax.set_aspect("equal")
 
     # Fix axis limits
-    pad = get_axis_limit_pad(width)
+    pad = get_axis_limit_pad(max(width, height))
     ax.set_xlim(pad, -pad)
     ax.set_ylim(pad, -pad)
 
