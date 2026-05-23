@@ -1,4 +1,5 @@
-# Copyright 2019-2026 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,13 +15,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
-from ._ebsd_detector_plotter import EBSDDetectorPlotter
-from ._navigators import get_rgb_navigator
-from ._plot_pattern_positions_in_map import plot_pattern_positions_in_map
+import pytest
 
-__all__ = [
-    "EBSDDetectorPlotter",
-    "get_rgb_navigator",
-    "plot_pattern_positions_in_map",
-]
+from kikuchipy._constants import dependency_version, verify_dependency_or_raise
+
+
+@pytest.mark.skipif(
+    dependency_version["ipywidgets"] is not None, reason="ipywidgets is installed"
+)
+def test_verify_dependency_or_raise():
+    verify_dependency_or_raise("numpy", "")
+
+    with pytest.raises(ImportError, match="for some reason"):
+        verify_dependency_or_raise("ipywidgets", "for some reason")

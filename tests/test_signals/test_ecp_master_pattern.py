@@ -23,6 +23,7 @@ from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
+from kikuchipy._constants import dependency_version
 
 
 class TestECPMasterPattern:
@@ -72,6 +73,9 @@ class TestECPMasterPattern:
         assert np.allclose(mp_upper, data[1])
         assert np.allclose(mp_lower, data[1])
 
+    @pytest.mark.skipif(
+        dependency_version["pyvista"] is None, reason="PyVista is not installed"
+    )
     def test_plot_spherical(
         self, emsoft_ecp_master_pattern_file, skipif_no_vtk_support
     ):

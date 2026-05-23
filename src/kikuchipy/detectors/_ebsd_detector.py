@@ -40,9 +40,10 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import warnings
 
 from diffsims.crystallography import ReciprocalLatticeVector
+import numba as nb
 import numpy as np
-from orix.crystal_map import PhaseList
-from orix.quaternion import Rotation
+import orix.crystal_map as ocm
+import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
@@ -63,8 +64,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
-    if dependency_version["ipywidgets"] is not None:
-        import ipywidgets
 
 
 PC_CONVENTIONS = Literal[
@@ -88,6 +87,59 @@ PC_CONVENTIONS_ALIASES: dict[PC_CONVENTIONS_SINGLE, list[PC_CONVENTIONS]] = {
     "oxford": ["oxford", "aztec"],
     "emsoft": ["emsoft", "emsoft4", "emsoft5"],
 }
+
+
+@nb.njit(
+    "float64[:, :](float64, float64, float64, float64)",
+    cache=True,
+    fastmath=True,
+    nogil=True,
+)
+def _detector_to_sample_intrinsic_matrix(
+    sigma: float, theta: float, omega: float, gamma: float
+) -> np.ndarray:
+    """Return detector axes in sample frame from intrinsic rotations."""
+    # Rows are detector (X_d, Y_d, Z_d) in sample coordinates.
+    basis = np.array(
+        [
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 0, 0],
+        ],
+        dtype=np.float64,
+    )
+
+    # Sample tilt, detector tilt, azimuthal, twist
+    angles = np.array((-sigma, theta, -omega, -gamma), dtype=np.float64)
+
+    for i, angle in zip([0, 0, 1, 2], angles):
+        ux = basis[i, 0]
+        uy = basis[i, 1]
+        uz = basis[i, 2]
+        norm = np.sqrt(ux * ux + uy * uy + uz * uz)
+        ux /= norm
+        uy /= norm
+        uz /= norm
+
+        c = np.cos(angle)
+        s = np.sin(angle)
+        one_minus_c = 1.0 - c
+
+        for j in range(3):
+            vx = basis[j, 0]
+            vy = basis[j, 1]
+            vz = basis[j, 2]
+
+            dot = ux * vx + uy * vy + uz * vz
+            cx = uy * vz - uz * vy
+            cy = uz * vx - ux * vz
+            cz = ux * vy - uy * vx
+
+            basis[j, 0] = vx * c + cx * s + ux * dot * one_minus_c
+            basis[j, 1] = vy * c + cy * s + uy * dot * one_minus_c
+            basis[j, 2] = vz * c + cz * s + uz * dot * one_minus_c
+
+    return basis
 
 
 class EBSDDetector:
@@ -114,25 +166,27 @@ class EBSDDetector:
         binned into one. Default is 1, meaning no binning.
     tilt
         Detector tilt :math:`\theta` about the detector horizontal
-        :math:`X_d`, in degrees. Default is 0. A positive angle means
-        features on the detector appear to move upward (assuming all
-        other defaults).
+        :math:`X_d`, in degrees. Default is :math:`0^{\circ}`.
+
+        A positive angle means features on the detector appear to move
+        upward (assuming all other defaults).
     azimuthal
         Detector tilt :math:`\omega` about the detector vertical
-        :math:`Y_d`, pointing downwards, in degrees. Default is 0. A
-        positive angle means features on the detector appear to move
+        :math:`Y_d`, in degrees. Default is :math:`0^{\circ}`.
+
+        A positive angle means features on the detector appear to move
         toward the right (assuming all other defaults).
     twist
         Detector tilt :math:`\gamma` about the detector normal
-        :math:`Z_d`, pointing towards the sample, in degrees. Default is
-        0.0. A positive angle means features on the detector appear to
-        move counter-clockwise about the detector center (assuming all
+        :math:`Z_d`, in degrees. Default is :math:`0^{\circ}`.
+
+        A positive angle means features on the detector appear to
+        move counter-clockwise about the projection center (assuming all
         other defaults).
     sample_tilt
-        Sample tilt :math:`\sigma` about the sample horizontal,
-        :math:`Y_d`, in degrees. Default is 70. Note that the sample
-        horizontal :math:`Y_s` is parallel to the detector horizontal,
-        :math:`X_d` (assuming all other defaults).
+        Sample tilt :math:`\sigma` about the microscope X, :math:`X_m`,
+        in degrees. Default is :math:`70^{\circ}`, a typical angle for
+        EBSD acquisition.
     pc
         X, Y, and Z coordinates of the projection centers (PCs) in the
         given *convention*. Default is [0.5, 0.5, 0.5]. The PC describes
@@ -215,6 +269,7 @@ class EBSDDetector:
         _sample_tilt_changed = Signal(float)
         _tilt_changed = Signal(float)
         _azimuthal_changed = Signal(float)
+        _twist_changed = Signal(float)
         _pc_changed = Signal(np.ndarray)
 
     def __init__(
@@ -247,7 +302,7 @@ class EBSDDetector:
             # 0.13 has been released.
             warnings.warn(
                 message=(
-                    "Passing 'None' is deprecated and will give an error in version "
+                    "Passing None is deprecated and will give an error in version "
                     "0.14. Pass the default value 'bruker' to avoid this warning."
                 ),
                 category=VisibleDeprecationWarning,
@@ -256,126 +311,123 @@ class EBSDDetector:
         self._set_pc_in_bruker_convention(convention)
 
     # -------------------------- Properties -------------------------- #
-    # Listed alphabetically
+    # Grouped by topic
+
+    # ----------------------- Angle properties ----------------------- #
 
     @property
-    def aspect_ratio(self) -> float:
-        """Return the number of detector columns :math:`N_x` divided by
-        the number of detector rows :math:`N_y`.
+    def sample_tilt(self) -> float:
+        r"""Return or set the sample tilt :math:`\sigma` about the
+        microscope X, :math:`X_m`, in degrees.
+
+        Parameters
+        ----------
+        value : float
+            Sample tilt in degrees.
         """
-        return self.ncols / self.nrows
+        return self._sample_tilt
+
+    @sample_tilt.setter
+    def sample_tilt(self, value: float) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid sample tilt {value!r}. Must be a number.")
+        self._sample_tilt = float(value)
+
+        if self._has_signals:
+            self._sample_tilt_changed.emit(self._sample_tilt)
+
+    @property
+    def tilt(self) -> float:
+        r"""Return or set the detector tilt :math:`\theta` about the
+        detector horizontal :math:`X_d`, in degrees.
+
+        A positive angle means features on the detector appear to move
+        upward (assuming all other defaults).
+
+        If the :attr:`azimuthal` and :attr:`twist` angles are
+        :math:`0^{\circ}`, the tilt axis is the microscope X,
+        :math:`X_m`, and thus coincident with the sample tilt axis.
+
+        Parameters
+        ----------
+        value : float
+            Detector tilt in degrees.
+        """
+        return self._tilt
+
+    @tilt.setter
+    def tilt(self, value: float) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid detector tilt {value!r}. Must be a number.")
+        self._tilt = float(value)
+
+        if self._has_signals:
+            self._tilt_changed.emit(self._tilt)
 
     @property
     def azimuthal(self) -> float:
+        r"""Return or set the detector tilt :math:`\omega` about the
+        detector vertical :math:`Y_d`, in degrees.
+
+        A positive angle means features on the detector appear to move
+        toward the right (assuming all other defaults).
+
+        If the :attr:`tilt` angle is :math:`0^{\circ}`, the tilt axis
+        coincides with the microscope Z, :math:`Z_m`.
+
+        Parameters
+        ----------
+        value : float
+            Azimuthal detector tilt in degrees.
+        """
         return self._azimuthal
 
     @azimuthal.setter
     def azimuthal(self, value: float) -> None:
         if not isinstance(value, Number):
-            raise ValueError(f"Invalid azimuthal {value}. Must be a number.")
+            raise ValueError(f"Invalid azimuthal {value!r}. Must be a number.")
         self._azimuthal = float(value)
 
         if self._has_signals:
             self._azimuthal_changed.emit(self._azimuthal)
 
     @property
-    def binning(self) -> int:
-        r"""Return or set the integer detector binning factor, :math:`b`.
+    def twist(self) -> float:
+        r"""Return or set the detector twist :math:`\gamma` about the
+        detector normal :math:`Z_d`, in degrees.
+
+        A positive angle means features on the detector appear to move
+        counter-clockwise about the projection center (assuming all
+        other defaults).
 
         Parameters
         ----------
-        value : int
-            Detector binning factor.
+        value : float
+            Detector twist in degrees.
         """
-        return int(self._binning)
+        return self._twist
 
-    @binning.setter
-    def binning(self, value: int) -> None:
+    @twist.setter
+    def twist(self, value: float) -> None:
         if not isinstance(value, Number):
-            raise ValueError(f"Invalid binning {value}. Must be an integer.")
-        self._binning = float(value)
+            raise ValueError(f"Invalid twist {value!r}. Must be a number.")
+        self._twist = float(value)
 
-    @property
-    def bounds(self) -> np.ndarray:
-        """Return the detector bounds :math:`(0, N_x - 1, 0, N_y - 1)`
-        in pixel coordinates.
-        """
-        return np.array([0, self.ncols - 1, 0, self.nrows - 1])
+        if self._has_signals:
+            self._twist_changed.emit(self._twist)
 
     @property
     def euler(self) -> np.ndarray:
-        """Return the detector Euler angles in the Bunge convention
+        r"""Return the detector Euler angles in the Bunge convention
         (ZXZ) in degrees.
+
+        The Euler angles are given by the :attr:`azimuthal`,
+        :attr:`tilt`, and the :attr:`twist`,
+        :math:`(-\omega, 90^{\circ} + \theta, -\gamma)`.
         """
-        return np.array([self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
+        return np.array([-self.azimuthal, 90.0 + self.tilt, -self.twist], dtype=float)
 
-    @property
-    def gnomonic_bounds(self) -> np.ndarray:
-        """Return the detector bounds [x0, x1, y0, y1] in gnomonic
-        coordinates.
-
-        The calculation of gnomonic coordinates is based on the
-        supplementary material to :cite:`britton2016tutorial`.
-        """
-        return np.concatenate((self.x_range, self.y_range), axis=-1)
-
-    @property
-    def height(self) -> float:
-        r"""Return the detector height in microns.
-
-        This is given by :math:`N_y \delta b`.
-        """
-        return self.nrows * self.px_size * self._binning
-
-    @property
-    def navigation_dimension(self) -> int:
-        """Return the number of navigation dimensions of the projection
-        center array.
-        """
-        return len(self.navigation_shape)
-
-    @property
-    def navigation_shape(self) -> tuple[int] | tuple[int, int]:
-        """Return or set the navigation shape of the projection center
-        array.
-
-        Parameters
-        ----------
-        value : tuple[int] or tuple[int, int]
-            Navigation shape, with a maximum dimension of 2.
-        """
-        return self.pc.shape[: self.pc.ndim - 1]
-
-    @navigation_shape.setter
-    def navigation_shape(self, value: tuple[int] | tuple[int, int]) -> None:
-        ndim = len(value)
-        if ndim > 2:
-            raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
-        else:
-            self.pc = self.pc.reshape(value + (3,))
-
-    @property
-    def navigation_size(self) -> int:
-        """Return the number of projection centers."""
-        return int(np.prod(self.navigation_shape))
-
-    @property
-    def ncols(self) -> int:
-        """Return the number of detector pixel columns :math:`N_x`."""
-        return self.shape[1]
-
-    @property
-    def nrows(self) -> int:
-        """Return the number of detector pixel rows :math:`N_y`."""
-        return self.shape[0]
-
-    @property
-    def px_size_binned(self) -> float:
-        r"""Return the binned pixel size in microns.
-
-        This is given by :math:`\delta b`.
-        """
-        return self.px_size * self._binning
+    # ----------------- Projection center properties ----------------- #
 
     @property
     def pc(self) -> np.ndarray:
@@ -526,20 +578,7 @@ class EBSDDetector:
             raise ValueError(f"Invalid pixel size {value}. Must be a number.")
         self._px_size = float(value)
 
-    @property
-    def r_max(self) -> np.ndarray:
-        """Return the maximum distance from :attr:`pc` to the detector
-        edge in gnomonic coordinates.
-
-        The calculation of gnomonic coordinates is based on the
-        supplementary material to :cite:`britton2016tutorial`.
-        """
-        corners = np.zeros(self.navigation_shape + (4,))
-        corners[..., 0] = self.x_min**2 + self.y_min**2  # Upper left
-        corners[..., 1] = self.x_max**2 + self.y_min**2  # Upper right
-        corners[..., 2] = self.x_max**2 + self.y_max**2  # Lower right
-        corners[..., 3] = self.x_min**2 + self.y_min**2  # Lower left
-        return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
+    # ----------------------- Shape properties ----------------------- #
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -558,16 +597,68 @@ class EBSDDetector:
         self._shape = self._parse_valid_shape_or_raise(value)
 
     @property
+    def navigation_dimension(self) -> int:
+        """Return the number of navigation dimensions of the projection
+        center array.
+        """
+        return len(self.navigation_shape)
+
+    @property
+    def navigation_shape(self) -> tuple[int] | tuple[int, int]:
+        """Return or set the navigation shape of the projection center
+        array.
+
+        Parameters
+        ----------
+        value : tuple[int] or tuple[int, int]
+            Navigation shape, with a maximum dimension of 2.
+        """
+        return self.pc.shape[: self.pc.ndim - 1]
+
+    @navigation_shape.setter
+    def navigation_shape(self, value: tuple[int] | tuple[int, int]) -> None:
+        ndim = len(value)
+        if ndim > 2:
+            raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
+        else:
+            self.pc = self.pc.reshape(value + (3,))
+
+            if self._has_signals:
+                self._pc_changed.emit(self._pc)
+
+    @property
+    def navigation_size(self) -> int:
+        """Return the number of projection centers."""
+        return int(np.prod(self.navigation_shape))
+
+    @property
+    def ncols(self) -> int:
+        """Return the number of detector pixel columns :math:`N_x`."""
+        return self.shape[1]
+
+    @property
+    def nrows(self) -> int:
+        """Return the number of detector pixel rows :math:`N_y`."""
+        return self.shape[0]
+
+    @property
+    def aspect_ratio(self) -> float:
+        """Return the number of detector columns :math:`N_x` divided by
+        the number of detector rows :math:`N_y`.
+        """
+        return self.ncols / self.nrows
+
+    @property
+    def bounds(self) -> np.ndarray:
+        """Return the detector bounds :math:`(0, N_x - 1, 0, N_y - 1)`
+        in pixel coordinates.
+        """
+        return np.array([0, self.ncols - 1, 0, self.nrows - 1])
+
+    @property
     def size(self) -> int:
         """Return the number of detector pixels :math:`N_x N_y`."""
         return self.nrows * self.ncols
-
-    @property
-    def specimen_scintillator_distance(self) -> np.ndarray:
-        """Return the specimen-to-scintillator distance, known in EMsoft
-        as :math:`L`, given in microns.
-        """
-        return self.pcz * self.height
 
     @property
     def unbinned_shape(self) -> tuple[int, int]:
@@ -577,6 +668,33 @@ class EBSDDetector:
         """
         return tuple(np.array(self.shape, dtype=int) * self._binning)
 
+    # ----------------------- Size properties ------------------------ #
+
+    @property
+    def binning(self) -> int:
+        r"""Return or set the integer detector binning factor, :math:`b`.
+
+        Parameters
+        ----------
+        value : int
+            Detector binning factor.
+        """
+        return int(self._binning)
+
+    @binning.setter
+    def binning(self, value: int) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid binning {value}. Must be an integer.")
+        self._binning = float(value)
+
+    @property
+    def height(self) -> float:
+        r"""Return the detector height in microns.
+
+        This is given by :math:`N_y \delta b`.
+        """
+        return self.nrows * self.px_size * self._binning
+
     @property
     def width(self) -> float:
         r"""Return the detector width in microns.
@@ -584,6 +702,23 @@ class EBSDDetector:
         This is given by :math:`N_x \delta b`.
         """
         return self.ncols * self.px_size * self._binning
+
+    @property
+    def px_size_binned(self) -> float:
+        r"""Return the binned pixel size in microns.
+
+        This is given by :math:`\delta b`.
+        """
+        return self.px_size * self._binning
+
+    @property
+    def specimen_scintillator_distance(self) -> np.ndarray:
+        """Return the specimen-to-scintillator distance, known in EMsoft
+        as :math:`L`, given in microns.
+        """
+        return self.pcz * self.height
+
+    # ---------------- Gnomonic projection properties ---------------- #
 
     @property
     def x_min(self) -> np.ndarray | float:
@@ -666,6 +801,31 @@ class EBSDDetector:
         return y_scale.reshape(self.navigation_shape)
 
     @property
+    def gnomonic_bounds(self) -> np.ndarray:
+        """Return the detector bounds [x0, x1, y0, y1] in gnomonic
+        coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
+        return np.concatenate((self.x_range, self.y_range), axis=-1)
+
+    @property
+    def r_max(self) -> np.ndarray:
+        """Return the maximum distance from :attr:`pc` to the detector
+        edge in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
+        corners = np.zeros(self.navigation_shape + (4,))
+        corners[..., 0] = self.x_min**2 + self.y_min**2  # Upper left
+        corners[..., 1] = self.x_max**2 + self.y_min**2  # Upper right
+        corners[..., 2] = self.x_max**2 + self.y_max**2  # Lower right
+        corners[..., 3] = self.x_min**2 + self.y_min**2  # Lower left
+        return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
+
+    @property
     def coordinate_conversion_factors(self) -> dict:
         """Return factors for converting coordinates on the detector
         from pixel units to gnomonic units or vice versa.
@@ -688,100 +848,30 @@ class EBSDDetector:
         return get_coordinate_conversions(self.gnomonic_bounds, self.bounds)
 
     @property
-    def sample_to_detector(self) -> Rotation:
-        """Return the orientation matrix which transforms
-        vectors in the sample reference frame, CSs, to the
-        detector reference frame, CSd.
+    def sample_to_detector(self) -> oqu.Rotation:
+        """Return a rotation that transforms vectors in the sample
+        reference frame to the detector reference frame.
 
-        Notes
-        -----
+        Examples
+        --------
+        Get both transformations as rotations and orientation matrices
 
-        This is the matrix U_s as defined in the paper by
-        Britton et al. :cite:`britton2016tutorial`.
-
-        The return value has type orix.quaternion.Rotation.
-        To obtain a np.ndarray from this, call
-        u_s_rot.to_matrix(), or u_s_rot.to_matrix().squeeze(),
-        to obtain a 2D, 3x3 array.
-
-        The matrix describing the reverse transformation, i.e.
-        from the detector reference frame, CSd, to the sample
-        reference frame, CSs, can be obtained like this:
-        ~EBSDDetector.sample_to_detector
+        >>> import kikuchipy as kp
+        >>> det = kp.detectors.EBSDDetector()
+        >>> R_s2d = det.sample_to_detector
+        >>> om_s2d = R_s2d.to_matrix().squeeze()
+        >>> R_d2s = ~R_s2d
+        >>> om_d2s = om_s2d.T
         """
-        u_sample = Rotation.from_euler([0, self.sample_tilt, 0], degrees=True)
-        u_d = Rotation.from_euler(self.euler, degrees=True)
-        u_d_g = u_d.to_matrix().squeeze()
-        u_detector = Rotation.from_matrix(u_d_g.T)
-        u_s_bruker = u_sample * u_detector
-        sample_to_detector = (
-            Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
+        sigma = np.deg2rad(self.sample_tilt)
+        theta = np.deg2rad(self.tilt)
+        omega = np.deg2rad(self.azimuthal)
+        gamma = np.deg2rad(self.twist)
+        detector_to_sample = _detector_to_sample_intrinsic_matrix(
+            sigma, theta, omega, gamma
         )
+        sample_to_detector = oqu.Rotation.from_matrix(detector_to_sample.T)
         return sample_to_detector
-
-    @property
-    def sample_tilt(self) -> float:
-        r"""Return or set the sample tilt in degrees.
-
-        The sample tilt :math:`\sigma` is about the sample horizontal,
-        :math:`Y_d`. Note that the sample horizontal :math:`Y_d` is
-        parallel to the detector horizontal, :math:`X_d`.
-
-        Parameters
-        ----------
-        value : float
-            Sample tilt in degrees.
-        """
-        return self._sample_tilt
-
-    @sample_tilt.setter
-    def sample_tilt(self, value: float) -> None:
-        if not isinstance(value, Number):
-            raise ValueError(f"Invalid sample tilt {value}. Must be a number.")
-        self._sample_tilt = float(value)
-
-        if self._has_signals:
-            self._sample_tilt_changed.emit(self._sample_tilt)
-
-    @property
-    def tilt(self) -> float:
-        r"""Return or set the detector tilt :math:`\theta` about the
-        detector horizontal :math:`X_d`, in degrees.
-
-        Parameters
-        ----------
-        value : float
-            Detector tilt in degrees.
-        """
-        return self._tilt
-
-    @tilt.setter
-    def tilt(self, value: float) -> None:
-        if not isinstance(value, Number):
-            raise ValueError(f"Invalid detector tilt {value}. Must be a number.")
-        self._tilt = float(value)
-
-        if self._has_signals:
-            self._tilt_changed.emit(self._tilt)
-
-    @property
-    def twist(self) -> float:
-        r"""Return or set the detector twist :math:`\gamma` about the
-        detector normal :math:`Z_d`, pointing towards the sample, in
-        degrees.
-
-        Parameters
-        ----------
-        value : float
-            Detector twist in degrees.
-        """
-        return self._twist
-
-    @twist.setter
-    def twist(self, value: float) -> None:
-        if not isinstance(value, Number):
-            raise ValueError(f"Invalid twist {value}. Must be a number.")
-        self._twist = float(value)
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
@@ -805,10 +895,10 @@ class EBSDDetector:
         s = f"{self.__class__.__name__}\n"
         s += f"  shape (Ny, Nx):     {shape}\n"
         s += f"  pc (PCx, PCy, PCz): {pc_average}\n"
-        s += f"  sample_tilt:        {sample_tilt} deg\n"
-        s += f"  tilt:               {tilt} deg\n"
-        s += f"  azimuthal:          {azimuthal} deg\n"
-        s += f"  twist:              {twist} deg\n"
+        s += f"  sample_tilt:        {sample_tilt}\N{DEGREE SIGN}\n"
+        s += f"  tilt:               {tilt}\N{DEGREE SIGN}\n"
+        s += f"  azimuthal:          {azimuthal}\N{DEGREE SIGN}\n"
+        s += f"  twist:              {twist}\N{DEGREE SIGN}\n"
         s += f"  binning:            {binning}\n"
         s += f"  px_size:            {px_size} um"
 
@@ -997,7 +1087,7 @@ class EBSDDetector:
         return_figure: Literal[False] = False,
         return_outliers: Literal[False] = False,
         figure_kwargs: dict | None = None,
-    ) -> float: ...
+    ) -> float: ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1008,7 +1098,7 @@ class EBSDDetector:
         return_figure: Literal[False] = False,
         return_outliers: Literal[True] = ...,
         figure_kwargs: dict | None = None,
-    ) -> tuple[float, np.ndarray]: ...
+    ) -> tuple[float, np.ndarray]: ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1019,7 +1109,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[False] = False,
         figure_kwargs: dict | None = None,
-    ) -> "tuple[float, mfigure.Figure]": ...
+    ) -> "tuple[float, mfigure.Figure]": ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1030,7 +1120,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[True] = ...,
         figure_kwargs: dict | None = None,
-    ) -> "tuple[float, np.ndarray, mfigure.Figure]": ...
+    ) -> "tuple[float, np.ndarray, mfigure.Figure]": ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1041,7 +1131,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[False] = False,
         figure_kwargs: dict | None = None,
-    ) -> float: ...
+    ) -> float: ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1052,7 +1142,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[True] = ...,
         figure_kwargs: dict | None = None,
-    ) -> tuple[float, np.ndarray]: ...
+    ) -> tuple[float, np.ndarray]: ...  # pragma: no cover
 
     def estimate_xtilt(
         self,
@@ -1128,14 +1218,14 @@ class EBSDDetector:
         --------
         sklearn.linear_model.LinearRegression,
         sklearn.linear_model.RANSACRegressor,
-        estimate_xtilt_ztilt,
-        fit_pc
+        :meth:`~kikuchipy.detectors.EBSDDetector.estimate_xtilt_ztilt`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.fit_pc`
         """
         from kikuchipy.detectors._fit_projection_center import (
             estimate_xtilt_linear,
             estimate_xtilt_linear_robust,
         )
-        from kikuchipy.draw._plot_ebsd_detector import plot_xtilt_estimate
+        from kikuchipy.draw._projection_center_plot import plot_xtilt_estimate
 
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
@@ -1369,7 +1459,7 @@ class EBSDDetector:
         plot: bool = True,
         return_figure: Literal[False] = False,
         figure_kwargs: dict[str, Any] | None = None,
-    ) -> Self: ...
+    ) -> Self: ...  # pragma: no cover
 
     @overload
     def fit_pc(
@@ -1381,7 +1471,7 @@ class EBSDDetector:
         plot: bool = True,
         return_figure: Literal[True] = True,
         figure_kwargs: dict[str, Any] | None = None,
-    ) -> "tuple[Self, mfigure.Figure]": ...
+    ) -> "tuple[Self, mfigure.Figure]": ...  # pragma: no cover
 
     def fit_pc(
         self,
@@ -1446,7 +1536,9 @@ class EBSDDetector:
 
         See Also
         --------
-        estimate_xtilt, estimate_xtilt_ztilt, extrapolate_pc
+        :meth:`~kikuchipy.detectors.EBSDDetector.estimate_xtilt`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.estimate_xtilt_ztilt`,
+        :meth:`~kikuchipy.detectors.EBSDDetector.extrapolate_pc`
 
         Notes
         -----
@@ -1459,7 +1551,7 @@ class EBSDDetector:
         transformation.
         """
         from kikuchipy.detectors._fit_projection_center import fit_plane_to_pc
-        from kikuchipy.draw._plot_ebsd_detector import plot_projection_center_fit
+        from kikuchipy.draw._projection_center_plot import plot_projection_center_fit
 
         n_pc = self.navigation_size
         if n_pc == 1:
@@ -1527,7 +1619,7 @@ class EBSDDetector:
 
     def get_indexer(
         self,
-        phase_list: PhaseList,
+        phase_list: ocm.PhaseList,
         reflectors: (
             list[ReciprocalLatticeVector | np.ndarray | list | tuple | None] | None
         ) = None,
@@ -1713,7 +1805,7 @@ class EBSDDetector:
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = ...,
         return_figure: Literal[False] = ...,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot(
@@ -1728,7 +1820,7 @@ class EBSDDetector:
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = ...,
         return_figure: Literal[True] = ...,
-    ) -> "None | mfigure.Figure": ...
+    ) -> "None | mfigure.Figure | mfigure.SubFigure": ...  # pragma: no cover
 
     def plot(
         self,
@@ -1738,11 +1830,11 @@ class EBSDDetector:
         pattern: np.ndarray | None = None,
         pattern_kwargs: dict | None = None,
         draw_gnomonic_circles: bool = False,
-        gnomonic_angles: np.ndarray | list | None = None,
+        gnomonic_angles: np.ndarray | list[float] | None = None,
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = 1.0,
         return_figure: bool = False,
-    ) -> "None | mfigure.Figure":
+    ) -> "None | mfigure.Figure | mfigure.SubFigure":
         """Plot the detector screen viewed from the detector towards the
         sample.
 
@@ -1759,8 +1851,10 @@ class EBSDDetector:
             Show the average projection center in the Bruker convention.
             Default is True.
         pc_kwargs
-            Keyword arguments passed to
-            :meth:`matplotlib.axes.Axes.scatter`.
+            The following arguments are used:
+
+            - "s": PC size. Default is 100.
+            - "zorder": The z-order. Default is 10.
         pattern
             A pattern to put on the detector. If not given, no pattern
             is displayed. The pattern array must have the same shape as
@@ -1781,8 +1875,8 @@ class EBSDDetector:
             :meth:`matplotlib.patches.Circle`.
         zoom
             Whether to zoom in/out from the detector, e.g. to show the
-            extent of the gnomonic projection circles. A zoom > 1 zooms
-            out. Default is 1, i.e. no zoom.
+            extent of the gnomonic projection circles. Note that a zoom
+            > 1 zooms out. Default is 1 (no zoom).
         return_figure
             Whether to return the figure. Default is False.
 
@@ -1793,11 +1887,11 @@ class EBSDDetector:
 
         See Also
         --------
+        :class:`~kikuchipy.draw.EBSDDetectorPlotter`,
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`
         """
-        from kikuchipy.draw._plot_ebsd_detector import plot_ebsd_detector
+        from kikuchipy.draw._ebsd_detector_plot import plot_ebsd_detector
 
         if pattern_kwargs is None:
             pattern_kwargs = {}
@@ -1827,10 +1921,9 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         legend: bool = False,
         dimensionless: bool = True,
-        interactive: Literal[False] = False,
         return_figure: Literal[False] = False,
         **kwargs,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot_side_view(
@@ -1838,46 +1931,31 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         legend: bool = False,
         dimensionless: bool = True,
-        interactive: Literal[True] = True,
-        return_figure: Literal[False] = False,
-        **kwargs,
-    ) -> "ipywidgets.VBox": ...
-
-    @overload
-    def plot_side_view(
-        self,
-        ax: "maxes.Axes | None" = None,
-        legend: bool = False,
-        dimensionless: bool = True,
-        interactive: Literal[False] = False,
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "mfigure.Figure | mfigure.SubFigure": ...
-
-    @overload
-    def plot_side_view(
-        self,
-        ax: "maxes.Axes | None" = None,
-        legend: bool = False,
-        dimensionless: bool = True,
-        interactive: Literal[True] = True,
-        return_figure: Literal[True] = True,
-        **kwargs,
-    ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
+    ) -> "mfigure.Figure | mfigure.SubFigure": ...  # pragma: no cover
 
     def plot_side_view(
         self,
         ax: "maxes.Axes | None" = None,
         legend: bool = False,
         dimensionless: bool = True,
-        interactive: bool = False,
         return_figure: bool = False,
         **kwargs,
-    ) -> "None | ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure] | mfigure.Figure | mfigure.SubFigure":
+    ) -> "None | mfigure.Figure | mfigure.SubFigure":
         r"""Plot the EBSD detector-sample geometry in a 2D side-view.
 
-        The view is looking down the microscope Z axis and shows the
-        X-Y plane.
+        The side is viewed along the negative microscope X :math:`X_m`
+        axis and shows the Y-Z plane. Changes to the following
+        attributes are visible in this view:
+
+        - :attr:`~kikuchipy.detectors.EBSDDetector.tilt`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.sample_tilt`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcy`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
+
+        The :class:`~kikuchipy.draw.EBSDDetectorPlotter` provides an
+        interactive side view.
 
         Parameters
         ----------
@@ -1891,21 +1969,6 @@ class EBSDDetector:
             Whether to ignore the
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
             drawing the plot axes. Default is True.
-        interactive
-            Whether to return slider controls to interactively vary the
-            relevant detector-sample geometry parameters in the
-            side-view. Default is False. If True, the detector is varied
-            inplace. Requires that :mod:`ipywidgets` is installed. If
-            :mod:`psygnal` is installed, the plot is driven by signals
-            emitted from the detector property setters.
-
-            The following attributes can be varied:
-
-            - :attr:`sample_tilt`
-            - :attr:`tilt`
-            - :attr:`pcy` and :attr:`pcz`
-
-            The remaining attributes are ignored.
         return_figure
             Whether to return the figure. Default is False.
         **kwargs
@@ -1914,44 +1977,28 @@ class EBSDDetector:
 
         Returns
         -------
-        controls
-            The slider controls. Must be displayed using IPython.
         fig
             Figure showing the detector-sample geometry.
 
         See Also
         --------
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot`
         """
-        from kikuchipy.draw._plot_ebsd_detector import (
+        from kikuchipy.draw._ebsd_detector_plot import (
             plot_detector_sample_geometry_side_view,
-            plot_detector_sample_geometry_side_view_interactive,
         )
 
-        if interactive:
-            controls, fig = plot_detector_sample_geometry_side_view_interactive(
-                detector=self,
-                ax=ax,
-                legend=legend,
-                dimensionless=dimensionless,
-                **kwargs,
-            )
-            if return_figure:
-                return controls, fig
-            else:
-                return controls
-        else:
-            fig = plot_detector_sample_geometry_side_view(
-                detector=self,
-                ax=ax,
-                legend=legend,
-                dimensionless=dimensionless,
-                **kwargs,
-            )
-            if return_figure:
-                return fig
+        fig = plot_detector_sample_geometry_side_view(
+            detector=self,
+            ax=ax,
+            legend=legend,
+            dimensionless=dimensionless,
+            **kwargs,
+        )
+
+        if return_figure:
+            return fig
 
     @overload
     def plot_top_view(
@@ -1959,10 +2006,9 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         legend: bool = False,
         dimensionless: bool = True,
-        interactive: bool = False,
         return_figure: Literal[False] = False,
         **kwargs,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot_top_view(
@@ -1970,47 +2016,33 @@ class EBSDDetector:
         ax: "maxes.Axes | None" = None,
         legend: bool = False,
         dimensionless: bool = True,
-        interactive: bool = False,
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "mfigure.Figure | mfigure.SubFigure": ...
+    ) -> "mfigure.Figure | mfigure.SubFigure": ...  # pragma: no cover
 
-    @overload
     def plot_top_view(
         self,
         ax: "maxes.Axes | None" = None,
         legend: bool = False,
         dimensionless: bool = True,
-        interactive: Literal[True] = True,
         return_figure: bool = False,
         **kwargs,
-    ) -> "ipywidgets.VBox": ...
-
-    @overload
-    def plot_top_view(
-        self,
-        ax: "maxes.Axes | None" = None,
-        legend: bool = False,
-        dimensionless: bool = True,
-        interactive: Literal[True] = True,
-        return_figure: Literal[True] = True,
-        **kwargs,
-    ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
-
-    def plot_top_view(
-        self,
-        ax: "maxes.Axes | None" = None,
-        legend: bool = False,
-        dimensionless: bool = True,
-        interactive: bool = False,
-        return_figure: bool = False,
-        **kwargs,
-    ) -> "None | ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure] | mfigure.Figure | mfigure.SubFigure":
+    ) -> "None | mfigure.Figure | mfigure.SubFigure":
         r"""Plot the EBSD detector-sample geometry in a 2D top-view.
 
         The view is looking down the microscope Z axis and shows the
-        X-Y plane. This is the view in which the detector azimuthal
-        angle :math:`\omega` is visible. The effect of
+        X-Y plane. Changes to the following attributes are visible in
+        this view:
+
+        - :attr:`~kikuchipy.detectors.EBSDDetector.sample_tilt`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.tilt`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.azimuthal`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcx`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcy`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
+
+        The :class:`~kikuchipy.draw.EBSDDetectorPlotter` provides an
+        interactive top view.
 
         Parameters
         ----------
@@ -2024,20 +2056,6 @@ class EBSDDetector:
             Whether to ignore the
             :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
             drawing the plot axes. Default is True.
-        interactive
-            Whether to return slider controls to interactively vary the
-            relevant detector-sample geometry parameters in the
-            top-view. Default is False. If True, the detector is varied
-            inplace. Requires that :mod:`ipywidgets` is installed. If
-            :mod:`psygnal` is installed, the plot is driven by signals
-            emitted from the detector property setters.
-
-            The following attributes can be varied:
-
-            - :attr:`azimuthal`
-            - :attr:`pcx` and :attr:`pcz`
-
-            The remaining attributes are ignored.
         return_figure
             Whether to return the figure. Default is False.
         **kwargs
@@ -2052,145 +2070,22 @@ class EBSDDetector:
         See Also
         --------
         :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_interactive`
+        :meth:`~kikuchipy.detectors.EBSDDetector.plot`
         """
-        from kikuchipy.draw._plot_ebsd_detector import (
+        from kikuchipy.draw._ebsd_detector_plot import (
             plot_detector_sample_geometry_top_view,
-            plot_detector_sample_geometry_top_view_interactive,
         )
 
-        if interactive:
-            controls, fig = plot_detector_sample_geometry_top_view_interactive(
-                detector=self,
-                ax=ax,
-                legend=legend,
-                dimensionless=dimensionless,
-                **kwargs,
-            )
-            if return_figure:
-                return controls, fig
-            else:
-                return controls
-        else:
-            fig = plot_detector_sample_geometry_top_view(
-                detector=self,
-                ax=ax,
-                legend=legend,
-                dimensionless=dimensionless,
-                **kwargs,
-            )
-            if return_figure:
-                return fig
-
-    @overload
-    def plot_interactive(
-        self,
-        inplace: bool = True,
-        legend: bool = False,
-        dimensionless: bool = True,
-        coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
-        zoom: float = 1.0,
-        return_figure: Literal[False] = False,
-        **kwargs,
-    ) -> "ipywidgets.VBox": ...
-
-    @overload
-    def plot_interactive(
-        self,
-        inplace: bool = True,
-        legend: bool = False,
-        dimensionless: bool = True,
-        coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
-        zoom: float = 1.0,
-        return_figure: Literal[True] = True,
-        **kwargs,
-    ) -> "tuple[ipywidgets.VBox, mfigure.Figure]": ...
-
-    def plot_interactive(
-        self,
-        inplace: bool = True,
-        legend: bool = False,
-        dimensionless: bool = True,
-        coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
-        zoom: float = 1.0,
-        return_figure: bool = False,
-        **kwargs,
-    ) -> "ipywidgets.VBox | tuple[ipywidgets.VBox, mfigure.Figure]":
-        """Plot the side view, top view, and detector plane side by
-        side with interactive slider controls.
-
-        Parameters
-        ----------
-        inplace
-            Whether the interactive changes affect the detector inplace.
-            Default is True.
-        legend
-            Whether to show a legend in the upper right corner of the
-            side and top view plots. Default is False.
-        dimensionless
-            Whether to ignore the
-            :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
-            drawing the side-view plot axes. Default is True.
-        coordinates
-            Detector plane coordinate format: "gnomonic" (default) or
-            "detector".
-        zoom
-            Zoom factor for the detector plane. Default is 1.0.
-        return_figure
-            Whether to return the figure. Default is False. If False,
-            :meth:`matplotlib.figure.Figure.show` is called before
-            returning.
-        **kwargs
-            Keyword arguments passed to
-            :func:`~matplotlib.pyplot.figure`.
-
-        Returns
-        -------
-        widgets
-            The widget containing the sliders. Required to display the
-            interactive controls.
-
-        See Also
-        --------
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_side_view`,
-        :meth:`~kikuchipy.detectors.EBSDDetector.plot_top_view`
-
-        Notes
-        -----
-        Requires that :mod:`ipywidgets` is installed.
-
-        Parameters to vary:
-
-        - :attr:`sample_tilt`
-        - Detector :attr:`tilt`
-        - Detector :attr:`azimuthal`
-        - Average :attr:`pc`, (PCx, PCy, PCz), individually
-
-        If :mod:`psygnal` is installed and *inplace* is True, the plot
-        can be updated by any change to the above parameters, not just
-        via the slider controls. However, any change not done via the
-        sliders will not affect the sliders.
-        """
-        from kikuchipy.draw._plot_ebsd_detector import (
-            plot_detector_sample_geometry_interactive,
-        )
-
-        fig, widgets = plot_detector_sample_geometry_interactive(
+        fig = plot_detector_sample_geometry_top_view(
             detector=self,
-            inplace=inplace,
+            ax=ax,
             legend=legend,
             dimensionless=dimensionless,
-            coords_fmt=coordinates,
-            zoom=zoom,
             **kwargs,
         )
 
         if return_figure:
-            return widgets, fig
-        else:
-            return widgets
+            return fig
 
     @overload
     def plot_pc(
@@ -2201,7 +2096,7 @@ class EBSDDetector:
         annotate: bool = False,
         figure_kwargs: dict | None = None,
         **kwargs,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot_pc(
@@ -2212,7 +2107,7 @@ class EBSDDetector:
         annotate: bool = ...,
         figure_kwargs: dict | None = ...,
         **kwargs,
-    ) -> "mfigure.Figure": ...
+    ) -> "mfigure.Figure": ...  # pragma: no cover
 
     def plot_pc(
         self,
@@ -2258,7 +2153,7 @@ class EBSDDetector:
         fig
             Figure is returned if *return_figure* is True.
         """
-        from kikuchipy.draw._plot_ebsd_detector import plot_all_projection_centers
+        from kikuchipy.draw._projection_center_plot import plot_all_projection_centers
 
         # Ensure there are PCs to plot
         if self.navigation_size == 1:

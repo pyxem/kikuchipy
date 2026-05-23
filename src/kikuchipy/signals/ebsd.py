@@ -30,7 +30,7 @@ import warnings
 
 import dask
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 from h5py import File
 import hyperspy.api as hs
 from hyperspy.axes import AxesManager

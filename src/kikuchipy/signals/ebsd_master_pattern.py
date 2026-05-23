@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 import dask
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 import hyperspy.api as hs
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
@@ -352,7 +352,7 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             the signal.
         """
         suitable = True
-        error = None
+        error: Exception | None = None
         if self.projection != "lambert":
             error = NotImplementedError(
                 "Master pattern must be in the square Lambert projection"

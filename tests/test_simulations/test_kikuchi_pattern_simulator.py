@@ -297,6 +297,9 @@ class TestPlot:
 
         plt.close("all")
 
+    @pytest.mark.skipif(
+        dependency_version["pyvista"] is None, reason="PyVista is not installed"
+    )
     def test_plot_spherical(self, skipif_no_vtk_support):
         """Spherical plot with PyVista."""
         import pyvista as pv

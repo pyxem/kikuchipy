@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,8 +15,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
-import matplotlib.pyplot as plt
+import matplotlib.axes as maxes
+import matplotlib.figure as mfigure
 import numpy as np
 import pytest
 
@@ -109,24 +112,24 @@ class TestPCCalibrationMovingScreen:
         cal = moving_screen_cal_instance
         fig = cal.plot(return_figure=True)
 
-        assert isinstance(fig, plt.Figure)
+        assert isinstance(fig, mfigure.Figure)
         assert len(fig.axes) == 3
-        assert isinstance(fig.axes[0], plt.Subplot)
+        assert isinstance(fig.axes[0], maxes.Subplot)
 
     def test_repr(self, moving_screen_cal_instance):
         assert repr(moving_screen_cal_instance) == (
             "PCCalibrationMovingScreen: (PCx, PCy, PCz) = "
             "(0.5054, 0.8624, 0.5036)\n"
             "5 points:\n"
-            "[[[109 131]\n"
-            "  [390 139]\n"
-            "  [246 232]\n"
-            "  [129 228]\n"
-            "  [364 237]]\n"
+            "[[[109. 131.]\n"
+            "  [390. 139.]\n"
+            "  [246. 232.]\n"
+            "  [129. 228.]\n"
+            "  [364. 237.]]\n"
             "\n"
-            " [[ 77 146]\n"
-            "  [424 156]\n"
-            "  [246 269]\n"
-            "  [104 265]\n"
-            "  [392 276]]]"
+            " [[ 77. 146.]\n"
+            "  [424. 156.]\n"
+            "  [246. 269.]\n"
+            "  [104. 265.]\n"
+            "  [392. 276.]]]"
         )

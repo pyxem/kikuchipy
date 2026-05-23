@@ -20,18 +20,21 @@
 from copy import deepcopy
 
 import matplotlib.collections as mcollections
-import matplotlib.colors as mcolors
-import matplotlib.figure as mfigure
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
-from orix.quaternion import Rotation
-from packaging.version import Version
+import orix.quaternion as oqu
 import pytest
 
 import kikuchipy as kp
 from kikuchipy._constants import dependency_version
+
+skipif_pyebsdindex_installed = pytest.mark.skipif(
+    dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
+)
+skipif_pyebsdindex_not_installed = pytest.mark.skipif(
+    dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
+)
 
 
 class TestEBSDDetector:
@@ -150,10 +153,10 @@ class TestEBSDDetector:
             "EBSDDetector\n"
             "  shape (Ny, Nx):     (1, 2)\n"
             "  pc (PCx, PCy, PCz): (0.421, 0.779, 0.505)\n"
-            "  sample_tilt:        70.0 deg\n"
-            "  tilt:               5.0 deg\n"
-            "  azimuthal:          2.0 deg\n"
-            "  twist:              1.02 deg\n"
+            "  sample_tilt:        70.0\N{DEGREE SIGN}\n"
+            "  tilt:               5.0\N{DEGREE SIGN}\n"
+            "  azimuthal:          2.0\N{DEGREE SIGN}\n"
+            "  twist:              1.02\N{DEGREE SIGN}\n"
             "  binning:            4\n"
             "  px_size:            3.0 um"
         )
@@ -252,58 +255,37 @@ class TestEBSDDetector:
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
 
     @pytest.mark.parametrize(
-        "tilt, azimuthal, twist, sample_tilt, expected_angle, expected_axis, "
-        "expected_rotation",
+        "tilt, azimuthal, twist, sample_tilt, expected_rotation",
         [
-            (
-                0,
-                0,
-                0,
-                90,
-                90.0,
-                np.array([0.0, 0.0, 1.0]),
-                np.array([[0.70710678, 0.0, 0.0, 0.70710678]]),
-            ),
-            (
-                0,
-                0,
-                0,
-                70,
-                91.7279410723505,
-                np.array([0.17108787, 0.17108787, 0.97028753]),
-                np.array([[0.69636424, 0.1227878, 0.1227878, 0.69636424]]),
-            ),
-            (
-                8.3,
-                4.7,
-                1.02,
-                70,
-                94.94104636971042,
-                np.array([0.19765823, 0.27176174, 0.94184754]),
-                np.array([[0.67596942, 0.14566022, 0.20026929, 0.69407539]]),
-            ),
+            (0, 0, 0, 90.0, [0.7071, 0.0, 0.0, 0.7071]),
+            (0, 0, 0, 70.0, [0.6964, 0.1228, 0.1228, 0.6964]),
+            (8.3, 4.7, -1.02, 70.0, [0.6861, 0.2021, 0.1428, 0.6841]),
         ],
     )
     def test_sample_to_detector(
-        self,
-        tilt,
-        azimuthal,
-        twist,
-        sample_tilt,
-        expected_angle,
-        expected_axis,
-        expected_rotation,
+        self, tilt, azimuthal, twist, sample_tilt, expected_rotation
     ):
-        """Check the Rotation sample_to_detector has the correct type and values."""
-        detector = kp.detectors.EBSDDetector(
+        det = kp.detectors.EBSDDetector(
             tilt=tilt, azimuthal=azimuthal, twist=twist, sample_tilt=sample_tilt
         )
-        smpl_to_det = detector.sample_to_detector
+        rot_sample_to_det = det.sample_to_detector
+        assert isinstance(rot_sample_to_det, oqu.Rotation)
+        assert np.allclose(rot_sample_to_det.data, expected_rotation, atol=1e-4)
 
-        assert isinstance(smpl_to_det, Rotation)
-        assert np.allclose(np.rad2deg(smpl_to_det.angle)[0], expected_angle)
-        assert np.allclose(smpl_to_det.axis.data.squeeze(), expected_axis)
-        assert np.allclose(smpl_to_det.data, expected_rotation)
+    @pytest.mark.parametrize("sample_tilt", [0.0, 70.0])
+    def test_sample_to_detector_azimuthal_about_detector_y(self, sample_tilt):
+        det = kp.detectors.EBSDDetector(
+            sample_tilt=sample_tilt,
+            tilt=40.0,
+            azimuthal=0.0,
+            twist=0.0,
+        )
+        y0 = (~det.sample_to_detector).to_matrix().squeeze()[1]
+
+        for azimuthal in [20.0, -40.0]:
+            det.azimuthal = azimuthal
+            y = (~det.sample_to_detector).to_matrix().squeeze()[1]
+            assert np.allclose(y, y0, atol=1e-8)
 
     def test_coordinate_conversion_factors(self):
         """Factors for converting between pixel and gonomic coords."""
@@ -378,6 +360,148 @@ class TestEBSDDetector:
         assert np.allclose(cds_out, desired_coords)
         assert np.allclose(cds_back[..., :], coords[..., :])
 
+    @pytest.mark.parametrize(
+        "shape, desired_shapes",
+        [
+            (
+                (1,),  # PC
+                [
+                    (4,),  # extent
+                    (1,),  # x_min
+                    (1,),  # y_min
+                    (1, 2),  # x_range
+                    (1, 2),  # y_range
+                    (1,),  # x_scale
+                    (1,),  # y_scale
+                    (1, 4),  # extent_gnomonic
+                ],
+            ),
+            (
+                (10,),
+                [
+                    (4,),
+                    (10,),
+                    (10,),
+                    (10, 2),
+                    (10, 2),
+                    (10,),
+                    (10,),
+                    (10, 4),
+                ],
+            ),
+            (
+                (10, 10),
+                [
+                    (4,),
+                    (10, 10),
+                    (10, 10),
+                    (10, 10, 2),
+                    (10, 10, 2),
+                    (10, 10),
+                    (10, 10),
+                    (10, 10, 4),
+                ],
+            ),
+            (
+                (1, 10),
+                [
+                    (4,),
+                    (1, 10),
+                    (1, 10),
+                    (1, 10, 2),
+                    (1, 10, 2),
+                    (1, 10),
+                    (1, 10),
+                    (1, 10, 4),
+                ],
+            ),
+            (
+                (10, 1),
+                [
+                    (4,),
+                    (10, 1),
+                    (10, 1),
+                    (10, 1, 2),
+                    (10, 1, 2),
+                    (10, 1),
+                    (10, 1),
+                    (10, 1, 4),
+                ],
+            ),
+        ],
+    )
+    def test_property_shapes(self, shape, desired_shapes):
+        """Expected property shapes when varying navigation shape."""
+        det = kp.detectors.EBSDDetector(pc=np.ones(shape + (3,)))
+        assert det.bounds.shape == desired_shapes[0]
+        assert det.x_min.shape == desired_shapes[1]
+        assert det.y_min.shape == desired_shapes[2]
+        assert det.x_range.shape == desired_shapes[3]
+        assert det.y_range.shape == desired_shapes[4]
+        assert det.x_scale.shape == desired_shapes[5]
+        assert det.y_scale.shape == desired_shapes[6]
+        assert det.gnomonic_bounds.shape == desired_shapes[7]
+
+    def test_crop(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        det2 = det.crop((1, 5, 2, 6))
+        assert det2.shape == (4, 4)
+        assert np.allclose(det2.pc, [0.25, 0.25, 0.75])
+
+        # "Real" example
+        s = kp.data.nickel_ebsd_small()
+        det3 = s.detector
+        det4 = det3.crop((-10, 50, 20, 70))  # (0, 50, 20, 60)
+        assert det4.shape == (50, 40)
+
+    def test_crop_raises(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        with pytest.raises(ValueError):
+            _ = det.crop((1.0, 5, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((5, 1, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((1, 5, 6, 2))
+
+    def test_crop_simulated(self):
+        s = kp.data.nickel_ebsd_small()
+
+        det2 = s.detector.crop((0, 50, 20, 60))
+
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        rot = s.xmap.rotations.reshape(*s.xmap.shape)
+
+        kwds = {"compute": True, "dtype_out": "uint8"}
+        sim1 = mp.get_patterns(rot, s.detector, **kwds)
+        sim2 = mp.get_patterns(rot, det2, **kwds)
+
+        assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)
+
+    def test_set_detector_binning_raises(self):
+        det = kp.detectors.EBSDDetector()
+        with pytest.raises(ValueError, match=r"Invalid binning \(3, 4\). Must be an "):
+            det.binning = (3, 4)
+
+    def test_invalid_values_raises(self):
+        det = kp.detectors.EBSDDetector()
+
+        with pytest.raises(ValueError, match="Invalid sample tilt "):
+            det.sample_tilt = "a"
+
+        with pytest.raises(ValueError, match="Invalid detector tilt "):
+            det.tilt = "a"
+
+        with pytest.raises(ValueError, match="Invalid azimuthal "):
+            det.azimuthal = "a"
+
+        with pytest.raises(ValueError, match="Invalid twist "):
+            det.twist = "a"
+
+        with pytest.raises(ValueError, match="Invalid pixel size "):
+            det.px_size = "a"
+
+
+class TestEBSDDetectorPCConventions:
     @pytest.mark.parametrize(
         "shape, pc, px_size, binning, version, desired_pc",
         [
@@ -531,410 +655,14 @@ class TestEBSDDetector:
     def test_set_pc_convention_raises(self, pc1):
         """Wrong convention raises."""
         with pytest.raises(ValueError, match="Invalid projection/pattern center "):
-            _ = kp.detectors.EBSDDetector(pc=pc1, convention="nordif")
+            kp.detectors.EBSDDetector(pc=pc1, convention="nordif")
 
-    @pytest.mark.parametrize(
-        "coordinates, show_pc, pattern, zoom, desired_label",
-        [
-            (None, False, None, 1, "detector"),
-            ("detector", True, np.ones((60, 60)), 1, "detector"),
-            ("gnomonic", True, np.ones((60, 60)), 2, "gnomonic"),
-        ],
-    )
-    def test_plot_detector(
-        self, detector, coordinates, show_pc, pattern, zoom, desired_label
-    ):
-        """Plotting detector works, *not* checking whether Matplotlib
-        displays the pattern correctly.
-        """
-        kwargs = dict(show_pc=show_pc, pattern=pattern, zoom=zoom, return_figure=True)
-        if coordinates is not None:
-            kwargs["coordinates"] = coordinates
-        fig = detector.plot(**kwargs)
-        ax = fig.axes[0]
-        assert ax.get_xlabel() == f"{desired_label.capitalize()} X"
-        assert ax.get_ylabel() == f"{desired_label.capitalize()} Y"
-        if isinstance(pattern, np.ndarray):
-            assert np.allclose(ax.get_images()[0].get_array(), pattern)
-        plt.close("all")
-
-    @pytest.mark.parametrize(
-        "gnomonic_angles, gnomonic_circles_kwargs",
-        [
-            ([10, 20], {"edgecolor": "b"}),
-            (np.arange(1, 3) * 10, {"edgecolor": "r"}),
-            (None, None),
-        ],
-    )
-    def test_plot_detector_gnomonic_circles(
-        self, detector, gnomonic_angles, gnomonic_circles_kwargs
-    ):
-        """Draw gnomonic circles."""
-        fig = detector.plot(
-            coordinates="gnomonic",
-            draw_gnomonic_circles=True,
-            gnomonic_angles=gnomonic_angles,
-            gnomonic_circles_kwargs=gnomonic_circles_kwargs,
-            return_figure=True,
-        )
-        ax = fig.axes[0]
-
-        # Correct number of gnomonic circles are added to the patches
-        num_circles = 0
-        num_rectangles = 0
-        for patch in ax.patches:
-            if isinstance(patch, mpatches.Circle):
-                num_circles += 1
-            elif isinstance(patch, mpatches.Rectangle):
-                num_rectangles += 1
-
-        if gnomonic_angles is None:
-            assert num_circles == 8  # Default
-        else:
-            assert num_circles == len(gnomonic_angles)
-        assert num_rectangles == 1
-
-        # Circles are coloured correctly
-        if gnomonic_circles_kwargs is None:
-            edgecolor = "k"
-        else:
-            edgecolor = gnomonic_circles_kwargs["edgecolor"]
-        assert np.allclose(ax.patches[1]._edgecolor[:3], mcolors.to_rgb(edgecolor))
-
-        plt.close("all")
-
-    @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])
-    def test_plot_detector_pattern_raises(self, detector, pattern):
-        """Pattern shape unequal to detector shape raises ValueError."""
-        with pytest.raises(ValueError, match=f"Pattern shape {pattern.shape}*"):
-            detector.plot(pattern=pattern)
-        plt.close("all")
-
-    @pytest.mark.parametrize(
-        "pattern_kwargs", [None, {"cmap": "inferno"}, {"cmap": "plasma"}]
-    )
-    def test_plot_pattern_kwargs(self, detector, pattern_kwargs):
-        """Pass pattern kwargs to imshow()."""
-        fig = detector.plot(
-            pattern=np.ones((60, 60)),
-            pattern_kwargs=pattern_kwargs,
-            return_figure=True,
-        )
-        if pattern_kwargs is None:
-            pattern_kwargs = {"cmap": "gray"}
-        assert fig.axes[0].images[0].cmap.name == pattern_kwargs["cmap"]
-        plt.close("all")
-
-    @pytest.mark.parametrize(
-        "pc_kwargs", [None, {"facecolor": "r"}, {"facecolor": "b"}]
-    )
-    def test_plot_pc_kwargs(self, detector, pc_kwargs):
-        """Pass PC kwargs to scatter()."""
-        fig = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_figure=True)
-        if pc_kwargs is None:
-            pc_kwargs = {"facecolor": "C1"}
-        assert np.allclose(
-            fig.axes[0].collections[0].get_facecolor().squeeze()[:3],
-            mcolors.to_rgb(pc_kwargs["facecolor"]),
-        )
-        plt.close("all")
-
-    @pytest.mark.parametrize("coordinates", ["detector", "gnomonic"])
-    def test_plot_extent(self, detector, coordinates):
-        """Correct detector extent."""
-        fig = detector.plot(
-            coordinates=coordinates,
-            pattern=np.ones(detector.shape),
-            return_figure=True,
-        )
-        if coordinates == "gnomonic":
-            desired_data_lim = np.concatenate(
-                [
-                    detector._average_gnomonic_bounds[::2],
-                    np.diff(detector._average_gnomonic_bounds)[::2],
-                ]
-            )
-        else:
-            desired_data_lim = np.sort(detector.bounds)
-        assert np.allclose(fig.axes[0].dataLim.bounds, desired_data_lim)
-        plt.close("all")
-
-    @pytest.mark.parametrize(
-        "shape, desired_shapes",
-        [
-            (
-                (1,),  # PC
-                [
-                    (4,),  # extent
-                    (1,),  # x_min
-                    (1,),  # y_min
-                    (1, 2),  # x_range
-                    (1, 2),  # y_range
-                    (1,),  # x_scale
-                    (1,),  # y_scale
-                    (1, 4),  # extent_gnomonic
-                ],
-            ),
-            (
-                (10,),
-                [
-                    (4,),
-                    (10,),
-                    (10,),
-                    (10, 2),
-                    (10, 2),
-                    (10,),
-                    (10,),
-                    (10, 4),
-                ],
-            ),
-            (
-                (10, 10),
-                [
-                    (4,),
-                    (10, 10),
-                    (10, 10),
-                    (10, 10, 2),
-                    (10, 10, 2),
-                    (10, 10),
-                    (10, 10),
-                    (10, 10, 4),
-                ],
-            ),
-            (
-                (1, 10),
-                [
-                    (4,),
-                    (1, 10),
-                    (1, 10),
-                    (1, 10, 2),
-                    (1, 10, 2),
-                    (1, 10),
-                    (1, 10),
-                    (1, 10, 4),
-                ],
-            ),
-            (
-                (10, 1),
-                [
-                    (4,),
-                    (10, 1),
-                    (10, 1),
-                    (10, 1, 2),
-                    (10, 1, 2),
-                    (10, 1),
-                    (10, 1),
-                    (10, 1, 4),
-                ],
-            ),
-        ],
-    )
-    def test_property_shapes(self, shape, desired_shapes):
-        """Expected property shapes when varying navigation shape."""
-        det = kp.detectors.EBSDDetector(pc=np.ones(shape + (3,)))
-        assert det.bounds.shape == desired_shapes[0]
-        assert det.x_min.shape == desired_shapes[1]
-        assert det.y_min.shape == desired_shapes[2]
-        assert det.x_range.shape == desired_shapes[3]
-        assert det.y_range.shape == desired_shapes[4]
-        assert det.x_scale.shape == desired_shapes[5]
-        assert det.y_scale.shape == desired_shapes[6]
-        assert det.gnomonic_bounds.shape == desired_shapes[7]
-
-    def test_crop(self):
-        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
-        det2 = det.crop((1, 5, 2, 6))
-        assert det2.shape == (4, 4)
-        assert np.allclose(det2.pc, [0.25, 0.25, 0.75])
-
-        # "Real" example
-        s = kp.data.nickel_ebsd_small()
-        det3 = s.detector
-        det4 = det3.crop((-10, 50, 20, 70))  # (0, 50, 20, 60)
-        assert det4.shape == (50, 40)
-
-    def test_crop_raises(self):
-        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
-        with pytest.raises(ValueError):
-            _ = det.crop((1.0, 5, 2, 6))
-        with pytest.raises(ValueError):
-            _ = det.crop((5, 1, 2, 6))
-        with pytest.raises(ValueError):
-            _ = det.crop((1, 5, 6, 2))
-
-    def test_crop_simulated(self):
-        s = kp.data.nickel_ebsd_small()
-
-        det2 = s.detector.crop((0, 50, 20, 60))
-
-        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
-        rot = s.xmap.rotations.reshape(*s.xmap.shape)
-
-        kwds = {"compute": True, "dtype_out": "uint8"}
-        sim1 = mp.get_patterns(rot, s.detector, **kwds)
-        sim2 = mp.get_patterns(rot, det2, **kwds)
-
-        assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)
-
-    def test_set_detector_binning_raises(self):
-        det = kp.detectors.EBSDDetector()
-        with pytest.raises(ValueError, match=r"Invalid binning \(3, 4\). Must be an "):
-            det.binning = (3, 4)
-
-
-class TestPlotDetector:
-    def test_plot_side_view(self):
-        det = kp.detectors.EBSDDetector()
-
-        fig1 = det.plot_side_view(return_figure=True)
-        ax1 = fig1.axes[0]
-        line_labels = [line.get_label() for line in ax1.lines]
-        assert all(expected in line_labels for expected in ["Sample", "Detector"])
-        assert "PC" in [coll.get_label() for coll in ax1.collections]
-        assert len(ax1.texts) == 1
-        assert ax1.get_xlabel() == "Microscope Y"
-        assert ax1.get_ylabel() == "Microscope Z"
-
-        fig2 = plt.figure()
-        ax2 = fig2.add_subplot()
-        det.plot_side_view(ax=ax2, legend=True, dimensionless=False)
-        legend = fig2.legend()
-        if dependency_version["matplotlib"] >= Version("3.7"):
-            assert len(legend.legend_handles) == 3
-        else:
-            assert len(legend.legendHandles) == 3
-        assert ax2.get_xlabel() == "Microscope Y [mm]"
-        assert ax2.get_ylabel() == "Microscope Z [mm]"
-
-    @pytest.mark.skipif(
-        dependency_version["ipywidgets"] is None, reason="Needs ipywidgets"
-    )
-    def test_plot_side_view_interactive(self):
-        import ipywidgets
-
-        det = kp.detectors.EBSDDetector()
-        widgets1 = det.plot_side_view(interactive=True)
-        assert isinstance(widgets1, ipywidgets.VBox)
-
-        widgets2, fig1 = det.plot_side_view(interactive=True, return_figure=True)
-        assert isinstance(widgets2, ipywidgets.VBox)
-        assert isinstance(fig1, mfigure.Figure)
-
-        _, ax = plt.subplots()
-        _, fig3 = det.plot_side_view(interactive=True, ax=ax, return_figure=True)
-        assert fig3.axes[0] is ax
-
-
-class TestPlotPC:
-    det = kp.detectors.EBSDDetector(
-        shape=(60, 60),
-        pc=np.stack(
-            (
-                np.repeat(np.linspace(0.55, 0.45, 30), 20).reshape(30, 20).T,
-                np.repeat(np.linspace(0.75, 0.70, 20), 30).reshape(20, 30),
-                np.repeat(np.linspace(0.50, 0.55, 20), 30).reshape(20, 30),
-            ),
-            axis=2,
-        ),
-        sample_tilt=70,
-    )
-
-    def test_plot_pc_raises(self):
-        det = self.det.deepcopy()
-        det.pc = det.pc_average
-        with pytest.raises(ValueError, match="Detector must have more than one "):
-            det.plot_pc()
-
-        det2 = self.det.deepcopy()
-        det2.pc = det2.pc[0]
-        with pytest.raises(ValueError, match="Detector's navigation dimension must be"):
-            det2.plot_pc()
-
-        with pytest.raises(ValueError, match="Plot mode 'stereographic' must be one "):
-            self.det.plot_pc("stereographic")
-
-    def test_plot_pc_map_horizontal(self):
-        fig = self.det.plot_pc(return_figure=True)
-
-        figsize = fig.get_size_inches()
-        assert (figsize[0] / figsize[1]) > 1
-
-        axes = fig.axes
-        assert len(axes) == 6
-        assert all([ax.get_xlabel() == "Column" for ax in axes[:3]])
-        for ax, label in zip(axes[3:], ["x", "y", "z"]):
-            assert ax.get_ylabel() == f"PC{label}"
-
-        plt.close(fig)
-
-    def test_plot_pc_map_vertical(self):
-        fig = self.det.plot_pc(return_figure=True, orientation="vertical")
-
-        figsize = fig.get_size_inches()
-        assert (figsize[0] / figsize[1]) < 1
-
-        axes = fig.axes
-        assert len(axes) == 6
-        assert all([ax.get_xlabel() == "Column" for ax in axes[:3]])
-        for ax, label in zip(axes[3:], ["x", "y", "z"]):
-            assert ax.get_ylabel() == f"PC{label}"
-
-        plt.close(fig)
-
-    def test_plot_pc_scatter_horizontal(self):
-        fig = self.det.plot_pc("scatter", return_figure=True, annotate=True)
-
-        figsize = fig.get_size_inches()
-        assert (figsize[0] / figsize[1]) > 1
-
-        axes = fig.axes
-        assert len(axes) == 3
-        for ax, label in zip(axes[3:], ["x", "y", "z"]):
-            assert ax.get_xlabel() == f"PC{label}"
-            assert ax.get_ylabel() == f"PC{label}"
-
-        texts = axes[0].texts
-        assert len(texts) == self.det.navigation_size
-        assert texts[0].get_text() == "0"
-        assert texts[-1].get_text() == "599"
-
-        plt.close(fig)
-
-    def test_plot_pc_scatter_vertical(self):
-        fig = self.det.plot_pc("scatter", return_figure=True, orientation="vertical")
-
-        figsize = fig.get_size_inches()
-        assert (figsize[0] / figsize[1]) < 1
-
-        axes = fig.axes
-        assert len(axes) == 3
-        for ax, label in zip(axes[3:], ["x", "y", "z"]):
-            assert ax.get_xlabel() == f"PC{label}"
-            assert ax.get_ylabel() == f"PC{label}"
-
-        plt.close(fig)
-
-    def test_plot_pc_3d(self):
-        fig = self.det.plot_pc("3d", return_figure=True, annotate=True)
-
-        texts = fig.axes[0].texts
-        assert len(texts) == self.det.navigation_size
-        assert texts[0].get_text() == "0"
-        assert texts[-1].get_text() == "599"
-
-        plt.close(fig)
-
-    def test_plot_pc_figure(self):
-        fig1 = self.det.plot_pc(figure_kwargs=dict(figsize=(9, 3)), return_figure=True)
-        assert fig1.get_tight_layout()
-
-        fig2 = self.det.plot_pc(
-            figure_kwargs=dict(figsize=(6, 3), layout="constrained"), return_figure=True
-        )
-        assert fig2.get_constrained_layout()
-        assert not np.allclose(fig1.get_size_inches(), fig2.get_size_inches())
-
-        plt.close("all")
+    # TODO: Remove test after 0.13 has been released
+    def test_convention_none_warns(self):
+        pc0 = [0.5, 0.4, 0.3]
+        with pytest.warns(UserWarning, match="Passing None"):
+            det = kp.detectors.EBSDDetector(pc=pc0, convention=None)
+        assert np.allclose(det.pc, pc0)
 
 
 class TestEstimateTilts:
@@ -1244,17 +972,13 @@ class TestGetIndexer:
         )
         self.det = det
 
-    @pytest.mark.skipif(
-        dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
-    )
+    @skipif_pyebsdindex_installed
     def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
         with pytest.raises(ImportError, match="requires that 'pyebsdindex'"):
             _ = self.det.get_indexer(pl)
 
-    @pytest.mark.skipif(
-        dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
-    )
+    @skipif_pyebsdindex_not_installed
     def test_get_indexer_invalid_phase_lists(self):
         # Not all phases have space groups
         pl = PhaseList(names=["a", "b"], point_groups=["m-3m", "432"])
@@ -1262,9 +986,7 @@ class TestGetIndexer:
         with pytest.raises(ValueError, match="Space group for each phase must be set,"):
             _ = self.det.get_indexer(pl)
 
-    @pytest.mark.skipif(
-        dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
-    )
+    @skipif_pyebsdindex_not_installed
     def test_get_indexer(self):
         # fmt: off
         #               -1  2/m  222   -3   -3m   4/m   4/mmm   6/m  6/mmm    m-3  m-3m

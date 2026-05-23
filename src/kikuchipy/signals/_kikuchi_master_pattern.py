@@ -334,7 +334,8 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         if self._has_multiple_energies:
             if energy is None:
                 energy = self.axes_manager["energy"].axis[-1]
-            master_patterns = self.inav[float(energy)].data
+            idx = float(energy)
+            master_patterns = self.inav[idx].data
         else:  # Assume a single energy
             master_patterns = self.data
         if self.hemisphere == "both":
