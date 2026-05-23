@@ -219,3 +219,40 @@ class TestEBSDDetectorPlotter:
         assert len(fig.axes) == 3
 
         plt.close("all")
+
+    def test_show_ebsd_detector_plotter_gnomonic_fixed_xy_ticks(self):
+        det = kp.detectors.EBSDDetector(shape=(60, 60))
+        plotter = EBSDDetectorPlotter(det, coords_fmt="gnomonic")
+        fig, controls = plotter.show()
+        ax_det = fig.axes[2]
+
+        xticks0 = ax_det.get_xticks()
+        yticks0 = ax_det.get_yticks()
+        xlim0 = ax_det.get_xlim()
+        ylim0 = ax_det.get_ylim()
+        xrel0 = (xticks0 - xlim0[0]) / (xlim0[1] - xlim0[0])
+        yrel0 = (yticks0 - ylim0[0]) / (ylim0[1] - ylim0[0])
+
+        det_col = controls.children[0]
+        pcz_slider = det_col.children[7]
+        if pcz_slider.value + 0.1 <= pcz_slider.max:
+            pcz_slider.value += 0.1
+        else:
+            pcz_slider.value -= 0.1
+
+        xticks1 = ax_det.get_xticks()
+        yticks1 = ax_det.get_yticks()
+        xlim1 = ax_det.get_xlim()
+        ylim1 = ax_det.get_ylim()
+        xrel1 = (xticks1 - xlim1[0]) / (xlim1[1] - xlim1[0])
+        yrel1 = (yticks1 - ylim1[0]) / (ylim1[1] - ylim1[0])
+
+        assert len(xticks1) == len(xticks0)
+        assert len(yticks0) == 5
+        assert len(yticks1) == 5
+        assert np.allclose(xrel1, xrel0)
+        assert np.allclose(yrel1, yrel0)
+        assert not np.allclose(xticks1, xticks0)
+        assert not np.allclose(yticks1, yticks0)
+
+        plt.close("all")

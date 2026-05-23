@@ -78,8 +78,8 @@ class PCCalibrationMovingScreen:
         self,
         pattern_in: np.ndarray,
         pattern_out: np.ndarray,
-        points_in: np.ndarray | list[tuple[float]],
-        points_out: np.ndarray | list[tuple[float]],
+        points_in: np.ndarray | list[tuple[float, float]],
+        points_out: np.ndarray | list[tuple[float, float]],
         delta_z: float = 1.0,
         px_size: float | None = None,
         binning: int = 1,
@@ -89,7 +89,7 @@ class PCCalibrationMovingScreen:
         and other parameters relevant for the estimation.
         """
         self.patterns = np.stack([pattern_in, pattern_out])
-        self.points = np.stack([points_in, points_out])
+        self.points = np.stack([points_in, points_out], dtype=np.float64)
 
         self.delta_z = delta_z
         self.px_size = px_size

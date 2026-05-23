@@ -31,6 +31,7 @@ from typing import Any, Literal
 
 from diffsims.crystallography import ReciprocalLatticeVector
 import ipywidgets
+from matplotlib import ticker
 import matplotlib.axes as maxes
 import matplotlib.collections as mcollections
 import matplotlib.figure as mfigure
@@ -833,6 +834,7 @@ class EBSDDetectorPlotter:
         figure_kwargs.setdefault("figsize", (3 * w, h))
         fig = plt.figure(**figure_kwargs)
         ax_side, ax_top, ax_det = fig.subplots(1, 3)
+        gnomonic_num_xticks = gnomonic_num_yticks = 5
 
         def get_rotation() -> oqu.Rotation | None:
             if rotation_sliders:
@@ -861,6 +863,13 @@ class EBSDDetectorPlotter:
                 draw_gnomonic_circles=gnomonic_circles_checkbox.value,
                 show_pc=pc_checkbox.value,
             )
+            if self._coords_fmt == "gnomonic":
+                ax_det.xaxis.set_major_locator(
+                    ticker.LinearLocator(numticks=gnomonic_num_xticks)
+                )
+                ax_det.yaxis.set_major_locator(
+                    ticker.LinearLocator(numticks=gnomonic_num_yticks)
+                )
             ax_det.set_title("Detector")
             rot = get_rotation()
             if rot is not None:
