@@ -14,8 +14,8 @@ List entries are sorted in descending chronological order. Contributors to each 
 were listed in alphabetical order by first name until version 0.7.0.
 
 
-Unreleased
-==========
+0.12.0 (2026-05-24)
+===================
 
 Added
 -----
@@ -57,9 +57,6 @@ Changed
   (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 - Detector coordinate parameter "detector" to "pixel" in ``EBSDDetector.plot()``.
   (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
-
-Removed
--------
 
 Fixed
 -----
