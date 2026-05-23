@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from ._ebsd_detector_plot_widgets import EBSDDetectorPlotter
+from ._ebsd_detector_plotter import EBSDDetectorPlotter
 from ._navigators import get_rgb_navigator
 from ._plot_pattern_positions_in_map import plot_pattern_positions_in_map
 

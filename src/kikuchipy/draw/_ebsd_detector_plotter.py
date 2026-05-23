@@ -76,7 +76,7 @@ def get_slider_style() -> dict[str, str]:
 def get_sample_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
     """Return an :mod:`ipywidgets` slider from a *detector*."""
     stilt = detector.sample_tilt
-    stilt_min, stilt_max = get_detector_value_range(stilt, 0, 180)
+    stilt_min, stilt_max = get_detector_value_range(stilt, 0, 90)
 
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
@@ -84,7 +84,7 @@ def get_sample_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
         min=stilt_min,
         max=stilt_max,
         step=0.1,
-        description="Sample tilt",
+        description="Sample tilt [\u00b0]",
         style=style,
     )
 
@@ -94,7 +94,7 @@ def get_sample_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
 def get_detector_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
     """Return an :mod:`ipywidgets` slider from a *detector*."""
     tilt = detector.tilt
-    tilt_min, tilt_max = get_detector_value_range(tilt, -90, 270)
+    tilt_min, tilt_max = get_detector_value_range(tilt, -90, 90)
 
     style = get_slider_style()
     widget = ipywidgets.FloatSlider(
@@ -102,7 +102,7 @@ def get_detector_tilt_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
         min=tilt_min,
         max=tilt_max,
         step=0.1,
-        description="Detector tilt",
+        description="Detector tilt [\u00b0]",
         style=style,
     )
 
@@ -120,7 +120,7 @@ def get_detector_azimuthal_slider(detector: EBSDDetector) -> ipywidgets.FloatSli
         min=azim_min,
         max=azim_max,
         step=0.01,
-        description="Azimuthal",
+        description="Azimuthal [\u00b0]",
         style=style,
     )
 
@@ -138,7 +138,7 @@ def get_detector_twist_slider(detector: EBSDDetector) -> ipywidgets.FloatSlider:
         min=twist_min,
         max=twist_max,
         step=0.1,
-        description="Twist",
+        description="Twist [\u00b0]",
         style=style,
     )
 
@@ -209,7 +209,7 @@ def get_phi1_slider(angle: float) -> ipywidgets.FloatSlider:
         min=0.0,
         max=360.0,
         step=0.1,
-        description="\u03c61 (\u00b0)",
+        description="\u03c61 [\u00b0]",
         style=style,
     )
 
@@ -226,7 +226,7 @@ def get_Phi_slider(angle: float) -> ipywidgets.FloatSlider:
         min=0.0,
         max=180.0,
         step=0.1,
-        description="\u03a6 (\u00b0)",
+        description="\u03a6 [\u00b0]",
         style=style,
     )
 
@@ -243,7 +243,7 @@ def get_phi2_slider(angle: float) -> ipywidgets.FloatSlider:
         min=0.0,
         max=360.0,
         step=0.1,
-        description="\u03c62 (\u00b0)",
+        description="\u03c62 [\u00b0]",
         style=style,
     )
 

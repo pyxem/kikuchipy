@@ -30,7 +30,7 @@ import orix.crystal_map as ocm
 import orix.quaternion as oqu
 
 import kikuchipy as kp
-from kikuchipy.draw._ebsd_detector_plot_widgets import (
+from kikuchipy.draw._ebsd_detector_plotter import (
     EBSDDetectorPlotter,
     GeometricalSimulationOverlay,
     MasterPatternOverlay,

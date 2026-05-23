@@ -22,22 +22,38 @@
 Detector-sample geometry views
 ==============================
 
-This example shows how to view the detector-sample geometry using the
-:class:`~kikuchipy.detectors.EBSDDetector`.
+This example shows how to plot multiple views of the detector-sample geometry in a
+single figure using the :class:`~kikuchipy.detectors.EBSDDetector`.
 Both a side view and top view are available.
-These can be useful when understanding the geometry and the definition of the detector
-parameters.
+
+These can be useful when demonstrating variations in geometry parameters in a single
+figure.
 
 For a more in-depth tutorial on the various reference frames in kikuchipy, see the
 :doc:`reference frames tutorial </tutorials/reference_frames>`.
 
 .. note::
 
-    The top view only shows a change in :attr:`~kikuchipy.detectors.EBSDDetector.pcx`,
-    :attr:`~kikuchipy.detectors.EBSDDetector.pcz`, and
-    :attr:`~kikuchipy.detectors.EBSDDetector.azimuthal`.
-    Changes in other parameters like the sample and detector tilts do not change the top
-    view.
+    The side view shows changes in the following geometry parameters:
+
+    - :attr:`~kikuchipy.detectors.EBSDDetector.tilt`
+    - :attr:`~kikuchipy.detectors.EBSDDetector.sample_tilt`
+    - :attr:`~kikuchipy.detectors.EBSDDetector.pcy`
+    - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
+
+    The top view shows changes in the following geometry parameters:
+
+    - :attr:`~kikuchipy.detectors.EBSDDetector.pcx`
+    - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
+    - :attr:`~kikuchipy.detectors.EBSDDetector.azimuthal`
+
+    None of these views show changes in the detector
+    :attr:`~kikuchipy.detectors.EBSDDetector.twist` angle.
+
+.. note::
+
+    Use :class:`~kikuchipy.draw.EBSDDetectorPlotter` for a plot where all
+    detector-sample geometry parameters can be changed interactively.
 """
 
 # %%
@@ -50,9 +66,9 @@ import kikuchipy as kp
 
 def tilt_string(detector: kp.detectors.EBSDDetector) -> str:
     return (
-        rf"sample tilt $\sigma = {detector.sample_tilt:.1f}$"
+        rf"Sample tilt $\sigma = {detector.sample_tilt:.1f}$"
         "\N{DEGREE SIGN}\n"
-        rf"detector tilt $\theta = {detector.tilt:.1f}$"
+        rf"Detector tilt $\theta = {detector.tilt:.1f}$"
         "\N{DEGREE SIGN}"
     )
 
@@ -140,8 +156,8 @@ fig = plt.figure(figsize=(9, 3), layout="constrained")
 for i, pcx in enumerate([0, 0.5, 1]):
     det5.pcx = pcx
 
-    ax2 = fig.add_subplot(2, 3, i + 1)
-    ax2.set_title("top view\n" + pc_string(det5))
+    ax2 = fig.add_subplot(1, 3, i + 1)
+    ax2.set_title("Top view\n" + pc_string(det5))
     det5.plot_top_view(ax=ax2)
 
 # %%
@@ -179,22 +195,3 @@ for i, pcz in enumerate([0.2, 0.6, 1]):
     ax2 = fig.add_subplot(2, 3, i + 4)
     ax2.set_title("Top view")
     det7.plot_top_view(ax=ax2)
-
-# %%
-# Interactive changes
-# ===================
-#
-# We can also show both views at the same time and change all parameters interactively.
-#
-# .. note::
-#
-#   This requires that :mod:`ipywidgets` is installed and that the code is running in
-#   an interactive environment with an interactive Matplotlib backend.
-#
-# The default behavior is not to affect the detector.
-# Here, we want the changes to affect the detector inplace.
-
-det8 = kp.detectors.EBSDDetector(shape=(60, 60))
-det8.plot_interactive(figsize=(9, 3))
-
-plt.show()

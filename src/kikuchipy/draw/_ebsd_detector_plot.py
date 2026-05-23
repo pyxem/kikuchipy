@@ -295,7 +295,7 @@ def plot_detector_sample_geometry_side_view(
         unit = ""
     else:
         unit = " [mm]"
-    ax.set_xlabel(f"\u2190 Microscope Y{unit}")
+    ax.set_xlabel(f"Microscope Y{unit} \u2192")
     ax.set_ylabel(f"Microscope Z{unit} \u2192")
 
     return fig
@@ -418,8 +418,8 @@ def plot_detector_sample_geometry_top_view(
         unit = ""
     else:
         unit = " [mm]"
-    ax.set_xlabel(f"\u2190 Microscope X{unit}")
-    ax.set_ylabel(f"Microscope Y{unit} \u2190")
+    ax.set_xlabel(f"Microscope X{unit} \u2192")
+    ax.set_ylabel(f"Microscope Y{unit} \u2192")
 
     return fig
 

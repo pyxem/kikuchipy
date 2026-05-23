@@ -112,25 +112,27 @@ class EBSDDetector:
         binned into one. Default is 1, meaning no binning.
     tilt
         Detector tilt :math:`\theta` about the detector horizontal
-        :math:`X_d`, in degrees. Default is 0. A positive angle means
-        features on the detector appear to move upward (assuming all
-        other defaults).
+        :math:`X_d`, in degrees. Default is :math:`0^{\circ}`.
+
+        A positive angle means features on the detector appear to move
+        upward (assuming all other defaults).
     azimuthal
         Detector tilt :math:`\omega` about the detector vertical
-        :math:`Y_d`, pointing downwards, in degrees. Default is 0. A
-        positive angle means features on the detector appear to move
+        :math:`Y_d`, in degrees. Default is :math:`0^{\circ}`.
+
+        A positive angle means features on the detector appear to move
         toward the right (assuming all other defaults).
     twist
         Detector tilt :math:`\gamma` about the detector normal
-        :math:`Z_d`, pointing towards the sample, in degrees. Default is
-        0.0. A positive angle means features on the detector appear to
-        move counter-clockwise about the detector center (assuming all
+        :math:`Z_d`, in degrees. Default is :math:`0^{\circ}`.
+
+        A positive angle means features on the detector appear to
+        move counter-clockwise about the projection center (assuming all
         other defaults).
     sample_tilt
-        Sample tilt :math:`\sigma` about the sample horizontal,
-        :math:`Y_d`, in degrees. Default is 70. Note that the sample
-        horizontal :math:`Y_s` is parallel to the detector horizontal,
-        :math:`X_d` (assuming all other defaults).
+        Sample tilt :math:`\sigma` about the microscope X, :math:`X_m`,
+        in degrees. Default is :math:`70^{\circ}`, a typical angle for
+        EBSD acquisition.
     pc
         X, Y, and Z coordinates of the projection centers (PCs) in the
         given *convention*. Default is [0.5, 0.5, 0.5]. The PC describes
@@ -261,11 +263,8 @@ class EBSDDetector:
 
     @property
     def sample_tilt(self) -> float:
-        r"""Return or set the sample tilt in degrees.
-
-        The sample tilt :math:`\sigma` is about the sample horizontal,
-        :math:`Y_d`. Note that the sample horizontal :math:`Y_d` is
-        parallel to the detector horizontal, :math:`X_d`.
+        r"""Return or set the sample tilt :math:`\sigma` about the
+        microscope X, :math:`X_m`, in degrees.
 
         Parameters
         ----------
@@ -288,6 +287,13 @@ class EBSDDetector:
         r"""Return or set the detector tilt :math:`\theta` about the
         detector horizontal :math:`X_d`, in degrees.
 
+        A positive angle means features on the detector appear to move
+        upward (assuming all other defaults).
+
+        If the :attr:`azimuthal` and :attr:`twist` angles are
+        :math:`0^{\circ}`, the tilt axis is the microscope X,
+        :math:`X_m`, and thus coincident with the sample tilt axis.
+
         Parameters
         ----------
         value : float
@@ -307,10 +313,13 @@ class EBSDDetector:
     @property
     def azimuthal(self) -> float:
         r"""Return or set the detector tilt :math:`\omega` about the
-        detector vertical :math:`Y_d`, pointing downwards, in degrees.
+        detector vertical :math:`Y_d`, in degrees.
 
         A positive angle means features on the detector appear to move
         toward the right (assuming all other defaults).
+
+        If the :attr:`tilt` angle is :math:`0^{\circ}`, the tilt axis
+        coincides with the microscope Z, :math:`Z_m`.
 
         Parameters
         ----------
@@ -331,12 +340,11 @@ class EBSDDetector:
     @property
     def twist(self) -> float:
         r"""Return or set the detector twist :math:`\gamma` about the
-        detector normal :math:`Z_d`, pointing towards the sample, in
-        degrees.
+        detector normal :math:`Z_d`, in degrees.
 
         A positive angle means features on the detector appear to move
-        counter-clockwise about the detector center (assuming all other
-        defaults).
+        counter-clockwise about the projection center (assuming all
+        other defaults).
 
         Parameters
         ----------
@@ -839,10 +847,10 @@ class EBSDDetector:
         s = f"{self.__class__.__name__}\n"
         s += f"  shape (Ny, Nx):     {shape}\n"
         s += f"  pc (PCx, PCy, PCz): {pc_average}\n"
-        s += f"  sample_tilt:        {sample_tilt} deg\n"
-        s += f"  tilt:               {tilt} deg\n"
-        s += f"  azimuthal:          {azimuthal} deg\n"
-        s += f"  twist:              {twist} deg\n"
+        s += f"  sample_tilt:        {sample_tilt}\N{DEGREE SIGN}\n"
+        s += f"  tilt:               {tilt}\N{DEGREE SIGN}\n"
+        s += f"  azimuthal:          {azimuthal}\N{DEGREE SIGN}\n"
+        s += f"  twist:              {twist}\N{DEGREE SIGN}\n"
         s += f"  binning:            {binning}\n"
         s += f"  px_size:            {px_size} um"
 
@@ -1889,8 +1897,14 @@ class EBSDDetector:
     ) -> "None | mfigure.Figure | mfigure.SubFigure":
         r"""Plot the EBSD detector-sample geometry in a 2D side-view.
 
-        The side is viewed along the microscope X axis and shows the
-        Y-Z plane.
+        The side is viewed along the negative microscope X :math:`X_m`
+        axis and shows the Y-Z plane. Changes in the following
+        attributes are visible in this view:
+
+        - :attr:`~kikuchipy.detectors.EBSDDetector.tilt`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.sample_tilt`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcy`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
 
         The :class:`~kikuchipy.draw.EBSDDetectorPlotter` provides an
         interactive side view.
@@ -1969,8 +1983,12 @@ class EBSDDetector:
         r"""Plot the EBSD detector-sample geometry in a 2D top-view.
 
         The view is looking down the microscope Z axis and shows the
-        X-Y plane. The detector azimuthal angle :math:`\omega` is
-        visible in this view.
+        X-Y plane. Changes in the following attributes are visible in
+        this view:
+
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcx`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.pcz`
+        - :attr:`~kikuchipy.detectors.EBSDDetector.azimuthal`
 
         The :class:`~kikuchipy.draw.EBSDDetectorPlotter` provides an
         interactive top view.
