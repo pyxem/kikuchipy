@@ -1202,6 +1202,10 @@ class EBSDDetector:
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
 
+        self._warn_if_angles_ignored(
+            "estimate_xtilt() assumes azimuthal and twist angles are zero, but"
+        )
+
         if return_outliers:
             detect_outliers = True
 
@@ -1298,6 +1302,10 @@ class EBSDDetector:
 
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
+
+        self._warn_if_angles_ignored(
+            "estimate_xtilt_ztilt() assumes azimuthal and twist angles are zero, but"
+        )
 
         pc = self.pc
         if isinstance(is_outlier, np.ndarray):
@@ -1403,6 +1411,9 @@ class EBSDDetector:
         pc_indices_mean = np.round(pc_indices_mean).astype(int)
 
         # Make PC plane
+        self._warn_if_angles_ignored(
+            "extrapolate_pc() assumes azimuthal and twist angles are zero, but"
+        )
         alpha = np.deg2rad(90 - self.sample_tilt + self.tilt)
         y, x = np.indices((ny, nx), dtype=float)
         factor = px_size * binning
@@ -1566,6 +1577,10 @@ class EBSDDetector:
         x_tilt_deg = np.rad2deg(x_tilt)
         new_detector = self.deepcopy()
         new_detector.pc = pc_fit_map
+        self._warn_if_angles_ignored(
+            "fit_pc() assumes azimuthal and twist angles are zero when estimating"
+            " sample_tilt, but"
+        )
         new_detector.sample_tilt = 90 - x_tilt_deg - new_detector.tilt
 
         if plot:
@@ -1638,6 +1653,9 @@ class EBSDDetector:
         --------
         pyebsdindex.tripletvote.addphase
         """
+        self._warn_if_angles_ignored(
+            "get_indexer() passes only sample_tilt and tilt to PyEBSDIndex;"
+        )
         return _get_indexer_from_detector(
             phase_list=phase_list,
             shape=self.shape,
@@ -2330,6 +2348,23 @@ class EBSDDetector:
         self, convention: PC_CONVENTIONS = "bruker"
     ) -> None:
         self.pc = self._get_pc_in_bruker_convention(convention)
+
+    def _warn_if_angles_ignored(self, msg: str) -> None:
+        """Issue a UserWarning if azimuthal or twist are non-zero.
+
+        Parameters
+        ----------
+        msg
+            Method-specific message prefix, appended with the current
+            azimuthal and twist values.
+        """
+        if self.azimuthal != 0.0 or self.twist != 0.0:
+            warnings.warn(
+                msg + f" azimuthal={self.azimuthal} and twist={self.twist} will be"
+                " ignored.",
+                UserWarning,
+                stacklevel=3,
+            )
 
     def _parse_sample_position(self, pos: int | tuple | None) -> tuple | None:
         """Validate and parse given sample *pos*."""
