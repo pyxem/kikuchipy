@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,8 +15,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
-"""Function to calculate gnomonic bounds of an EBSDDetector"""
+"""Function to calculate gnomonic bounds for a detector."""
 
 import numpy as np
 

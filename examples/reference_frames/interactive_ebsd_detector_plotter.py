@@ -34,13 +34,13 @@ We use the :class:`~kikuchipy.draw.EBSDDetectorPlotter`.
 
     Interactivity is only achieved when run in an active Jupyter session, not directly
     on this static web page.
-    Use the gallery's Binder launch button for browser-based interactivity, or run
-    locally with an interactive Matplotlib backend.
+    Run locally with an interactive Matplotlib backend.
 """
 
 # %%
 # Imports.
 from diffsims.crystallography import ReciprocalLatticeVector
+from IPython.display import display
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -90,6 +90,7 @@ print(pl)
 # %%
 # Show the plotter and controls (when run locally).
 fig, controls = pl.show(figsize=(9, 3))
-controls
+
+display(controls)
 
 plt.show()

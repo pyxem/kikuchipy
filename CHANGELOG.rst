@@ -41,6 +41,10 @@ Added
   showing the side and top views as well as the detector plane.
   Additionally, a geometrical and/or kinematical/dynamical simulation can be projected
   onto the detector plane.
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- Two new ``EBSDDetector`` methods to convert between detector pixel and gnomonic
+  coordinates.
+  (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
 
 Changed
 -------
@@ -51,6 +55,8 @@ Changed
   The only PC keyword arguments used when given in a dictionary to a plot method is
   the size ("s") and the z-order ("zorder").
   (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- Detector coordinate parameter "detector" to "pixel" in ``EBSDDetector.plot()``.
+  (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
 
 Removed
 -------
@@ -72,6 +78,10 @@ Deprecated
   To avoid the warning, use the default value ``convention="bruker"`` instead.
   The warning will change to an error in version 0.14.
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Detector coordinate parameter "detector", replaced with "pixel" in
+  ``EBSDDetector.plot()``.
+  Passing "detector" after 0.13.0 is released will throw an error.
+  (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
 
 
 0.11.5 (2026-03-08)

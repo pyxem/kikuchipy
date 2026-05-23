@@ -464,7 +464,7 @@ class EBSDDetectorOverlay(abc.ABC):
         rotation
             Current crystal orientation (single rotation).
         coords_fmt
-            Coordinate system in use: "gnomonic" or "detector".
+            Coordinate system in use: "gnomonic" or "pixel".
         """
 
 
@@ -777,7 +777,7 @@ class EBSDDetectorPlotter:
             drawing the side-view plot axes. Default is True.
         coordinates
             Detector panel coordinate format: "gnomonic" (default) or
-            "detector".
+            "pixel".
         **kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.figure`.

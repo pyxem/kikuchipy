@@ -287,52 +287,27 @@ class TestEBSDDetector:
             y = (~det.sample_to_detector).to_matrix().squeeze()[1]
             assert np.allclose(y, y0, atol=1e-8)
 
-    def test_coordinate_conversion_factors(self):
-        """Factors for converting between pixel and gonomic coords."""
-        s = kp.data.nickel_ebsd_small()
-        det_1d = kp.detectors.EBSDDetector(shape=(60, 60), pc=s.detector.pc[0,])
-        conv_1d = det_1d.coordinate_conversion_factors
-
-        exp_res_1d = {
-            "pix_to_gn": {
-                "m_x": np.array([0.03319923, 0.03326385, 0.03330547]),
-                "c_x": np.array([-0.83957734, -0.84652344, -0.85204404]),
-                "m_y": np.array([-0.03319923, -0.03326385, -0.03330547]),
-                "c_y": np.array([0.42827701, 0.41940433, 0.42255835]),
-            },
-            "gn_to_pix": {
-                "m_x": np.array([30.12118421, 30.06266362, 30.02509794]),
-                "c_x": np.array([25.28906376, 25.4487495, 25.58270568]),
-                "m_y": np.array([-30.12118421, -30.06266362, -30.02509794]),
-                "c_y": np.array([12.90021062, 12.60841133, 12.6873559]),
-            },
-        }
-
-        for i in ["pix_to_gn", "gn_to_pix"]:
-            for j in ["m_x", "c_x", "m_y", "c_y"]:
-                assert np.allclose(conv_1d[i][j], exp_res_1d[i][j])
-
     @pytest.mark.parametrize(
         "coords, detector_index, desired_coords",
         [
             (
-                np.array([[36.2, 12.7]]),
+                np.array([[12.7, 36.2]]),
                 None,
                 np.array(
                     [
-                        [[[0.36223463, 0.00664684]], [[0.357628, -0.00304659]]],
-                        [[[0.36432453, 0.00973462]], [[0.35219232, 0.00567801]]],
+                        [[[0.00664684, 0.36223463]], [[-0.00304659, 0.357628]]],
+                        [[[0.00973462, 0.36432453]], [[0.00567801, 0.35219232]]],
                     ]
                 ),
             ),
             (
-                np.array([[36.2, 12.7], [2.5, 43.7], [8.2, 27.7]]),
+                np.array([[12.7, 36.2], [43.7, 2.5], [27.7, 8.2]]),
                 (0, 1),
                 np.array(
                     [
-                        [0.35762801, -0.00304659],
-                        [-0.76336381, -1.03422601],
-                        [-0.57375985, -0.50200438],
+                        [-0.00304659, 0.35762801],
+                        [-1.03422601, -0.76336381],
+                        [-0.50200438, -0.57375985],
                     ]
                 ),
             ),
@@ -353,12 +328,67 @@ class TestEBSDDetector:
             ]
         )
         det = kp.detectors.EBSDDetector(shape=(60, 60), pc=pc)
-        cds_out = det.convert_detector_coordinates(coords, "pix_to_gn", detector_index)
-        cds_back = det.convert_detector_coordinates(
-            cds_out, "gn_to_pix", detector_index
-        )
+        cds_out = det.to_gnomonic_coords(coords, detector_index)
+        cds_back = det.to_pixel_coords(cds_out, detector_index)
         assert np.allclose(cds_out, desired_coords)
         assert np.allclose(cds_back[..., :], coords[..., :])
+
+    @pytest.mark.parametrize(
+        "method_name, coords",
+        [
+            ("to_gnomonic_coords", np.array([[12.7, 36.2]])),
+            ("to_pixel_coords", np.array([[0.01, 0.35]])),
+        ],
+    )
+    def test_coordinate_conversions_detector_index_validation(
+        self, method_name, coords
+    ):
+        pc_1d = np.array(
+            [
+                [0.4214844, 0.21500351, 0.50201974],
+                [0.42414583, 0.21014019, 0.50104439],
+                [0.42088203, 0.2165417, 0.50079336],
+            ]
+        )
+        pc_2d = np.array(
+            [
+                [
+                    [0.4214844, 0.21500351, 0.50201974],
+                    [0.42414583, 0.21014019, 0.50104439],
+                ],
+                [
+                    [0.42088203, 0.2165417, 0.50079336],
+                    [0.42725023, 0.21450546, 0.49996293],
+                ],
+            ]
+        )
+
+        det_1d = kp.detectors.EBSDDetector(shape=(60, 60), pc=pc_1d)
+        method_1d = getattr(det_1d, method_name)
+        assert np.allclose(method_1d(coords, 1), method_1d(coords, (1,)))
+
+        with pytest.raises(ValueError, match="navigation dimension is 2"):
+            method_1d(coords, (0, 1))
+
+        with pytest.raises(TypeError, match="single integer"):
+            method_1d(coords, (slice(None),))
+
+        det_2d = kp.detectors.EBSDDetector(shape=(60, 60), pc=pc_2d)
+        method_2d = getattr(det_2d, method_name)
+
+        with pytest.raises(ValueError, match="navigation dimension is 1"):
+            method_2d(coords, 0)
+
+        with pytest.raises(TypeError, match="Sample position"):
+            method_2d(coords, [0, 1])
+
+        with pytest.raises(ValueError, match="length 1 or 2"):
+            method_2d(coords, (0, 1, 2))
+
+        cds_out_multi = method_2d(coords, (slice(None), 1))
+        assert cds_out_multi.shape == (2,) + coords.shape
+        assert np.allclose(cds_out_multi[0], method_2d(coords, (0, 1)))
+        assert np.allclose(cds_out_multi[1], method_2d(coords, (1, 1)))
 
     @pytest.mark.parametrize(
         "shape, desired_shapes",

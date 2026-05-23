@@ -34,7 +34,7 @@ import numpy as np
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
 
 # Repeated in detector module: keep in sync!
-DETECTOR_PLOT_FORMATS = Literal["detector", "gnomonic"]
+DETECTOR_PLOT_FORMATS = Literal["pixel", "gnomonic"]
 
 BEAM_COLOR = "C2"
 SAMPLE_COLOR = "C0"
@@ -108,9 +108,9 @@ def plot_ebsd_detector(
 
     fig, axis = set_up_figure_axis(ax=ax)
 
-    # Y goes down for detector coordinates and up for gnomonic
+    # Y goes down for pixel coordinates and up for gnomonic
     # coordinates
-    if coords_fmt == "detector":
+    if coords_fmt == "pixel":
         pcx, pcy = detector.pc_average[:2]
         # Avoid multiplying by 0 if a default detector is used (of shape
         # (1, 1))
