@@ -34,6 +34,13 @@ Added
   detector normal, pointing towards the sample, in degrees.
   A positive angle means features on the detector appear to move counter-clockwise about
   the detector center (assuming all other defaults).
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- Two new ``EBSDDetector`` plot methods for plotting a side view and top view of the
+  detector-sample geometry (non-interactive).
+- An ``EBSDDetectorPlotter`` for an interactive plot of the detector-sample geometry,
+  showing the side and top views as well as the detector plane.
+  Additionally, a geometrical and/or kinematical/dynamical simulation can be projected
+  onto the detector plane.
 
 Changed
 -------
@@ -43,6 +50,7 @@ Changed
   circle with a black cross overlayed.
   The only PC keyword arguments used when given in a dictionary to a plot method is
   the size ("s") and the z-order ("zorder").
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 
 Removed
 -------
