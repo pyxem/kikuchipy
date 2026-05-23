@@ -39,7 +39,6 @@ We use the :class:`~kikuchipy.draw.EBSDDetectorPlotter`.
 # %%
 # Imports.
 from diffsims.crystallography import ReciprocalLatticeVector
-from IPython.display import display
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -87,9 +86,8 @@ pl.set_master_pattern(mp)
 print(pl)
 
 # %%
-# Show the plotter.
+# Show the plotter and controls (when run locally).
 fig, controls = pl.show(figsize=(9, 3))
-
-display(controls)
+controls
 
 plt.show()
