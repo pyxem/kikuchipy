@@ -222,8 +222,8 @@ class TestEBSDDetectorPlotter:
 
     def test_show_ebsd_detector_plotter_gnomonic_fixed_xy_ticks(self):
         det = kp.detectors.EBSDDetector(shape=(60, 60))
-        plotter = EBSDDetectorPlotter(det, coords_fmt="gnomonic")
-        fig, controls = plotter.show()
+        plotter = EBSDDetectorPlotter(det)
+        fig, controls = plotter.show(coordinates="gnomonic")
         ax_det = fig.axes[2]
 
         xticks0 = ax_det.get_xticks()
@@ -256,3 +256,20 @@ class TestEBSDDetectorPlotter:
         assert not np.allclose(yticks1, yticks0)
 
         plt.close("all")
+
+    def test_plotter_repr(self):
+        det = kp.detectors.EBSDDetector(shape=(60, 60))
+        plotter = EBSDDetectorPlotter(det)
+        assert repr(plotter) == (
+            "EBSDDetectorPlotter(inplace=False)\n"
+            "  shape (Ny, Nx):     (60, 60)\n"
+            "  pc (PCx, PCy, PCz): (0.5, 0.5, 0.5)\n"
+            "  sample_tilt:        70.0°\n"
+            "  tilt:               0.0°\n"
+            "  azimuthal:          0.0°\n"
+            "  twist:              0.0°\n"
+            "  binning:            1\n"
+            "  px_size:            1.0 um\n"
+            "  Geometrical simulation: None\n"
+            "  Master pattern: None"
+        )
