@@ -89,7 +89,7 @@ class PCCalibrationMovingScreen:
         and other parameters relevant for the estimation.
         """
         self.patterns = np.stack([pattern_in, pattern_out])
-        self.points = np.stack([points_in, points_out], dtype=np.float64)
+        self.points = np.stack([points_in, points_out]).astype(np.float64)
 
         self.delta_z = delta_z
         self.px_size = px_size
