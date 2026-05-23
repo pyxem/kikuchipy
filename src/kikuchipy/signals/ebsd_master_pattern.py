@@ -352,7 +352,7 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             the signal.
         """
         suitable = True
-        error = AttributeError
+        error: Exception | None = None
         if self.projection != "lambert":
             error = NotImplementedError(
                 "Master pattern must be in the square Lambert projection"
