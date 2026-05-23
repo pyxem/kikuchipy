@@ -380,10 +380,6 @@ def plot_detector_sample_geometry_top_view_interactive(
         detector.pcz = pcz_slider.value
 
     if detector._has_signals:
-        detector._sample_tilt_changed.connect(redraw)
-        detector._tilt_changed.connect(redraw)
-        detector._azimuthal_changed.connect(redraw)
-        detector._pc_changed.connect(redraw)
 
         def on_slider_change(change: Any = None) -> None:
             # Block to redraw only once
@@ -909,30 +905,6 @@ class EBSDDetectorPlotter:
             det.pc = [pcx_slider.value, pcy_slider.value, pcz_slider.value]
 
         if det._has_signals:
-            # Affecting side view
-            det._sample_tilt_changed.connect(redraw_side)
-            det._tilt_changed.connect(redraw_side)
-            det._pc_changed.connect(redraw_side)
-
-            # Affecting top view
-            det._sample_tilt_changed.connect(redraw_top)
-            det._tilt_changed.connect(redraw_top)
-            det._azimuthal_changed.connect(redraw_top)
-            det._pc_changed.connect(redraw_top)
-
-            # Affecting detector panel
-            det._sample_tilt_changed.connect(redraw_top)
-            det._tilt_changed.connect(redraw_top)
-            det._azimuthal_changed.connect(redraw_top)
-            det._twist_changed.connect(redraw_det)
-            det._pc_changed.connect(redraw_det)
-
-            # Canvas flush
-            det._sample_tilt_changed.connect(lambda *_: fig.canvas.draw_idle())
-            det._tilt_changed.connect(lambda *_: fig.canvas.draw_idle())
-            det._azimuthal_changed.connect(lambda *_: fig.canvas.draw_idle())
-            det._twist_changed.connect(lambda *_: fig.canvas.draw_idle())
-            det._pc_changed.connect(lambda *_: fig.canvas.draw_idle())
 
             def on_slider_change(change: Any = None) -> None:
                 with (
