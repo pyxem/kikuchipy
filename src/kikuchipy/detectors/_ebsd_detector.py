@@ -248,7 +248,7 @@ class EBSDDetector:
             # 0.13 has been released.
             warnings.warn(
                 message=(
-                    "Passing 'None' is deprecated and will give an error in version "
+                    "Passing None is deprecated and will give an error in version "
                     "0.14. Pass the default value 'bruker' to avoid this warning."
                 ),
                 category=VisibleDeprecationWarning,
@@ -279,7 +279,7 @@ class EBSDDetector:
     @sample_tilt.setter
     def sample_tilt(self, value: float) -> None:
         if not isinstance(value, Number):
-            raise ValueError(f"Invalid sample tilt {value}. Must be a number.")
+            raise ValueError(f"Invalid sample tilt {value!r}. Must be a number.")
         self._sample_tilt = float(value)
 
         if self._has_signals:
@@ -300,7 +300,7 @@ class EBSDDetector:
     @tilt.setter
     def tilt(self, value: float) -> None:
         if not isinstance(value, Number):
-            raise ValueError(f"Invalid detector tilt {value}. Must be a number.")
+            raise ValueError(f"Invalid detector tilt {value!r}. Must be a number.")
         self._tilt = float(value)
 
         if self._has_signals:
@@ -324,7 +324,7 @@ class EBSDDetector:
     @azimuthal.setter
     def azimuthal(self, value: float) -> None:
         if not isinstance(value, Number):
-            raise ValueError(f"Invalid azimuthal {value}. Must be a number.")
+            raise ValueError(f"Invalid azimuthal {value!r}. Must be a number.")
         self._azimuthal = float(value)
 
         if self._has_signals:
@@ -350,7 +350,7 @@ class EBSDDetector:
     @twist.setter
     def twist(self, value: float) -> None:
         if not isinstance(value, Number):
-            raise ValueError(f"Invalid twist {value}. Must be a number.")
+            raise ValueError(f"Invalid twist {value!r}. Must be a number.")
         self._twist = float(value)
 
         if self._has_signals:
@@ -1033,7 +1033,7 @@ class EBSDDetector:
         return_figure: Literal[False] = False,
         return_outliers: Literal[False] = False,
         figure_kwargs: dict | None = None,
-    ) -> float: ...
+    ) -> float: ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1044,7 +1044,7 @@ class EBSDDetector:
         return_figure: Literal[False] = False,
         return_outliers: Literal[True] = ...,
         figure_kwargs: dict | None = None,
-    ) -> tuple[float, np.ndarray]: ...
+    ) -> tuple[float, np.ndarray]: ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1055,7 +1055,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[False] = False,
         figure_kwargs: dict | None = None,
-    ) -> "tuple[float, mfigure.Figure]": ...
+    ) -> "tuple[float, mfigure.Figure]": ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1066,7 +1066,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[True] = ...,
         figure_kwargs: dict | None = None,
-    ) -> "tuple[float, np.ndarray, mfigure.Figure]": ...
+    ) -> "tuple[float, np.ndarray, mfigure.Figure]": ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1077,7 +1077,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[False] = False,
         figure_kwargs: dict | None = None,
-    ) -> float: ...
+    ) -> float: ...  # pragma: no cover
 
     @overload
     def estimate_xtilt(
@@ -1088,7 +1088,7 @@ class EBSDDetector:
         return_figure: Literal[True] = ...,
         return_outliers: Literal[True] = ...,
         figure_kwargs: dict | None = None,
-    ) -> tuple[float, np.ndarray]: ...
+    ) -> tuple[float, np.ndarray]: ...  # pragma: no cover
 
     def estimate_xtilt(
         self,
@@ -1405,7 +1405,7 @@ class EBSDDetector:
         plot: bool = True,
         return_figure: Literal[False] = False,
         figure_kwargs: dict[str, Any] | None = None,
-    ) -> Self: ...
+    ) -> Self: ...  # pragma: no cover
 
     @overload
     def fit_pc(
@@ -1417,7 +1417,7 @@ class EBSDDetector:
         plot: bool = True,
         return_figure: Literal[True] = True,
         figure_kwargs: dict[str, Any] | None = None,
-    ) -> "tuple[Self, mfigure.Figure]": ...
+    ) -> "tuple[Self, mfigure.Figure]": ...  # pragma: no cover
 
     def fit_pc(
         self,
@@ -1751,7 +1751,7 @@ class EBSDDetector:
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = ...,
         return_figure: Literal[False] = ...,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot(
@@ -1766,7 +1766,7 @@ class EBSDDetector:
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = ...,
         return_figure: Literal[True] = ...,
-    ) -> "None | mfigure.Figure | mfigure.SubFigure": ...
+    ) -> "None | mfigure.Figure | mfigure.SubFigure": ...  # pragma: no cover
 
     def plot(
         self,
@@ -1871,7 +1871,7 @@ class EBSDDetector:
         interactive: Literal[False] = False,
         return_figure: Literal[False] = False,
         **kwargs,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot_side_view(
@@ -1882,7 +1882,7 @@ class EBSDDetector:
         interactive: Literal[True] = True,
         return_figure: Literal[False] = False,
         **kwargs,
-    ) -> "ipywidgets.VBox": ...
+    ) -> "ipywidgets.VBox": ...  # pragma: no cover
 
     @overload
     def plot_side_view(
@@ -1893,7 +1893,7 @@ class EBSDDetector:
         interactive: Literal[False] = False,
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "mfigure.Figure | mfigure.SubFigure": ...
+    ) -> "mfigure.Figure | mfigure.SubFigure": ...  # pragma: no cover
 
     @overload
     def plot_side_view(
@@ -1904,7 +1904,9 @@ class EBSDDetector:
         interactive: Literal[True] = True,
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
+    ) -> (
+        "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]"
+    ): ...  # pragma: no cover
 
     def plot_side_view(
         self,
@@ -2005,7 +2007,7 @@ class EBSDDetector:
         interactive: bool = False,
         return_figure: Literal[False] = False,
         **kwargs,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot_top_view(
@@ -2016,7 +2018,7 @@ class EBSDDetector:
         interactive: bool = False,
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "mfigure.Figure | mfigure.SubFigure": ...
+    ) -> "mfigure.Figure | mfigure.SubFigure": ...  # pragma: no cover
 
     @overload
     def plot_top_view(
@@ -2027,7 +2029,7 @@ class EBSDDetector:
         interactive: Literal[True] = True,
         return_figure: bool = False,
         **kwargs,
-    ) -> "ipywidgets.VBox": ...
+    ) -> "ipywidgets.VBox": ...  # pragma: no cover
 
     @overload
     def plot_top_view(
@@ -2038,7 +2040,9 @@ class EBSDDetector:
         interactive: Literal[True] = True,
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]": ...
+    ) -> (
+        "tuple[ipywidgets.VBox, mfigure.Figure | mfigure.SubFigure]"
+    ): ...  # pragma: no cover
 
     def plot_top_view(
         self,
@@ -2137,7 +2141,7 @@ class EBSDDetector:
         coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
         return_figure: Literal[False] = False,
         **kwargs,
-    ) -> "ipywidgets.Widget": ...
+    ) -> "ipywidgets.Widget": ...  # pragma: no cover
 
     @overload
     def plot_interactive(
@@ -2148,7 +2152,7 @@ class EBSDDetector:
         coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
         return_figure: Literal[True] = True,
         **kwargs,
-    ) -> "tuple[ipywidgets.Widget, mfigure.Figure]": ...
+    ) -> "tuple[ipywidgets.Widget, mfigure.Figure]": ...  # pragma: no cover
 
     def plot_interactive(
         self,
@@ -2239,7 +2243,7 @@ class EBSDDetector:
         annotate: bool = False,
         figure_kwargs: dict | None = None,
         **kwargs,
-    ) -> None: ...
+    ) -> None: ...  # pragma: no cover
 
     @overload
     def plot_pc(
@@ -2250,7 +2254,7 @@ class EBSDDetector:
         annotate: bool = ...,
         figure_kwargs: dict | None = ...,
         **kwargs,
-    ) -> "mfigure.Figure": ...
+    ) -> "mfigure.Figure": ...  # pragma: no cover
 
     def plot_pc(
         self,

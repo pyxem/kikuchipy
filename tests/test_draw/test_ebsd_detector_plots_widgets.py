@@ -19,7 +19,7 @@
 
 import pytest
 
-ipywidgets = pytest.importorskip("ipywidgets")
+ipywidgets = pytest.importorskip("ipywidgets", reason="ipywidgets is not installed")
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector

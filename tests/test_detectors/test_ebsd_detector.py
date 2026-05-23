@@ -29,6 +29,13 @@ import pytest
 import kikuchipy as kp
 from kikuchipy._constants import dependency_version
 
+skipif_pyebsdindex_installed = pytest.mark.skipif(
+    dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
+)
+skipif_pyebsdindex_not_installed = pytest.mark.skipif(
+    dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
+)
+
 
 class TestEBSDDetector:
     def test_init(self, pc1):
@@ -339,6 +346,148 @@ class TestEBSDDetector:
         assert np.allclose(cds_back[..., :], coords[..., :])
 
     @pytest.mark.parametrize(
+        "shape, desired_shapes",
+        [
+            (
+                (1,),  # PC
+                [
+                    (4,),  # extent
+                    (1,),  # x_min
+                    (1,),  # y_min
+                    (1, 2),  # x_range
+                    (1, 2),  # y_range
+                    (1,),  # x_scale
+                    (1,),  # y_scale
+                    (1, 4),  # extent_gnomonic
+                ],
+            ),
+            (
+                (10,),
+                [
+                    (4,),
+                    (10,),
+                    (10,),
+                    (10, 2),
+                    (10, 2),
+                    (10,),
+                    (10,),
+                    (10, 4),
+                ],
+            ),
+            (
+                (10, 10),
+                [
+                    (4,),
+                    (10, 10),
+                    (10, 10),
+                    (10, 10, 2),
+                    (10, 10, 2),
+                    (10, 10),
+                    (10, 10),
+                    (10, 10, 4),
+                ],
+            ),
+            (
+                (1, 10),
+                [
+                    (4,),
+                    (1, 10),
+                    (1, 10),
+                    (1, 10, 2),
+                    (1, 10, 2),
+                    (1, 10),
+                    (1, 10),
+                    (1, 10, 4),
+                ],
+            ),
+            (
+                (10, 1),
+                [
+                    (4,),
+                    (10, 1),
+                    (10, 1),
+                    (10, 1, 2),
+                    (10, 1, 2),
+                    (10, 1),
+                    (10, 1),
+                    (10, 1, 4),
+                ],
+            ),
+        ],
+    )
+    def test_property_shapes(self, shape, desired_shapes):
+        """Expected property shapes when varying navigation shape."""
+        det = kp.detectors.EBSDDetector(pc=np.ones(shape + (3,)))
+        assert det.bounds.shape == desired_shapes[0]
+        assert det.x_min.shape == desired_shapes[1]
+        assert det.y_min.shape == desired_shapes[2]
+        assert det.x_range.shape == desired_shapes[3]
+        assert det.y_range.shape == desired_shapes[4]
+        assert det.x_scale.shape == desired_shapes[5]
+        assert det.y_scale.shape == desired_shapes[6]
+        assert det.gnomonic_bounds.shape == desired_shapes[7]
+
+    def test_crop(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        det2 = det.crop((1, 5, 2, 6))
+        assert det2.shape == (4, 4)
+        assert np.allclose(det2.pc, [0.25, 0.25, 0.75])
+
+        # "Real" example
+        s = kp.data.nickel_ebsd_small()
+        det3 = s.detector
+        det4 = det3.crop((-10, 50, 20, 70))  # (0, 50, 20, 60)
+        assert det4.shape == (50, 40)
+
+    def test_crop_raises(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        with pytest.raises(ValueError):
+            _ = det.crop((1.0, 5, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((5, 1, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((1, 5, 6, 2))
+
+    def test_crop_simulated(self):
+        s = kp.data.nickel_ebsd_small()
+
+        det2 = s.detector.crop((0, 50, 20, 60))
+
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        rot = s.xmap.rotations.reshape(*s.xmap.shape)
+
+        kwds = {"compute": True, "dtype_out": "uint8"}
+        sim1 = mp.get_patterns(rot, s.detector, **kwds)
+        sim2 = mp.get_patterns(rot, det2, **kwds)
+
+        assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)
+
+    def test_set_detector_binning_raises(self):
+        det = kp.detectors.EBSDDetector()
+        with pytest.raises(ValueError, match=r"Invalid binning \(3, 4\). Must be an "):
+            det.binning = (3, 4)
+
+    def test_invalid_values_raises(self):
+        det = kp.detectors.EBSDDetector()
+
+        with pytest.raises(ValueError, match="Invalid sample tilt "):
+            det.sample_tilt = "a"
+
+        with pytest.raises(ValueError, match="Invalid detector tilt "):
+            det.tilt = "a"
+
+        with pytest.raises(ValueError, match="Invalid azimuthal "):
+            det.azimuthal = "a"
+
+        with pytest.raises(ValueError, match="Invalid twist "):
+            det.twist = "a"
+
+        with pytest.raises(ValueError, match="Invalid pixel size "):
+            det.px_size = "a"
+
+
+class TestEBSDDetectorPCConventions:
+    @pytest.mark.parametrize(
         "shape, pc, px_size, binning, version, desired_pc",
         [
             (
@@ -491,129 +640,14 @@ class TestEBSDDetector:
     def test_set_pc_convention_raises(self, pc1):
         """Wrong convention raises."""
         with pytest.raises(ValueError, match="Invalid projection/pattern center "):
-            _ = kp.detectors.EBSDDetector(pc=pc1, convention="nordif")
+            kp.detectors.EBSDDetector(pc=pc1, convention="nordif")
 
-    @pytest.mark.parametrize(
-        "shape, desired_shapes",
-        [
-            (
-                (1,),  # PC
-                [
-                    (4,),  # extent
-                    (1,),  # x_min
-                    (1,),  # y_min
-                    (1, 2),  # x_range
-                    (1, 2),  # y_range
-                    (1,),  # x_scale
-                    (1,),  # y_scale
-                    (1, 4),  # extent_gnomonic
-                ],
-            ),
-            (
-                (10,),
-                [
-                    (4,),
-                    (10,),
-                    (10,),
-                    (10, 2),
-                    (10, 2),
-                    (10,),
-                    (10,),
-                    (10, 4),
-                ],
-            ),
-            (
-                (10, 10),
-                [
-                    (4,),
-                    (10, 10),
-                    (10, 10),
-                    (10, 10, 2),
-                    (10, 10, 2),
-                    (10, 10),
-                    (10, 10),
-                    (10, 10, 4),
-                ],
-            ),
-            (
-                (1, 10),
-                [
-                    (4,),
-                    (1, 10),
-                    (1, 10),
-                    (1, 10, 2),
-                    (1, 10, 2),
-                    (1, 10),
-                    (1, 10),
-                    (1, 10, 4),
-                ],
-            ),
-            (
-                (10, 1),
-                [
-                    (4,),
-                    (10, 1),
-                    (10, 1),
-                    (10, 1, 2),
-                    (10, 1, 2),
-                    (10, 1),
-                    (10, 1),
-                    (10, 1, 4),
-                ],
-            ),
-        ],
-    )
-    def test_property_shapes(self, shape, desired_shapes):
-        """Expected property shapes when varying navigation shape."""
-        det = kp.detectors.EBSDDetector(pc=np.ones(shape + (3,)))
-        assert det.bounds.shape == desired_shapes[0]
-        assert det.x_min.shape == desired_shapes[1]
-        assert det.y_min.shape == desired_shapes[2]
-        assert det.x_range.shape == desired_shapes[3]
-        assert det.y_range.shape == desired_shapes[4]
-        assert det.x_scale.shape == desired_shapes[5]
-        assert det.y_scale.shape == desired_shapes[6]
-        assert det.gnomonic_bounds.shape == desired_shapes[7]
-
-    def test_crop(self):
-        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
-        det2 = det.crop((1, 5, 2, 6))
-        assert det2.shape == (4, 4)
-        assert np.allclose(det2.pc, [0.25, 0.25, 0.75])
-
-        # "Real" example
-        s = kp.data.nickel_ebsd_small()
-        det3 = s.detector
-        det4 = det3.crop((-10, 50, 20, 70))  # (0, 50, 20, 60)
-        assert det4.shape == (50, 40)
-
-    def test_crop_raises(self):
-        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
-        with pytest.raises(ValueError):
-            _ = det.crop((1.0, 5, 2, 6))
-        with pytest.raises(ValueError):
-            _ = det.crop((5, 1, 2, 6))
-        with pytest.raises(ValueError):
-            _ = det.crop((1, 5, 6, 2))
-
-    def test_crop_simulated(self):
-        s = kp.data.nickel_ebsd_small()
-
-        det2 = s.detector.crop((0, 50, 20, 60))
-
-        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
-        rot = s.xmap.rotations.reshape(*s.xmap.shape)
-
-        kwds = {"compute": True, "dtype_out": "uint8"}
-        sim1 = mp.get_patterns(rot, s.detector, **kwds)
-        sim2 = mp.get_patterns(rot, det2, **kwds)
-
-        assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)
-
-    def test_set_detector_binning_raises(self):
-        det = kp.detectors.EBSDDetector()
-        with pytest.raises(ValueError, match=r"Invalid binning \(3, 4\). Must be an "):
-            det.binning = (3, 4)
+    # TODO: Remove test after 0.13 has been released
+    def test_convention_none_warns(self):
+        pc0 = [0.5, 0.4, 0.3]
+        with pytest.warns(UserWarning, match="Passing None"):
+            det = kp.detectors.EBSDDetector(pc=pc0, convention=None)
+        assert np.allclose(det.pc, pc0)
 
 
 class TestEstimateTilts:
@@ -923,17 +957,13 @@ class TestGetIndexer:
         )
         self.det = det
 
-    @pytest.mark.skipif(
-        dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
-    )
+    @skipif_pyebsdindex_installed
     def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
         with pytest.raises(ImportError, match="requires that 'pyebsdindex'"):
             _ = self.det.get_indexer(pl)
 
-    @pytest.mark.skipif(
-        dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
-    )
+    @skipif_pyebsdindex_not_installed
     def test_get_indexer_invalid_phase_lists(self):
         # Not all phases have space groups
         pl = PhaseList(names=["a", "b"], point_groups=["m-3m", "432"])
@@ -941,9 +971,7 @@ class TestGetIndexer:
         with pytest.raises(ValueError, match="Space group for each phase must be set,"):
             _ = self.det.get_indexer(pl)
 
-    @pytest.mark.skipif(
-        dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
-    )
+    @skipif_pyebsdindex_not_installed
     def test_get_indexer(self):
         # fmt: off
         #               -1  2/m  222   -3   -3m   4/m   4/mmm   6/m  6/mmm    m-3  m-3m
