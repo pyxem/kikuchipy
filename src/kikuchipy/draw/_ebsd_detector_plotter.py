@@ -27,7 +27,7 @@ from kikuchipy._constants import verify_dependency_or_raise
 verify_dependency_or_raise("ipywidgets", "Interactive detector plots")
 
 import abc
-from typing import Any, Literal
+from typing import Any
 
 from diffsims.crystallography import ReciprocalLatticeVector
 import ipywidgets
@@ -635,9 +635,11 @@ class EBSDDetectorPlotter:
     """Interactive EBSD detector plot with optional overlays.
 
     Shows the detector-sample geometry (side view, top view) and an EBSD
-    detector panel with interactive slider controls. Overlays can be
-    added via :meth:`add_geometrical_simulation` and
-    :meth:`add_master_pattern` before calling :meth:`show`.
+    detector panel with interactive slider controls.
+
+    A single geometrical simulation and a single master pattern
+    simulation can be overlayed on the detector, provided an initial
+    crystal orientation is given.
 
     .. warning::
 
@@ -657,19 +659,9 @@ class EBSDDetectorPlotter:
         added.
     inplace
         Whether interactive changes affect *detector* inplace. Default
-        is False (a deep copy is used). If True, the projection center
-        will be overwritten with the average projection center (required
-        for the plot).
-    legend
-        Whether to show a legend in the side and top views. Default is
-        False.
-    dimensionless
-        Whether to ignore
-        :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when drawing
-        the side-view plot axes. Default is True.
-    coords_fmt
-        Detector panel coordinate format: "gnomonic" (default) or
-        "detector".
+        is False (a copy is used). If True, the projection center will
+        be overwritten with the average projection center (required for
+        the plot).
     """
 
     def __init__(
@@ -678,19 +670,35 @@ class EBSDDetectorPlotter:
         rotation: oqu.Rotation | None = None,
         *,
         inplace: bool = False,
-        legend: bool = False,
-        dimensionless: bool = True,
-        coords_fmt: DETECTOR_PLOT_FORMATS = "gnomonic",
     ) -> None:
         if not inplace:
             detector = detector.deepcopy()
+        self._inplace = inplace
         self._detector = detector
         self._detector.pc = self._detector.pc_average
         self._rotation = rotation
-        self._legend = legend
-        self._dimensionless = dimensionless
-        self._coords_fmt: DETECTOR_PLOT_FORMATS = coords_fmt
         self._overlays: list[EBSDDetectorOverlay] = []
+
+    # ------------------------ Dunder methods ------------------------ #
+
+    def __repr__(self) -> str:
+        s_det = "\n".join(repr(self._detector).split("\n")[1:])
+        geometrical_overlay = self._get_overlay(GeometricalSimulationOverlay)
+        if geometrical_overlay is not None:
+            s_geo = repr(geometrical_overlay._reflectors).split("\n")[0]
+        else:
+            s_geo = "None"
+        master_pattern_overlay = self._get_overlay(MasterPatternOverlay)
+        if master_pattern_overlay is not None:
+            s_mp = repr(master_pattern_overlay._master_pattern)
+        else:
+            s_mp = "None"
+        return (
+            f"{self.__class__.__name__}(inplace={self._inplace})\n"
+            f"{s_det}\n"
+            f"  Geometrical simulation: {s_geo}\n"
+            f"  Master pattern: {s_mp}"
+        )
 
     # --------------------------- Methods ---------------------------- #
 
@@ -719,7 +727,7 @@ class EBSDDetectorPlotter:
             :meth:`~matplotlib.axes.Axes.scatter`.
         """
         self._raise_if_no_rotation()
-        self._raise_if_has_overlay("geometrical")
+        self._raise_if_has_overlay(GeometricalSimulationOverlay)
         self._overlays.append(
             GeometricalSimulationOverlay(reflectors, bands_kwargs, zone_axes_kwargs)
         )
@@ -750,17 +758,31 @@ class EBSDDetectorPlotter:
             :meth:`~matplotlib.axes.Axes.imshow`.
         """
         self._raise_if_no_rotation()
-        self._raise_if_has_overlay("master_pattern")
+        self._raise_if_has_overlay(MasterPatternOverlay)
         self._overlays.append(MasterPatternOverlay(master_pattern, energy, **kwargs))
 
     def show(
-        self, **figure_kwargs: Any
+        self,
+        legend: bool = False,
+        dimensionless: bool = True,
+        coordinates: DETECTOR_PLOT_FORMATS = "gnomonic",
+        **kwargs: Any,
     ) -> "tuple[mfigure.Figure, ipywidgets.VBox | ipywidgets.HBox]":
         """Build the interactive figure and return it with its controls.
 
         Parameters
         ----------
-        **figure_kwargs
+        legend
+            Whether to show a legend in the side and top views. Default
+            is False.
+        dimensionless
+            Whether to ignore
+            :attr:`~kikuchipy.detectors.EBSDDetector.px_size` when
+            drawing the side-view plot axes. Default is True.
+        coordinates
+            Detector panel coordinate format: "gnomonic" (default) or
+            "detector".
+        **kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.figure`.
 
@@ -785,9 +807,7 @@ class EBSDDetectorPlotter:
         # Set up overlay controls (call setup once, store widgets)
         pc_checkbox = ipywidgets.Checkbox(value=True, description="PC", indent=False)
         gnomonic_circles_checkbox = ipywidgets.Checkbox(
-            value=self._coords_fmt == "gnomonic",
-            description="Gnomonic circles",
-            indent=False,
+            value=False, description="Gnomonic circles", indent=False
         )
         overlay_widget_lists: list[list] = []
         all_overlay_widgets: list[ipywidgets.Widget] = [
@@ -830,11 +850,14 @@ class EBSDDetectorPlotter:
 
         # Create figure
         w, h = plt.rcParams["figure.figsize"]
-        figure_kwargs.setdefault("layout", "constrained")
-        figure_kwargs.setdefault("figsize", (3 * w, h))
-        fig = plt.figure(**figure_kwargs)
+        kwargs.setdefault("layout", "constrained")
+        kwargs.setdefault("figsize", (3 * w, h))
+        fig = plt.figure(**kwargs)
         ax_side, ax_top, ax_det = fig.subplots(1, 3)
-        gnomonic_num_xticks = gnomonic_num_yticks = 5
+
+        # Major tick locator used if detector format is gnomonic
+        gnomonic_tick_locator_x = ticker.LinearLocator(numticks=5)
+        gnomonic_tick_locator_y = ticker.LinearLocator(numticks=5)
 
         def get_rotation() -> oqu.Rotation | None:
             if rotation_sliders:
@@ -844,13 +867,13 @@ class EBSDDetectorPlotter:
 
         def redraw_side(*args: Any) -> None:
             update_detector_sample_geometry_side_view(
-                det, ax_side, legend=self._legend, dimensionless=self._dimensionless
+                det, ax_side, legend=legend, dimensionless=dimensionless
             )
             ax_side.set_title("Side view")
 
         def redraw_top(*args: Any) -> None:
             update_detector_sample_geometry_top_view(
-                det, ax_top, legend=self._legend, dimensionless=self._dimensionless
+                det, ax_top, legend=legend, dimensionless=dimensionless
             )
             ax_top.set_title("Top view")
 
@@ -858,23 +881,19 @@ class EBSDDetectorPlotter:
             update_detector_plane(
                 det,
                 ax_det,
-                coords_fmt=self._coords_fmt,
+                coords_fmt=coordinates,
                 zoom=1,
                 draw_gnomonic_circles=gnomonic_circles_checkbox.value,
                 show_pc=pc_checkbox.value,
             )
-            if self._coords_fmt == "gnomonic":
-                ax_det.xaxis.set_major_locator(
-                    ticker.LinearLocator(numticks=gnomonic_num_xticks)
-                )
-                ax_det.yaxis.set_major_locator(
-                    ticker.LinearLocator(numticks=gnomonic_num_yticks)
-                )
+            if coordinates == "gnomonic":
+                ax_det.xaxis.set_major_locator(gnomonic_tick_locator_x)
+                ax_det.yaxis.set_major_locator(gnomonic_tick_locator_y)
             ax_det.set_title("Detector")
             rot = get_rotation()
             if rot is not None:
                 for overlay in self._overlays:
-                    overlay.draw(ax_det, det, rot, self._coords_fmt)
+                    overlay.draw(ax_det, det, rot, coordinates)
 
         def redraw_all() -> None:
             redraw_side()
@@ -902,8 +921,11 @@ class EBSDDetectorPlotter:
             det._pc_changed.connect(redraw_top)
 
             # Affecting detector panel
-            det._pc_changed.connect(redraw_det)
+            det._sample_tilt_changed.connect(redraw_top)
+            det._tilt_changed.connect(redraw_top)
+            det._azimuthal_changed.connect(redraw_top)
             det._twist_changed.connect(redraw_det)
+            det._pc_changed.connect(redraw_det)
 
             # Canvas flush
             det._sample_tilt_changed.connect(lambda *_: fig.canvas.draw_idle())
@@ -955,15 +977,24 @@ class EBSDDetectorPlotter:
 
         return fig, controls
 
+    # ----------------------- Private methods ------------------------ #
+
+    def _get_overlay(
+        self, overlay: type[EBSDDetectorOverlay]
+    ) -> EBSDDetectorOverlay | None:
+        for present_overlay in self._overlays:
+            if isinstance(present_overlay, overlay):
+                return present_overlay
+
     def _raise_if_no_rotation(self) -> None:
         if self._rotation is None:
             raise RuntimeError("Plotter must be made with a rotation")
 
-    def _raise_if_has_overlay(
-        self, overlay: Literal["geometrical", "master_pattern"]
-    ) -> None:
+    def _raise_if_has_overlay(self, overlay: type[EBSDDetectorOverlay]) -> None:
+        if overlay is GeometricalSimulationOverlay:
+            msg = "Plotter already has a geometrical simulation"
+        else:
+            msg = "Plotter already has a master pattern"
         overlay_types = list(map(type, self._overlays))
-        if overlay == "geometrical" and GeometricalSimulationOverlay in overlay_types:
-            raise ValueError("Plotter already has a geometrical simulation")
-        if overlay == "master_pattern" and MasterPatternOverlay in overlay_types:
-            raise ValueError("Plotter already has a master pattern")
+        if overlay in overlay_types:
+            raise ValueError(msg)
