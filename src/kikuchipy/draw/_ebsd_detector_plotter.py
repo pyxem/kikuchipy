@@ -617,7 +617,7 @@ class MasterPatternOverlay(EBSDDetectorOverlay):
         )
         pattern = pattern_1d.reshape(detector.shape)
 
-        imshow_kwargs = self._imshow_kwargs
+        imshow_kwargs = self._imshow_kwargs.copy()
         if coords_fmt == "gnomonic":
             extent = detector._average_gnomonic_bounds
         else:
