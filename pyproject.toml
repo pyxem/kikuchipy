@@ -74,6 +74,7 @@ all = [
 doc = [
     "ipywidgets",
     "IPython",
+    "ipympl",
     "memory_profiler",
     "nbsphinx                     >= 0.7",
     # Restriction due to https://github.com/pyxem/kikuchipy/issues/739
