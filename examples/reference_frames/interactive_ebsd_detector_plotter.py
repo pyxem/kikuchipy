@@ -32,8 +32,10 @@ We use the :class:`~kikuchipy.draw.EBSDDetectorPlotter`.
 
     The plotter requires :doc:`ipywidgets <ipywidgets:index>` to be installed.
 
-    Interactivity is only achived when run locally, not on this web page. An interactive
-    Matplotlib backend must be set.
+    Interactivity is only achieved when run in an active Jupyter session, not directly
+    on this static web page.
+    Use the gallery's Binder launch button for browser-based interactivity, or run
+    locally with an interactive Matplotlib backend.
 """
 
 # %%
@@ -45,7 +47,7 @@ import matplotlib.pyplot as plt
 import kikuchipy as kp
 
 matplotlib.use("ipympl")
-plt.ion()
+_ = plt.ion()
 
 # %%
 # Load a small (not large) nickel EBSD map.
