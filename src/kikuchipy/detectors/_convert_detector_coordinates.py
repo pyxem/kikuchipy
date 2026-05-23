@@ -42,8 +42,13 @@ def parse_coordinate_format(fmt: ALL_DETECTOR_PLOT_FORMATS) -> DETECTOR_PLOT_FOR
             "Pass 'pixel' instead. Passing 'detector' is deprecated and will throw an "
             "error in 0.13.0",
             VisibleDeprecationWarning,
+            stacklevel=2,
         )
         fmt = "pixel"
+    if fmt not in ("pixel", "gnomonic"):
+        raise ValueError(
+            f"Unknown coordinate format {fmt!r}. Expected 'pixel' or 'gnomonic'."
+        )
     return fmt
 
 
@@ -118,6 +123,11 @@ def convert_coordinates(
 ) -> np.ndarray:
     """Convert coordinates using one conversion-factor dictionary."""
     coords = np.atleast_2d(coords)
+    if coords.shape[-1] != 2:
+        raise ValueError(
+            "Coordinates must have length 2 along the last axis, got shape "
+            f"{coords.shape}"
+        )
 
     nav_shape = conversion["m_x"].shape
     nav_ndim = len(nav_shape)

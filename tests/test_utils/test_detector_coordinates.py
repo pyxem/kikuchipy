@@ -98,7 +98,7 @@ class TestDetectorCoordinates:
         )
 
         cds_out5d_3 = convert_coordinates(self.coords_5d, self.conv_1d_pix_to_gn)
-        cds_out5d_4 = convert_coordinates(self.coords_5d, self.conv_1d_pix_to_gn, (1))
+        cds_out5d_4 = convert_coordinates(self.coords_5d, self.conv_1d_pix_to_gn, (1,))
         cds_out5d_5 = convert_coordinates(self.coords_5d, self.conv_1d_pix_to_gn, 1)
 
         cds_out4d_3 = convert_coordinates(self.coords_4d, self.conv_1d_pix_to_gn)
