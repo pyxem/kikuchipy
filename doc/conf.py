@@ -369,15 +369,6 @@ SphinxDocString._str_examples = _str_examples
 # https://sphinx-gallery.github.io
 sphinx_gallery_conf = {
     "backreferences_dir": "reference/generated",
-    "binder": {
-        "org": "pyxem",
-        "repo": "kikuchipy",
-        "branch": release_version,
-        "binderhub_url": "https://mybinder.org",
-        "dependencies": ["../environment.yml"],
-        "notebooks_dir": "doc/examples",
-        "use_jupyter_lab": True,
-    },
     "doc_module": ("kikuchipy",),
     "examples_dirs": "../examples",
     "filename_pattern": "^((?!sgskip).)*$",
