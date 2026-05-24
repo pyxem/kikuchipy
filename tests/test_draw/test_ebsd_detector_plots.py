@@ -51,7 +51,7 @@ class TestEBSDDetectorPlot:
         "coordinates, show_pc, pattern, zoom, desired_label",
         [
             (None, False, None, 1, "detector"),
-            ("detector", True, np.ones((60, 60)), 1, "detector"),
+            ("pixel", True, np.ones((60, 60)), 1, "detector"),
             ("gnomonic", True, np.ones((60, 60)), 2, "gnomonic"),
         ],
     )
@@ -155,7 +155,7 @@ class TestEBSDDetectorPlot:
 
         plt.close("all")
 
-    @pytest.mark.parametrize("coordinates", ["detector", "gnomonic"])
+    @pytest.mark.parametrize("coordinates", ["pixel", "gnomonic"])
     def test_plot_extent(self, detector, coordinates):
         """Correct detector extent."""
         fig = detector.plot(

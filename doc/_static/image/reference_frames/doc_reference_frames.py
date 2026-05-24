@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from pathlib import Path
 
@@ -33,7 +35,7 @@ s.rescale_intensity(percentiles=(0.5, 99.5))
 
 det = kp.detectors.EBSDDetector(shape=(60, 60), pc=[0.4210, 0.2206, 0.5049])
 fig = det.plot(
-    coordinates="detector", pattern=s.inav[0, 0].data, show_pc=True, return_figure=True
+    coordinates="pixel", pattern=s.inav[0, 0].data, show_pc=True, return_figure=True
 )
 ax = fig.axes[0]
 arrow_dict1 = {
