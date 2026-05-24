@@ -361,9 +361,9 @@ def plot_detector_sample_geometry_top_view(
     # Detector local basis in microscope coordinates at zero detector
     # tilt and zero azimuthal: X_d (width) points west, Y_d (height)
     # points down in side view, and Z_d is the detector normal.
-    x_d = np.array([-1.0, 0.0, 0.0], dtype=np.float64)
-    y_d = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-    z_d = np.array([0.0, 1.0, 0.0], dtype=np.float64)
+    x_d = np.ascontiguousarray([-1.0, 0.0, 0.0], dtype=np.float64)
+    y_d = np.ascontiguousarray([0.0, 0.0, 1.0], dtype=np.float64)
+    z_d = np.ascontiguousarray([0.0, 1.0, 0.0], dtype=np.float64)
 
     # Apply intrinsic rotations: detector tilt about X_d followed by
     # azimuthal tilt about Y_d.
