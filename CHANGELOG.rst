@@ -45,6 +45,7 @@ Added
 - Two new ``EBSDDetector`` methods to convert between detector pixel and gnomonic
   coordinates.
   (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
+- Explicit support for Python 3.13 and 3.14.
 
 Changed
 -------
