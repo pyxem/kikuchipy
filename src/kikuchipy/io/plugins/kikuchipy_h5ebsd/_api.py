@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Reader and writer of EBSD data from a kikuchipy h5ebsd file."""
 
@@ -30,7 +32,7 @@ from orix.io.plugins.orix_hdf5 import crystalmap2dict, dict2crystalmap
 from rsciio.hspy._api import overwrite_dataset
 
 from kikuchipy import __version__ as kikuchipy_version
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.io._util import _get_input_variable
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _dict2hdf5group, _hdf5group2dict
 from kikuchipy.signals.util._crystal_map import _xmap_is_compatible_with_signal
@@ -163,6 +165,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
             binning=header.get("binning", 1),
             tilt=header.get("elevation_angle", 0.0),
             azimuthal=header.get("azimuth_angle", 0.0),
+            twist=header.get("twist_angle", 0.0),
             sample_tilt=header.get("sample_tilt", 70.0),
             pc=pc,
         )
@@ -422,7 +425,8 @@ class KikuchipyH5EBSDWriter:
         _dict2hdf5group(
             {
                 "azimuth_angle": detector.azimuthal,
-                "binning": detector.binning,
+                "twist_angle": detector.twist,
+                "binning": detector._binning,
                 "elevation_angle": detector.tilt,
                 "n_columns": nx,
                 "n_rows": ny,

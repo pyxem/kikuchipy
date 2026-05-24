@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -13,7 +14,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.#
 
 from matplotlib.pyplot import imread
 import numpy as np
@@ -86,7 +87,8 @@ class TestNORDIFCalibrationPatterns:
             [
                 "Could not read area (electron image) shape",
                 "Could not read area ROI 'Top'",
-                "Number of samples (3, 3) differs from the one calculated from area/ROI shapes (4, 4)",
+                "Number of samples (3, 3) differs from the one calculated from area/ROI"
+                " shapes (4, 4)",
                 "No area image found",
             ],
         ):

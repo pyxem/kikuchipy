@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Constants and such useful across modules."""
 
@@ -21,13 +23,19 @@ from importlib.metadata import version
 
 from packaging.version import Version
 
+# TODO: Create this list dynamically using importlib.metadata.require
 deps_for_version_check = [
-    # Core
+    # Required
     "hyperspy",
     "matplotlib",
     "numpy",
+    "rosettasciio",
+    "scikit-image",
     # Optional
+    "IPython",
+    "ipywidgets",
     "nlopt",
+    "psygnal",
     "pyvista",
     "pyebsdindex",
 ]
@@ -38,6 +46,14 @@ for dep in deps_for_version_check:
     except ImportError:  # pragma: no cover
         dep_version = None
     dependency_version[dep] = dep_version
+
+
+def verify_dependency_or_raise(package: str, reason: str) -> None:
+    """Raise an informative ImportError if a *package* required for some
+    *reason* is not installed.
+    """
+    if dependency_version[package] is None:
+        raise ImportError(f"{reason} requires that {package!r} is installed")
 
 
 # PyOpenCL context available for use with PyEBSDIndex? Required for
@@ -54,7 +70,7 @@ try:  # pragma: no cover
         pyopencl_context_available = False
     else:
         pyopencl_context_available = True
-except:  # pragma: no cover
+except Exception:  # pragma: no cover
     # Have to use bare except because PyOpenCL might raise its own
     # LogicError, but we also want to catch import errors here
     pyopencl_context_available = False
@@ -67,6 +83,6 @@ try:
     from numpy.exceptions import VisibleDeprecationWarning
 except ImportError:  # pragma: no cover
     # Removed in NumPy 2.0.0
-    from numpy import VisibleDeprecationWarning
+    from numpy import VisibleDeprecationWarning  # noqa: F401
 
 del dep_version, deps_for_version_check, version

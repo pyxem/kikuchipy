@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,13 +15,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Utilities for attaching an EBSD detector,
 :class:`kikuchipy.detectors.EBSDDetector` to an EBSD signal,
 :class:`kikuchipy.signals.EBSD`.
 """
 
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 
 
 def _detector_is_compatible_with_signal(

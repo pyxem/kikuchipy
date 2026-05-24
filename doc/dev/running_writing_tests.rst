@@ -55,6 +55,18 @@ If you're in the top directory you can run::
 
     pytest --doctest-modules src
 
+.. note::
+
+    We have a `doctest setup and teardown function
+    <https://docs.pytest.org/en/stable/how-to/doctest.html#doctest-namespace-fixture>`__
+    in ``conftest.py``.
+    For the doctest call to run this function, the file has to be located in the same
+    directory tree.
+    So, ``conftest.py`` must be located in the top directory and *not* in
+    ``tests/conftest.py``.
+    For a discussion of the file location, please see
+    https://github.com/pyxem/kikuchipy/issues/744.
+
 Functionality using Numba
 -------------------------
 

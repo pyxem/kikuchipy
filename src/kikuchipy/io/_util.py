@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -9,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
 
 import os
 from pathlib import Path
@@ -71,7 +72,7 @@ def _get_input_variable(question: str, var_type: Any) -> Any | None:
     """
     try:
         answer = input(question)
-        while type(answer) != var_type:
+        while type(answer) is not var_type:
             try:
                 answer = var_type(answer)
             except (TypeError, ValueError):

@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import os
 from pathlib import Path
@@ -35,6 +37,7 @@ marshall = pooch.create(
     env="KIKUCHIPY_DATA_DIR",
     registry=registry_hashes,
     urls=registry_urls,
+    retry_if_failed=5,  # Five times at increasing intervals of 1 s
 )
 
 

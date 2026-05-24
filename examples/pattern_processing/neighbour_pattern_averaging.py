@@ -1,3 +1,21 @@
+#
+# Copyright 2019-2026 the kikuchipy developers
+#
+# This file is part of kikuchipy.
+#
+# kikuchipy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# kikuchipy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 """
 ===========================
 Neighbour pattern averaging
@@ -11,6 +29,8 @@ More details are given in the
 :doc:`feature maps tutorial </tutorials/feature_maps>`.
 """
 
+# %%
+# Imports.
 import hyperspy.api as hs
 import matplotlib.pyplot as plt
 
@@ -19,28 +39,33 @@ import kikuchipy as kp
 # Silence progressbars
 hs.preferences.General.show_progressbar = False
 
-# Load Ni patterns and subtract static and dynamic background
+# %%
+# Load Ni patterns and subtract static and dynamic background.
 s = kp.data.nickel_ebsd_large()
+print(s)
+
 s.remove_static_background()
 s.remove_dynamic_background()
 
+# %%
 # Get image quality before averaging
 iq0 = s.get_image_quality()
 
-# Keep one pattern for comparison
+# %%
+# Keep one pattern for comparison.
 x, y = (50, 8)
 pattern0 = s.inav[x, y].deepcopy()
 
-# Average in a (3, 3) window with a Gaussian kernel with a standard
-# deviation of 1
+# %%
+# Average in a (3, 3) window with a Gaussian kernel with a standard deviation of 1.
 s.average_neighbour_patterns(window="gaussian", std=1)
 
 iq1 = s.get_image_quality()
 pattern1 = s.inav[x, y]
 
-# Plot pattern and histograms of image qualities before and after
-# averaging
-fig, axes = plt.subplots(2, 2, height_ratios=[3, 1.5])
+# %%
+# Plot pattern and histograms of image qualities before and after averaging.
+fig, axes = plt.subplots(2, 2, height_ratios=[3, 1.5], layout="tight")
 for ax, pattern, title in zip(
     axes[0],
     [pattern0, pattern1],
@@ -51,4 +76,3 @@ for ax, pattern, title in zip(
     ax.axis("off")
 for ax, iq in zip(axes[1], [iq0, iq1]):
     ax.hist(iq.ravel(), bins=100)
-fig.tight_layout()

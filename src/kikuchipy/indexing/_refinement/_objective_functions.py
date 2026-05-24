@@ -22,6 +22,7 @@ and simulated patterns.
 
 import numpy as np
 
+from kikuchipy._utils._gnonomic_bounds import get_gnomonic_bounds
 from kikuchipy._utils.numba import rotation_from_euler
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     _ncc_single_patterns_1d_float32_exp_centered,
@@ -94,27 +95,25 @@ def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
             7. 1D signal mask
             8. Number of detector rows
             9. Number of detector columns
-            10. Detector tilt
-            11. Detector azimuthal angle
-            12. Sample tilt
-            13. Squared norm of centered experimental pattern as 32-bit
+            10. Orientation matrix detector to sample coordinates
+            11. Squared norm of centered experimental pattern as 32-bit
                 float
 
     Returns
     -------
         Normalized cross-correlation score.
     """
+    gn_bds = get_gnomonic_bounds(args[8], args[9], x[0], x[1], x[2])
+
     dc = _get_direction_cosines_for_fixed_pc(
-        pcx=x[0],
-        pcy=x[1],
+        gnomonic_bounds=gn_bds,
         pcz=x[2],
         nrows=args[8],
         ncols=args[9],
-        tilt=args[10],
-        azimuthal=args[11],
-        sample_tilt=args[12],
+        om_detector_to_sample=args[10],
         signal_mask=args[7],
     )
+
     simulated = _project_single_pattern_from_master_pattern(
         rotation=args[1],
         direction_cosines=dc,
@@ -129,7 +128,7 @@ def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
         dtype_out=np.float32,
     )
     return 1 - _ncc_single_patterns_1d_float32_exp_centered(
-        args[0], simulated, args[13]
+        args[0], simulated, args[11]
     )
 
 
@@ -152,29 +151,27 @@ def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
             4. Number of master pattern rows
             5. Master pattern scale
             6. 1D signal mask
-            7. Number of pattern rows
-            8. Number of pattern columns
-            9. Detector tilt
-            10. Detector azimuthal angle
-            11. Sample tilt
-            12. Squared norm of centered experimental pattern as 32-bit
+            7. Number of detector rows
+            8. Number of detector columns
+            9. Orientation matrix detector to sample coordinates
+            10. Squared norm of centered experimental pattern as 32-bit
                 float
 
     Returns
     -------
         normalized cross-correlation score.
     """
+    gn_bds = get_gnomonic_bounds(args[7], args[8], x[3], x[4], x[5])
+
     dc = _get_direction_cosines_for_fixed_pc(
-        pcx=x[3],
-        pcy=x[4],
+        gnomonic_bounds=gn_bds,
         pcz=x[5],
         nrows=args[7],
         ncols=args[8],
-        tilt=args[9],
-        azimuthal=args[10],
-        sample_tilt=args[11],
+        om_detector_to_sample=args[9],
         signal_mask=args[6],
     )
+
     simulated = _project_single_pattern_from_master_pattern(
         rotation=rotation_from_euler(*x[:3]),
         direction_cosines=dc,
@@ -189,5 +186,5 @@ def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
         dtype_out=np.float32,
     )
     return 1 - _ncc_single_patterns_1d_float32_exp_centered(
-        args[0], simulated, args[12]
+        args[0], simulated, args[10]
     )

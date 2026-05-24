@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from __future__ import annotations
 
@@ -21,14 +23,14 @@ from typing import TYPE_CHECKING
 
 import dask
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 import hyperspy.api as hs
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.signals._kikuchi_master_pattern import KikuchiMasterPattern
 from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
@@ -350,7 +352,7 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             the signal.
         """
         suitable = True
-        error = None
+        error: Exception | None = None
         if self.projection != "lambert":
             error = NotImplementedError(
                 "Master pattern must be in the square Lambert projection"
@@ -505,9 +507,9 @@ class LazyEBSDMasterPattern(LazyKikuchipySignal2D, EBSDMasterPattern):
     methods.
 
     This class extends HyperSpy's
-    :class:`~hyperspy._signals.signal2d.LazySignal2D` class for EBSD
-    master patterns. See the documentation of that class for how to
-    create this signal and the list of inherited attributes and methods.
+    :class:`~hyperspy.signals.LazySignal2D` class for EBSD master
+    patterns. See the documentation of that class for how to create this
+    signal and the list of inherited attributes and methods.
     """
 
     def compute(self, *args, **kwargs) -> None:

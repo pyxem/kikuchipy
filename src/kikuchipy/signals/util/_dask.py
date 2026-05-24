@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import logging
 from typing import TYPE_CHECKING
@@ -22,6 +24,7 @@ import dask.array as da
 import numpy as np
 
 if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy._utils.hyperspy_utils import LearningResults
     from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
 _logger = logging.getLogger(__name__)
@@ -109,7 +112,7 @@ def get_chunking(
 
 
 def get_dask_array(
-    signal: "EBSD |LazyEBSD", dtype: str | np.dtype | type | None = None, **kwargs
+    signal: "EBSD | LazyEBSD", dtype: str | np.dtype | type | None = None, **kwargs
 ) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
@@ -278,7 +281,7 @@ def _rechunk_learning_results(
 
 
 def _update_learning_results(
-    learning_results,
+    learning_results: "LearningResults",
     components: int | list[int] | None,
     dtype_out: str | np.dtype | type,
 ) -> tuple[np.ndarray | da.Array, np.ndarray | da.Array]:
@@ -289,7 +292,7 @@ def _update_learning_results(
 
     Parameters
     ----------
-    learning_results : hyperspy.learn.mva.LearningResults
+    learning_results
         Learning results with component patterns and loadings.
     components
         If None, rebuilds the signal from all `components`. If `int`,

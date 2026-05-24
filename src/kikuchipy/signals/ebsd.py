@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from __future__ import annotations
 
@@ -28,11 +30,10 @@ import warnings
 
 import dask
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 from h5py import File
 import hyperspy.api as hs
 from hyperspy.axes import AxesManager
-from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
 from hyperspy.signals import Signal2D
 import numpy as np
@@ -41,8 +42,9 @@ from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.constants import dependency_version, pyopencl_context_available
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy._constants import pyopencl_context_available, verify_dependency_or_raise
+from kikuchipy._utils.hyperspy_utils import LearningResults
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
@@ -75,9 +77,8 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     fft_frequency_vectors,
 )
-from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.pattern.chunk import _average_neighbour_patterns, get_dynamic_background
 from kikuchipy.pattern.chunk import fft_filter as fft_filter_chunk
-from kikuchipy.pattern.chunk import get_dynamic_background
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.util._crystal_map import (
     _equal_phase,
@@ -156,7 +157,15 @@ class EBSD(KikuchipySignal2D):
     >>> s
     <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector(shape=(60, 60), pc=(0.425, 0.213, 0.501), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=8.0, px_size=1.0 um)
+    EBSDDetector
+      shape (Ny, Nx):     (60, 60)
+      pc (PCx, PCy, PCz): (0.425, 0.213, 0.501)
+      sample_tilt:        70.0 deg
+      tilt:               0.0 deg
+      azimuthal:          0.0 deg
+      twist:              0.0 deg
+      binning:            8
+      px_size:            1.0 um
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],
@@ -164,7 +173,7 @@ class EBSD(KikuchipySignal2D):
            ...,
            [80, 82, 84, ..., 36, 30, 26],
            [79, 80, 82, ..., 28, 26, 26],
-           [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
+           [76, 78, 80, ..., 26, 26, 25]], shape=(60, 60), dtype=uint8)
     >>> s.xmap
     Phase  Orientations  Name  Space group  Point group  Proper point group     Color
         0    9 (100.0%)    ni        Fm-3m         m-3m                 432  tab:blue
@@ -394,6 +403,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.axes_manager['x'].scale
         2.0
         """
+        # TODO: Update crystal map step size too
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ("x", "y")
         x.scale, y.scale = (step_x, step_y)
@@ -422,6 +432,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.axes_manager['dx'].scale
         70.0
         """
+        # TODO: Update detector pixel size too
         center = delta * np.array(self.axes_manager.signal_shape) / 2
         dx, dy = self.axes_manager.signal_axes
         dx.units, dy.units = ["um"] * 2
@@ -493,7 +504,7 @@ class EBSD(KikuchipySignal2D):
                ...,
                [80, 82, 84, ..., 36, 30, 26],
                [79, 80, 82, ..., 28, 26, 26],
-               [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
+               [76, 78, 80, ..., 26, 26, 25]], shape=(60, 60), dtype=uint8)
 
         The static background can be removed by subtracting or dividing
         this background from each pattern:
@@ -1154,7 +1165,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if not isinstance(factor, int) or factor <= 1:
-            raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
+            raise ValueError(f"Binning factor {factor} must be an integer > 1")
         else:
             factor = int(factor)
 
@@ -1162,11 +1173,12 @@ class EBSD(KikuchipySignal2D):
         rest = np.mod(sig_shape_old, factor)
         if not all(rest == 0):
             raise ValueError(
-                f"Binning `factor` {factor} must be a divisor of the initial pattern "
+                f"Binning factor {factor} must be a divisor of the initial pattern "
                 f"shape {sig_shape_old}, but {tuple(rest)} pixels remain.\n"
-                "You might try to crop away these pixels first using EBSD.crop()"
+                "You might try to crop away these pixels first using EBSD.crop()."
             )
-        sig_shape_new = tuple(np.array(sig_shape_old) // factor)
+        sig_shape_new = np.array(sig_shape_old) // factor
+        sig_shape_new = tuple(map(int, sig_shape_new))
         sig_shape_new = sig_shape_new[::-1]
 
         if dtype_out is not None:
@@ -1184,8 +1196,9 @@ class EBSD(KikuchipySignal2D):
             static_bg_new = _downsample2d(static_bg, factor, omin, omax, dtype_out)
             attrs["static_background"] = static_bg_new
 
-        attrs["detector"].shape = sig_shape_new
-        attrs["detector"].binning *= factor
+        detector: EBSDDetector = attrs["detector"]
+        detector.shape = sig_shape_new
+        detector.binning *= factor
 
         map_kw = {
             "show_progressbar": show_progressbar,
@@ -1657,12 +1670,8 @@ class EBSD(KikuchipySignal2D):
         uses a single thread. If you need the fastest indexing, refer to
         the PyEBSDIndex documentation for multi-threading and more.
         """
-        if dependency_version["pyebsdindex"] is None:  # pragma: no cover
-            raise ValueError(
-                "Hough indexing requires pyebsdindex to be installed. Install it with "
-                "pip install pyebsdindex. See "
-                "https://kikuchipy.org/en/stable/user/installation.html for details"
-            )
+        verify_dependency_or_raise("pyebsdindex", "Hough indexing")
+
         if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "
@@ -1755,12 +1764,10 @@ class EBSD(KikuchipySignal2D):
         Requires :mod:`pyebsdindex` to be installed. See
         :ref:`dependencies` for further details.
         """
-        if dependency_version["pyebsdindex"] is None:  # pragma: no cover
-            raise ValueError(
-                "Hough indexing requires pyebsdindex to be installed. Install it with "
-                "pip install pyebsdindex. See "
-                "https://kikuchipy.org/en/stable/user/installation.html for details"
-            )
+        verify_dependency_or_raise(
+            "pyebsdindex", "Projection center optimization with Hough indexing"
+        )
+
         if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "
@@ -2802,17 +2809,18 @@ class EBSD(KikuchipySignal2D):
             attrs["static_background"] = static_bg2
 
         # Update detector shape and binning factor
-        attrs["detector"].shape = sig_shape_new
+        detector: EBSDDetector = attrs["detector"]
+        detector.shape = sig_shape_new
         factors = np.array(sig_shape_old) / np.array(sig_shape_new)
-        binning = attrs["detector"].binning * factors
-        if binning[0] == binning[1] and np.allclose(binning, binning.round(0)):
-            attrs["detector"].binning = int(binning[0])
+        binning2 = detector.binning * factors
+        if binning2[0] == binning2[1] and np.allclose(binning2, binning2.round(0)):
+            detector.binning = float(binning2[0])
         else:
-            attrs["detector"].binning = 1
+            detector.binning = 1.0
 
         if nav_shape_new != nav_shape_old:
             attrs["xmap"] = None
-            attrs["detector"].pc = np.full(nav_shape_new + (3,), 0.5)
+            detector.pc = np.full(nav_shape_new + (3,), 0.5)
             attrs["static_background"] = None
 
         new._set_custom_attributes(attrs)
@@ -3181,9 +3189,9 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
     See the documentation of ``EBSD`` for attributes and methods.
 
     This class extends HyperSpy's
-    :class:`~hyperspy._signals.signal2d.LazySignal2D` class for EBSD
-    patterns. See the documentation of that class for how to create
-    this signal and the list of inherited attributes and methods.
+    :class:`~hyperspy.signals.LazySignal2D` class for EBSD patterns. See
+    the documentation of that class for how to create this signal and
+    the list of inherited attributes and methods.
     """
 
     def compute(self, *args, **kwargs) -> None:
@@ -3288,7 +3296,7 @@ def _update_custom_attributes(
     nav_slices: slice | tuple | None = None,
     sig_slices: slice | tuple | None = None,
     new_nav_shape: tuple[int, ...] | None = None,
-    new_sig_shape: tuple[int, ...] | None = None,
+    new_sig_shape: tuple[int, int] | None = None,
 ) -> dict:
     """Update dictionary of custom attributes after slicing the signal
     data.

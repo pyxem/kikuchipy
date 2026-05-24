@@ -1,4 +1,5 @@
-# Copyright 2019-2026 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Reader of EBSD data from an Oxford Instruments h5ebsd (H5OINA) file."""
 
@@ -27,7 +29,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap
 from packaging.version import Version
 
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
 _logger = logging.getLogger(__name__)

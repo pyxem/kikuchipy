@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,13 +15,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import warnings
 
 import pytest
 
-from kikuchipy._utils import deprecated, deprecated_argument
-from kikuchipy.constants import VisibleDeprecationWarning
+from kikuchipy._constants import VisibleDeprecationWarning
+from kikuchipy._utils.deprecated import deprecated, deprecated_argument
 
 
 class TestDeprecationWarning:
@@ -84,10 +86,7 @@ class TestDeprecationWarning:
         )
         assert str(record[0].message) == desired_msg
         assert foo.__doc__ == (
-            "[*Deprecated*] \n"
-            "\nNotes\n-----\n"
-            ".. deprecated:: 0.7\n"
-            f"   {desired_msg}"
+            f"[*Deprecated*] \n\nNotes\n-----\n.. deprecated:: 0.7\n   {desired_msg}"
         )
 
     def test_deprecate_class_attribute(self):
@@ -106,10 +105,7 @@ class TestDeprecationWarning:
         desired_msg = "Attribute `b` is deprecated. Use `c` instead."
         assert str(record[0].message) == desired_msg
         assert Foo.b.__doc__ == (
-            "[*Deprecated*] \n"
-            "\nNotes\n-----\n"
-            ".. deprecated:: 0.7\n"
-            f"   {desired_msg}"
+            f"[*Deprecated*] \n\nNotes\n-----\n.. deprecated:: 0.7\n   {desired_msg}"
         )
 
 

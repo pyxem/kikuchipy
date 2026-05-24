@@ -1,4 +1,5 @@
-# Copyright 2019-2025 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # The following copyright notice is included because a part of the
 # calculation of kinematical master patterns in the stereographic
@@ -58,7 +60,7 @@ import sys
 from typing import TYPE_CHECKING, Literal
 
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.colors as mcolors
 import matplotlib.figure as mfigure
@@ -71,10 +73,10 @@ from orix.quaternion import Rotation
 from orix.vector import Vector3d
 from tqdm import tqdm
 
+from kikuchipy._constants import verify_dependency_or_raise
 from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
-from kikuchipy.constants import dependency_version
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.draw._arrow_3d import Arrow3D
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
@@ -254,11 +256,8 @@ class KikuchiPatternSimulator:
         hkl = ref.hkl
 
         # Transformation from detector reference frame CSd to sample
-        # reference frame CSs
-        total_tilt = np.deg2rad(detector.sample_tilt - 90 - detector.tilt)
-        u_s_bruker = Rotation.from_axes_angles((-1, 0, 0), total_tilt)
-        u_s_rot = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
-        u_s = da.from_array(u_s_rot.to_matrix().squeeze())
+        # reference frame CSs.
+        u_s = da.from_array(detector.sample_to_detector.to_matrix().squeeze())
 
         # Transformation from CSs to cartesian crystal reference frame
         # CSc
@@ -452,12 +451,8 @@ class KikuchiPatternSimulator:
             :class:`~matplotlib.figure.Figure` or a
             :class:`~pyvista.Plotter` is returned.
         """
-        if (
-            projection == "spherical"
-            and backend == "pyvista"
-            and dependency_version["pyvista"] is None
-        ):  # pragma: no cover
-            raise ImportError("PyVista is not installed")
+        if projection == "spherical" and backend == "pyvista":
+            verify_dependency_or_raise("pyvista", "3D spherical plot")
 
         ref = self._reflectors
 

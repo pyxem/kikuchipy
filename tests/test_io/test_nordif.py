@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # Many of these tests are inspired by the tests written for the block_file
 # reader/writer available in HyperSpy: https://github.com/hyperspy/hyperspy/
@@ -291,7 +293,7 @@ class TestNORDIF:
 
         s2 = kp.load(nordif_path / "Pattern.dat", lazy=False)
         s.compute()
-        np.testing.assert_allclose(s2.data, s.data)
+        assert np.allclose(s2.data, s.data)
 
     def test_load_inplace(self, nordif_path, assert_dictionary_func):
         s = kp.load(nordif_path / "Pattern.dat")

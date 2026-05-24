@@ -1,4 +1,5 @@
-# Copyright 2019-2026 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,10 +15,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
+# ------------------- Explanation of file location ------------------- #
 # Why is this file located in the top directory and not in tests/?
 # Because if it was, running "pytest --doctest-modules src" wouldn't
 # discover this file.
+#
+# An unwanted side-effect of this is that test files cannot import
+# anything from the conftest file.
 
 from io import TextIOWrapper
 from numbers import Number
@@ -38,7 +44,7 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 from kikuchipy.data._data import marshall
 from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_file,
@@ -46,7 +52,39 @@ from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_roi_file,
 )
 from kikuchipy.data._dummy_files.oxford_h5ebsd import create_dummy_oxford_h5ebsd_file
+from kikuchipy.draw._vtk import system_supports_plotting
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
+
+DATA_PATH = Path(kp.data.__file__).parent.resolve()
+
+
+# ---------------------- Control test selection ---------------------- #
+
+
+def pytest_addoption(parser):
+    # Flags for optional markers. Markers requiring something (installed
+    # dependency, e.g.) should not have a flag to still run them.
+    parser.addoption(
+        "--weekly", action="store_true", help="Run tests that should run only weekly"
+    )
+
+
+MARKERS = [
+    "weekly",
+]
+
+
+def pytest_runtest_setup(item):
+    # Skip certain tests when flag is missing:
+    # https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_runtest_setup
+    for marker in MARKERS:
+        marker_str = f"--{marker}"
+        if marker in item.keywords and not item.config.getoption(marker_str):
+            pytest.skip(f"Needs {marker_str} flag to run")
+
+
+# ----------------------------- PyVista ------------------------------ #
+
 
 if dependency_version["pyvista"] is not None:
     import pyvista as pv
@@ -55,14 +93,18 @@ if dependency_version["pyvista"] is not None:
     pv.global_theme.interactive = False
 
 
-DATA_PATH = Path(kp.data.__file__).parent.resolve()
+@pytest.fixture(autouse=False)
+def skipif_no_vtk_support():
+    if not system_supports_plotting():
+        pytest.skip("System does not support VTK plotting")
 
-# ------------------------------ Setup ------------------------------ #
+
+# --------------------------- pytest hooks --------------------------- #
 
 
 def pytest_sessionstart(session):
     _ = kp.data.nickel_ebsd_large(allow_download=True)
-    plt.rcParams["backend"] = "agg"
+    plt.rcParams.update({"backend": "agg", "figure.max_open_warning": False})
 
 
 # ---------------------- pytest doctest-modules ---------------------- #

@@ -1,4 +1,5 @@
-# Copyright 2019-2026 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Wrapping of PyEBSDIndex functionality for Hough indexing of
 EBSD patterns.
@@ -30,7 +32,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version, verify_dependency_or_raise
 
 if TYPE_CHECKING:  # pragma: no cover
     if dependency_version["pyebsdindex"] is not None:
@@ -163,11 +165,7 @@ def _get_indexer_from_detector(
     Requires that :mod:`pyebsdindex` is installed, which is an optional
     dependency of kikuchipy. See :ref:`dependencies` for details.
     """
-    if dependency_version["pyebsdindex"] is None:  # pragma: no cover
-        raise ValueError(
-            "pyebsdindex must be installed. Install with pip install pyebsdindex. "
-            "See https://kikuchipy.org/en/stable/user/installation.html for details."
-        )
+    verify_dependency_or_raise("pyebsdindex", "Getting an indexer")
 
     from pyebsdindex.ebsd_index import EBSDIndexer
 
@@ -493,7 +491,7 @@ def _phase_lists_are_compatible(
 
 
 def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> str:
-    from kikuchipy.constants import pyopencl_context_available
+    from kikuchipy._constants import pyopencl_context_available
 
     info = (
         "Hough indexing with PyEBSDIndex information:\n"

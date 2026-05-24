@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -13,7 +14,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.#
 
 import re
 
@@ -45,10 +46,12 @@ if make_release:
             elif line.startswith(pypi_version):
                 changelog_end = i - 1
     with open("release_part_in_changelog.rst", mode="w") as f:
+        # fmt: off
         f.write(
             "kikuchipy is an open-source Python library for processing, simulating and indexing of electron backscatter diffraction (EBSD) patterns.\n\n"
             f"See below, the `changelog <https://kikuchipy.org/en/stable/changelog.html>`_ or the `GitHub changelog <https://github.com/pyxem/kikuchipy/compare/v{pypi_version}...v{branch_version}>`_ for all updates from the previous release.\n\n"
         )
+        # fmt: on
         for line in content[changelog_start:changelog_end]:
             f.write(line)
 

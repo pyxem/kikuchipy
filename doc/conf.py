@@ -1,4 +1,5 @@
-# Copyright 2019-2026 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # Configuration file for the Sphinx documentation app.
 # See the documentation for a full list of configuration options:
@@ -81,6 +83,8 @@ intersphinx_mapping = {
     "hyperspy": ("https://hyperspy.org/hyperspy-doc/current", None),
     "h5py": ("https://docs.h5py.org/en/stable", None),
     "imageio": ("https://imageio.readthedocs.io/en/stable", None),
+    "IPython": ("https://ipython.readthedocs.io/en/stable", None),
+    "ipywidgets": ("https://ipywidgets.readthedocs.io/en/stable", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
     "numba": ("https://numba.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
@@ -90,19 +94,22 @@ intersphinx_mapping = {
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "packaging": ("https://packaging.python.org/en/latest", None),
     "pooch": ("https://www.fatiando.org/pooch/latest", None),
+    "psygnal": ("https://psygnal.readthedocs.io/en/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "pyopencl": ("https://documen.tician.de/pyopencl", None),
     "pytest": ("https://docs.pytest.org/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
-    "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
-    "readthedocs": ("https://docs.readthedocs.io/en/stable", None),
+    "pyxem": ("https://www.pyxem.org/en/latest", None),
+    "readthedocs": ("https://docs.readthedocs.com/platform/stable", None),
     "rosettasciio": ("https://rosettasciio.readthedocs.io/en/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "sphinx-gallery": ("https://sphinx-gallery.github.io/stable", None),
+    # TODO: Remove once Python >= 3.11
+    "typing-extensions": ("https://typing-extensions.readthedocs.io/en/latest", None),
     "xcdskd": ("https://xcdskd.readthedocs.io/en/latest", None),
 }
 
@@ -284,10 +291,6 @@ pv.global_theme.window_size = [600, 600]
 # Use static display until trame works with nbsphinx:
 # https://github.com/pyvista/pyvista/discussions/4809
 pv.set_jupyter_backend("static")
-try:
-    pv.start_xvfb()
-except:
-    pass
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code

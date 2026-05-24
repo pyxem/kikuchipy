@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -9,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
 
 import dask.array as da
 import numpy as np
@@ -102,7 +103,7 @@ class TestRescaleIntensityPattern:
         pattern = dummy_signal.inav[0, 0].data
 
         # Check for accepted data types
-        if dtype_out == complex:
+        if np.issubdtype(dtype_out, complex):
             with pytest.raises(KeyError, match="Could not set output"):
                 _ = rescale_intensity(
                     pattern=pattern,
@@ -311,10 +312,10 @@ class TestGetDynamicBackgroundPattern:
                     [
                         [5.3672, 5.4999, 5.4016],
                         [5.7932, 5.4621, 4.8999],
-                        [5.8638, 4.7310, 3.3672]
+                        [5.8638, 4.7310, 3.3672],
                     ],
                     dtype=np.float32,
-                )
+                ),
                 # fmt: on
             ),
         ],
@@ -474,33 +475,39 @@ class TestNormalizeIntensityPattern:
                 1,
                 True,
                 # fmt: off
-                np.array([
-                    [0.0653, 0.2124, 0.0653],
-                    [0.3595, 0.2124, 0.0653],
-                    [0.2124, -0.5229, -0.6700],
-                ])
+                np.array(
+                    [
+                        [0.0653, 0.2124, 0.0653],
+                        [0.3595, 0.2124, 0.0653],
+                        [0.2124, -0.5229, -0.6700],
+                    ]
+                ),
                 # fmt: on
             ),
             (
                 2,
                 True,
                 # fmt: off
-                np.array([
-                    [0.0326, 0.1062, 0.0326],
-                    [0.1797, 0.1062, 0.0326],
-                    [0.1062, -0.2614, -0.3350],
-                ]),
+                np.array(
+                    [
+                        [0.0326, 0.1062, 0.0326],
+                        [0.1797, 0.1062, 0.0326],
+                        [0.1062, -0.2614, -0.3350],
+                    ]
+                ),
                 # fmt: on
             ),
             (
                 1,
                 False,
                 # fmt: off
-                np.array([
-                    [0.1961, 0.6373, 0.1961],
-                    [1.0786, 0.6373, 0.1961],
-                    [0.6373, -1.5689, -2.0101],
-                ]),
+                np.array(
+                    [
+                        [0.1961, 0.6373, 0.1961],
+                        [1.0786, 0.6373, 0.1961],
+                        [0.6373, -1.5689, -2.0101],
+                    ]
+                ),
                 # fmt: on
             ),
         ],

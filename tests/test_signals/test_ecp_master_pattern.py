@@ -1,4 +1,5 @@
-# Copyright 2019-2026 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,8 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-import sys
+#
 
 import dask.array as da
 import numpy as np
@@ -23,7 +23,7 @@ from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 
 
 class TestECPMasterPattern:
@@ -73,11 +73,12 @@ class TestECPMasterPattern:
         assert np.allclose(mp_upper, data[1])
         assert np.allclose(mp_lower, data[1])
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Skip on Windows")
     @pytest.mark.skipif(
         dependency_version["pyvista"] is None, reason="PyVista is not installed"
     )
-    def test_plot_spherical(self, emsoft_ecp_master_pattern_file):
+    def test_plot_spherical(
+        self, emsoft_ecp_master_pattern_file, skipif_no_vtk_support
+    ):
         """Cover inherited method only included for documentation
         purposes (tested rigorously elsewhere).
         """

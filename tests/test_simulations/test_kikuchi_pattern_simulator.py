@@ -1,4 +1,5 @@
-# Copyright 2019-2026 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,8 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-import sys
+#
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
@@ -29,7 +29,7 @@ from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 
 
 def setup_method():
@@ -276,7 +276,7 @@ class TestPlot:
 
         plt.close("all")
 
-    def test_spherical(self):
+    def test_plot_spherical_matplotlib(self):
         """Spherical plot with Matplotlib."""
         simulator = self.simulator
         fig1 = simulator.plot("spherical", return_figure=True)
@@ -297,11 +297,10 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Skip on Windows")
     @pytest.mark.skipif(
         dependency_version["pyvista"] is None, reason="PyVista is not installed"
     )
-    def test_spherical_pyvista(self):
+    def test_plot_spherical(self, skipif_no_vtk_support):
         """Spherical plot with PyVista."""
         import pyvista as pv
 
@@ -344,7 +343,7 @@ class TestPlot:
         """Appropriate error message is raised when PyVista is
         unavailable.
         """
-        with pytest.raises(ImportError, match="PyVista is not installed"):
+        with pytest.raises(ImportError, match="3D spherical plot requires that"):
             _ = self.simulator.plot("spherical", backend="pyvista")
 
     def test_plot_scaling(self):

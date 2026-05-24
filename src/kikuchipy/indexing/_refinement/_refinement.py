@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Setup of refinement refinement of crystal orientations and projection
 centers by optimizing the similarity between experimental and simulated
@@ -25,12 +27,13 @@ from time import time
 from typing import TYPE_CHECKING, Callable
 
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 import scipy.optimize
 
+from kikuchipy._constants import dependency_version, verify_dependency_or_raise
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.indexing._refinement._solvers import (
     _refine_orientation_pc_solver_nlopt,
@@ -45,8 +48,7 @@ from kikuchipy.signals.util._crystal_map import _get_indexed_points_in_data_in_x
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy.constants import dependency_version
-    from kikuchipy.detectors.ebsd_detector import EBSDDetector
+    from kikuchipy.detectors._ebsd_detector import EBSDDetector
     from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
     if dependency_version["nlopt"] is not None:
@@ -397,9 +399,7 @@ def _refine_orientation(
             pcz,
             nrows=detector.nrows,
             ncols=detector.ncols,
-            tilt=detector.tilt,
-            azimuthal=detector.azimuthal,
-            sample_tilt=detector.sample_tilt,
+            om_detector_to_sample=(~detector.sample_to_detector).to_matrix().squeeze(),
             signal_mask=signal_mask,
             solver_kwargs=ref.solver_kwargs,
             n_pseudo_symmetry_ops=ref.n_pseudo_symmetry_ops,
@@ -451,9 +451,7 @@ def _refine_orientation_chunk_scipy(
     direction_cosines: np.ndarray | None = None,
     nrows: int | None = None,
     ncols: int | None = None,
-    tilt: float | None = None,
-    azimuthal: float | None = None,
-    sample_tilt: float | None = None,
+    om_detector_to_sample: np.ndarray | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ):
     """Refine orientations from patterns in one dask array chunk using
@@ -483,9 +481,7 @@ def _refine_orientation_chunk_scipy(
                 pcz=float(pcz[i, 0, 0]),
                 nrows=nrows,
                 ncols=ncols,
-                tilt=tilt,
-                azimuthal=azimuthal,
-                sample_tilt=sample_tilt,
+                om_detector_to_sample=om_detector_to_sample,
                 signal_mask=signal_mask,
                 n_pseudo_symmetry_ops=n_pseudo_symmetry_ops,
                 **solver_kwargs,
@@ -519,9 +515,7 @@ def _refine_orientation_chunk_nlopt(
     direction_cosines: np.ndarray | None = None,
     nrows: int | None = None,
     ncols: int | None = None,
-    tilt: float | None = None,
-    azimuthal: float | None = None,
-    sample_tilt: float | None = None,
+    om_detector_to_sample: np.ndarray | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ):
     """Refine orientations from patterns in one dask array chunk using
@@ -556,9 +550,7 @@ def _refine_orientation_chunk_nlopt(
                 pcz=float(pcz[i, 0, 0]),
                 nrows=nrows,
                 ncols=ncols,
-                tilt=tilt,
-                azimuthal=azimuthal,
-                sample_tilt=sample_tilt,
+                om_detector_to_sample=om_detector_to_sample,
                 n_pseudo_symmetry_ops=n_pseudo_symmetry_ops,
                 **solver_kwargs,
             )
@@ -1091,7 +1083,7 @@ class _RefinementSetup:
 
         if method not in supported_methods:
             raise ValueError(
-                f"Method '{method}' not in the list of supported methods "
+                f"Method {method!r} not in the list of supported methods "
                 f"{supported_methods}"
             )
 
@@ -1101,14 +1093,8 @@ class _RefinementSetup:
         self.package = method_dict["package"]
 
         if self.package == "nlopt":
-            from kikuchipy.constants import dependency_version
-
             method_upper = method.upper()
-            if dependency_version["nlopt"] is None:
-                raise ImportError(  # pragma: no cover
-                    f"Package `nlopt`, required for method {method_upper}, is not "
-                    "installed"
-                )
+            verify_dependency_or_raise("nlopt", f"Optimization method {method_upper!r}")
 
             import nlopt
 
@@ -1184,9 +1170,7 @@ class _RefinementSetup:
                 signal_mask,
                 nrows,
                 ncols,
-                detector.tilt,
-                detector.azimuthal,
-                detector.sample_tilt,
+                (~detector.sample_to_detector).to_matrix().squeeze(),
             )
 
         self.fixed_parameters = params

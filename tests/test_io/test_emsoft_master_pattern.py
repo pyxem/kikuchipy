@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from h5py import File
 import numpy as np
@@ -34,7 +36,7 @@ class TestEMsoftEBSDMasterPatternReader:
             g2.create_dataset(
                 "ProgramName", data=np.array([b"EMEBSDmasterr.f90"], dtype="S17")
             )
-            with pytest.raises(IOError, match=".* is not in EMsoft's master "):
+            with pytest.raises(IOError, match="File .* is not created with one of the"):
                 check_file_format(f, "EBSD")
 
     @pytest.mark.parametrize(

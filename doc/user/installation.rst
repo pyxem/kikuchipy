@@ -27,6 +27,10 @@ To install a specific version of kikuchipy (say version 0.8.5)::
 
     pip install kikuchipy==0.8.5
 
+To install *with* optional dependencies::
+
+    pip install "kikuchipy[all]"
+
 
 .. _install-with-anaconda:
 
@@ -55,6 +59,10 @@ To update kikuchipy to the latest release::
 To install a specific version of kikuchipy (say version 0.8.5)::
 
     conda install kikuchipy==0.8.5
+
+To install *without* optional dependencies::
+
+    conda install kikuchipy-base
 
 
 .. _install-with-hyperspy-bundle:
@@ -90,7 +98,7 @@ Dependencies
 kikuchipy builds on the great work and effort of many people.
 This is a list of core package dependencies:
 
-* :doc:`dask<dask:index>`: Out-of-memory processing of data larger than RAM
+* :doc:`dask <dask:index>`: Out-of-memory processing of data larger than RAM
 * :doc:`diffpy.structure <diffpy.structure:index>`: Handling of crystal structures
 * :doc:`diffsims <diffsims:index>`: Handling of reciprocal lattice vectors and structure
   factors
@@ -111,23 +119,26 @@ This is a list of core package dependencies:
 * `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis
 * :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more
 * `tqdm <https://tqdm.github.io/>`__: Progressbars
+* :doc:`typing-extensions <typing-extensions:index>`: Type hints only available from
+  Python >= 3.11
 
 .. _lazy_loader: https://scientific-python.org/specs/spec-0001/#lazy_loader
 
 Some functionality requires optional dependencies:
 
-* :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing. We recommend to install with
-  optional GPU support via :doc:`pyopencl<pyopencl:index>` with
-  ``pip install "pyebsdindex[gpu]""`` or ``conda install pyebsdindex -c conda-forge``.
+* :doc:`ipywidgets <ipywidgets:index>`: Interactive widgets in Jupyter notebooks.
+* :doc:`IPython <ipython:index>`: Interactive widgets in Jupyter notebooks.
+* :doc:`psygnal <psygnal:index>`: Trigger actions based on state changes.
+* :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing.
+  We recommend to install with optional GPU support via :doc:`pyopencl<pyopencl:index>`
+  with ``pip install "pyebsdindex[gpu]""`` or
+  ``conda install pyebsdindex -c conda-forge``.
 * `nlopt <https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/>`__: Extra
   optimization algorithms used in EBSD orientation and/or projection center refinement.
   Installation from conda ``conda install nlopt -c conda-forge`` is recommended.
 * :doc:`pyvista<pyvista:index>`: 3D plotting of master patterns.
 
-Install all optional dependencies::
-
-    pip install "kikuchipy[all]"
-
-Note that this command will not install ``pyopencl``, which is required for GPU support
-in ``pyebsdindex``. If the above command failed for some reason, you can try to install
-each optional dependency individually.
+Note that installing with the optional dependencies, ``pip install "kikuchipy[all]"``,
+will not install ``pyopencl``, which is required for GPU support in ``pyebsdindex``.
+If the install command failed for some reason, you can try to install each optional
+dependency separately.

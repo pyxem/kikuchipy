@@ -13,20 +13,92 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+
+0.12.0 (2026-05-24)
+===================
+
+Added
+-----
+- Download from conda-forge of ``kikuchipy-base`` without optional dependencies.
+- Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
+  (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
+- Added error handling for setting various properties of the ``EBSDDetector``.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Dependency on typing-extensions for type hints only available from Python >= 3.11.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Optional dependency on ipywidgets and IPython for IPython widgets.
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- Optional dependency on psygnal to allow triggering actions based on state changes.
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- A mutable ``EBSDDetector.twist`` attribute which represents the angle about the
+  detector normal, pointing towards the sample, in degrees.
+  A positive angle means features on the detector appear to move counter-clockwise about
+  the detector center (assuming all other defaults).
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- Two new ``EBSDDetector`` plot methods for plotting a side view and top view of the
+  detector-sample geometry (non-interactive).
+- An ``EBSDDetectorPlotter`` for an interactive plot of the detector-sample geometry,
+  showing the side and top views as well as the detector plane.
+  Additionally, a geometrical and/or kinematical/dynamical simulation can be projected
+  onto the detector plane.
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- Two new ``EBSDDetector`` methods to convert between detector pixel and gnomonic
+  coordinates.
+  (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
+- Explicit support for Python 3.13 and 3.14.
+
+Changed
+-------
+- Made the string representation of the ``EBSDDetector`` more informative.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Styling of the projection center (PC) in EBSD detector plot changed to a white filled
+  circle with a black cross overlayed.
+  The only PC keyword arguments used when given in a dictionary to a plot method is
+  the size ("s") and the z-order ("zorder").
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
+- Detector coordinate parameter "detector" to "pixel" in ``EBSDDetector.plot()``.
+  (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
+
+Fixed
+-----
+- Removed possibility for a silent out-of-bounds array indexing with Numba when
+  projecting a single pattern from a master pattern in the Lambert projection to the
+  detector.
+  (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
+- Getting Matplotlib collections of zone axes and zone axes labels in geometrical EBSD
+  simulations with a 2D navigation shape.
+  (`#720 <https://github.com/pyxem/kikuchipy/pull/720>`_)
+
+Deprecated
+----------
+- Option to pass ``EBSDDetector(..., convention=None)`` has been deprecated and will
+  emit a warning.
+  To avoid the warning, use the default value ``convention="bruker"`` instead.
+  The warning will change to an error in version 0.14.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Detector coordinate parameter "detector", replaced with "pixel" in
+  ``EBSDDetector.plot()``.
+  Passing "detector" after 0.13.0 is released will throw an error.
+  (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
+
+
 0.11.5 (2026-03-08)
 ===================
 
 Added
 -----
 - Add lower version restriction for optional dependency PyEBSDIndex to 0.3.9.2.
+  (`#782 <https://github.com/pyxem/kikuchipy/pull/782>`_)
 
 Changed
 -------
 - Increased lower version restriction for Matplotlib to 3.6.
+  (`#782 <https://github.com/pyxem/kikuchipy/pull/782>`_)
 
 Removed
 -------
 - Remove upper version restriction for NumPy.
+  (`#782 <https://github.com/pyxem/kikuchipy/pull/782>`_)
 
 
 0.11.4 (2026-03-04)
@@ -866,9 +938,9 @@ Deprecated
 
 Removed
 -------
-- *make_similarity_metric()* function is replaced by the need to create a class inheriting
-  from a new abstract *SimilarityMetric* class, which provides more freedom over
-  preparations of arrays before dictionary indexing.
+- *make_similarity_metric()* function is replaced by the need to create a class
+  inheriting from a new abstract *SimilarityMetric* class, which provides more freedom
+  over preparations of arrays before dictionary indexing.
   (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
 - *EBSD.match_patterns()* is removed, use *EBSD.dictionary_indexing()* instead.
   (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)

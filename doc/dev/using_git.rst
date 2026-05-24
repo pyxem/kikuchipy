@@ -9,7 +9,7 @@ want to fix a bug, branch off of ``main`` instead.
 
 To create a new feature branch that tracks the upstream development branch::
 
-    git checkout develop -b your-awesome-feature-name upstream/develop
+    git switch -c your-awesome-feature-name upstream/develop
 
 When you've made some changes you can view them with::
 
@@ -33,7 +33,7 @@ branch. If you are fixing a bug, merge ``main`` into your bug fix branch instead
 
 To update a feature branch, switch to the ``develop`` branch::
 
-    git checkout develop
+    git switch develop
 
 Fetch changes from the upstream branch and update ``develop``::
 
@@ -41,7 +41,7 @@ Fetch changes from the upstream branch and update ``develop``::
 
 Update your feature branch::
 
-    git checkout your-awesome-feature-name
+    git switch your-awesome-feature-name
     git merge develop
 
 Sharing your changes
