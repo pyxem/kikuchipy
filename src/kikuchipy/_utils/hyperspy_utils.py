@@ -17,29 +17,17 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Utilities for handling compatibility with RosettaSciIO.
+"""Utilities for handling compatibility with HyperSpy."""
 
-Used in at least the IO and signals modules.
-"""
-
-from typing import Callable
-
-import numpy as np
 from packaging.version import Version
 
 from kikuchipy._constants import dependency_version
 
-if dependency_version["rosettasciio"] >= Version("0.12"):
-    from rsciio.utils.file import memmap_distributed
-    from rsciio.utils.rgb import RGB_DTYPES
+if dependency_version["hyperspy"] >= Version("2.4.0"):
+    from hyperspy.learn import LearningResults
 else:
-    from rsciio.utils.distributed import memmap_distributed
-    from rsciio.utils.rgb_tools import rgb_dtypes as RGB_DTYPES
-
-RGB_DTYPES: dict[str, np.dtype]
-memmap_distributed: Callable
+    from hyperspy.learn.mva import LearningResults
 
 __all__ = [
-    "RGB_DTYPES",
-    "memmap_distributed",
+    "LearningResults",
 ]
