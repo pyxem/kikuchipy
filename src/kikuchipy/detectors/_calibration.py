@@ -20,9 +20,12 @@
 """Calibration of the EBSD projection/pattern center."""
 
 from itertools import combinations
+from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
+
+if TYPE_CHECKING:
+    import matplotlib.figure as mfigure
 
 
 class PCCalibrationMovingScreen:
@@ -265,7 +268,7 @@ class PCCalibrationMovingScreen:
         pc_kwargs: dict | None = None,
         return_figure: bool = False,
         **kwargs: dict,
-    ) -> None | tuple[plt.Figure, list[plt.Axes]]:
+    ) -> "mfigure.Figure | None":
         """A convenience method of three images, the first two with the
         patterns with points and lines annotated, and the third with the
         calibration results.
@@ -282,10 +285,11 @@ class PCCalibrationMovingScreen:
             Keyword arguments passed to
             :meth:`matplotlib.axes.Axes.scatter`.
         pc_kwargs
-            Keyword arguments, along with `scatter_kwargs`, passed to
-            :meth:`matplotlib.axes.Axes.scatter` when plotting the PCs.
+            Keyword arguments to customize the PC marker; ``s`` and
+            ``zorder`` are forwarded to
+            :func:`~kikuchipy.draw._ebsd_detector_plot.get_default_projection_center_scatter_kwargs`.
         return_figure
-            Whether to return the figure and axes, default is ``False``.
+            Whether to return the figure, default is ``False``.
         **kwargs
             Keyword arguments passed to
             :func:`matplotlib.pyplot.subplots`.
@@ -295,60 +299,27 @@ class PCCalibrationMovingScreen:
         fig
             Figure, returned if ``return_figure=True``.
         """
-        if pattern_kwargs is None:
-            pattern_kwargs = {"cmap": "gray"}
-        if line_kwargs is None:
-            line_kwargs = {"linewidth": 2, "zorder": 1}
-        if scatter_kwargs is None:
-            scatter_kwargs = {"zorder": 2}
-        if pc_kwargs is None:
-            pc_kwargs = {"marker": "*", "s": 300, "facecolor": "gold", "edgecolor": "k"}
+        from kikuchipy.draw._ebsd_detector_plot import plot_moving_screen_calibration
 
-        pat1, pat2 = self.patterns
-        points1, points2 = self.points
-        px = self.pxy[0]
-        py = self.pxy[1]
-        pxy_all = self.pxy_all
-        n_lines = self.n_lines
-        lines_start = self.lines_start
-        lines_end = self.lines_end
-        lines_out_in_start = self.lines_out_in_start
-        lines_out_in_end = self.lines_out_in_end
-
-        ncols = 3
-        for k, v in zip(["sharex", "sharey", "figsize"], [True, True, (20, 10)]):
-            kwargs.setdefault(k, v)
-        fig, ax = plt.subplots(ncols=ncols, **kwargs)
-        ax[0].set_title("In (operating) position")
-        ax[0].imshow(pat1, **pattern_kwargs)
-        ax[0].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
-        for i in range(n_lines):
-            start, end = lines_start[0, i], lines_end[0, i]
-            ax[0].axline(start, end, linestyle="-", color=f"C{i}", **line_kwargs)
-
-        ax[1].set_title("Out position")
-        ax[1].imshow(pat2, **pattern_kwargs)
-        ax[1].scatter(points2[:, 0], points2[:, 1], color="C1", **scatter_kwargs)
-        for i in range(n_lines):
-            start, end = lines_start[1, i], lines_end[1, i]
-            ax[1].axline(start, end, linestyle="--", color=f"C{i}", **line_kwargs)
-
-        ax[2].set_title("Projection center")
-        ax[2].imshow(np.ones(self.shape), cmap="gray", vmin=0, vmax=2)
-        ax[2].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
-        ax[2].scatter(points2[:, 0], points2[:, 1], **scatter_kwargs)
-        ax[2].scatter(
-            pxy_all[:, 0], pxy_all[:, 1], color="k", marker="*", **scatter_kwargs
+        return plot_moving_screen_calibration(
+            patterns=self.patterns,
+            points=self.points,
+            pxy=self.pxy,
+            pxy_all=self.pxy_all,
+            lines_start=self.lines_start,
+            lines_end=self.lines_end,
+            lines_out_in_start=self.lines_out_in_start,
+            lines_out_in_end=self.lines_out_in_end,
+            n_lines=self.n_lines,
+            n_points=self.n_points,
+            shape=self.shape,
+            pattern_kwargs=pattern_kwargs,
+            line_kwargs=line_kwargs,
+            scatter_kwargs=scatter_kwargs,
+            pc_kwargs=pc_kwargs,
+            return_figure=return_figure,
+            **kwargs,
         )
-        for i in range(self.n_points):
-            start, end = lines_out_in_start[i], lines_out_in_end[i]
-            ax[2].axline(start, end, color=f"C{i}", **line_kwargs)
-
-        for i in range(ncols):
-            ax[i].scatter(px, py, **pc_kwargs, **scatter_kwargs)
-
-        if return_figure:
-            return fig
 
     def __repr__(self) -> str:
         name = self.__class__.__name__
