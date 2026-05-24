@@ -14,6 +14,25 @@ List entries are sorted in descending chronological order. Contributors to each 
 were listed in alphabetical order by first name until version 0.7.0.
 
 
+Unreleased
+==========
+
+Added
+-----
+
+Changed
+-------
+
+Removed
+-------
+
+Fixed
+-----
+
+Deprecated
+----------
+
+
 0.12.0 (2026-05-24)
 ===================
 
