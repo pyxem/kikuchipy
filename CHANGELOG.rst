@@ -19,6 +19,25 @@ Unreleased
 
 Added
 -----
+
+Changed
+-------
+
+Removed
+-------
+
+Fixed
+-----
+
+Deprecated
+----------
+
+
+0.12.0 (2026-05-24)
+===================
+
+Added
+-----
 - Download from conda-forge of ``kikuchipy-base`` without optional dependencies.
 - Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
   (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
@@ -45,6 +64,7 @@ Added
 - Two new ``EBSDDetector`` methods to convert between detector pixel and gnomonic
   coordinates.
   (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
+- Explicit support for Python 3.13 and 3.14.
 
 Changed
 -------
@@ -57,9 +77,6 @@ Changed
   (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 - Detector coordinate parameter "detector" to "pixel" in ``EBSDDetector.plot()``.
   (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
-
-Removed
--------
 
 Fixed
 -----

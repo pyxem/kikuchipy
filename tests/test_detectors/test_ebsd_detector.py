@@ -1043,7 +1043,7 @@ class TestSaveLoadDetector:
         "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal, "
         "twist",
         [
-            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0, 0),
+            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0.1, 0),
             ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7, 0.003),
             ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7, -1.23),
             ((3, 2), (5, 7), "oxford", 71.3, 1.2, 90.3, 3, 0.1, 0.0465),
@@ -1073,11 +1073,14 @@ class TestSaveLoadDetector:
             twist=twist,
             convention=convention,
         )
-        det1 = det0.extrapolate_pc(
-            pc_indices=[0, 0],
-            navigation_shape=nav_shape,
-            step_sizes=(2, 2),
-        )
+
+        # Warns about unused non-zero azimuthal and twist angles
+        with pytest.warns(UserWarning, match="azimuthal"):
+            det1 = det0.extrapolate_pc(
+                pc_indices=[0, 0],
+                navigation_shape=nav_shape,
+                step_sizes=(2, 2),
+            )
         if any(i == 1 for i in nav_shape):
             det1.pc = det1.pc.reshape(-1, 3)
         fname = tmp_path / "det_temp.txt"

@@ -19,7 +19,6 @@
 
 from copy import deepcopy
 import re
-from typing import Literal
 
 from diffsims.crystallography import ReciprocalLatticeVector
 import hyperspy.api as hs
@@ -30,7 +29,8 @@ import matplotlib.text as mtext
 import numpy as np
 from orix.quaternion import Rotation
 
-from kikuchipy.detectors._ebsd_detector import EBSDDetector
+from kikuchipy.detectors._convert_detector_coordinates import parse_coordinate_format
+from kikuchipy.detectors._ebsd_detector import DETECTOR_PLOT_FORMATS, EBSDDetector
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
     KikuchiPatternZoneAxis,
@@ -124,7 +124,7 @@ class GeometricalKikuchiPatternSimulation:
     def as_collections(
         self,
         index: int | tuple[int, ...] | None = None,
-        coordinates: Literal["detector", "gnomonic"] = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "pixel",
         lines: bool = True,
         zone_axes: bool = False,
         zone_axes_labels: bool = False,
@@ -141,8 +141,11 @@ class GeometricalKikuchiPatternSimulation:
             Index of the simulation to get collections from. This is the
             first simulation if not given.
         coordinates
-            Coordinate space for the plot axes, either "detector"
-            (default) or "gnomonic".
+            Coordinate space for the plot axes, either "pixel" (default)
+            or "gnomonic".
+
+            Passing "detector" is deprecated and will raise an error
+            in version 0.13.0.
         lines
             Whether to get the collection of Kikuchi lines. Default is
             True. Returned as
@@ -175,6 +178,8 @@ class GeometricalKikuchiPatternSimulation:
         --------
         as_markers, plot
         """
+        coordinates = parse_coordinate_format(coordinates)
+
         if index is None:
             index = (0, 0)[: self.ndim]
         collections = []
@@ -182,20 +187,26 @@ class GeometricalKikuchiPatternSimulation:
             if lines_kwargs is None:
                 lines_kwargs = {}
             collections.append(
-                self._lines_as_collection(index, coordinates, **lines_kwargs)
+                self._lines_as_collection(
+                    index=index,
+                    coordinates=coordinates,
+                    **lines_kwargs,
+                )
             )
         if zone_axes:
             if zone_axes_kwargs is None:
                 zone_axes_kwargs = {}
             collections.append(
-                self._zone_axes_as_collection(index, coordinates, **zone_axes_kwargs)
+                self._zone_axes_as_collection(
+                    index=index, coordinate_fmt=coordinates, **zone_axes_kwargs
+                )
             )
         if zone_axes_labels:
             if zone_axes_labels_kwargs is None:
                 zone_axes_labels_kwargs = {}
             collections.append(
                 self._zone_axes_labels_as_list(
-                    index, coordinates, **zone_axes_labels_kwargs
+                    index=index, coordinates=coordinates, **zone_axes_labels_kwargs
                 )
             )
         return collections
@@ -269,7 +280,7 @@ class GeometricalKikuchiPatternSimulation:
     def lines_coordinates(
         self,
         index: int | tuple | None = None,
-        coordinates: Literal["detector", "gnomonic"] = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "pixel",
         exclude_nan: bool = True,
     ) -> np.ndarray:
         """Return Kikuchi line coordinates for a single simulation.
@@ -280,7 +291,10 @@ class GeometricalKikuchiPatternSimulation:
             Index of the simulation to get line coordinates for. This is
             the first simulation if not given.
         coordinates
-            Coordinate space, either "detector" (default) or "gnomonic".
+            Coordinate space, either "pixel" (default) or "gnomonic".
+
+            Passing "detector" is deprecated and will raise an error
+            in version 0.13.0.
         exclude_nan
             Whether to exclude coordinates of Kikuchi lines not present
             in the pattern. Default is True. If False, all simulations
@@ -295,9 +309,10 @@ class GeometricalKikuchiPatternSimulation:
         --------
         zone_axes_coordinates
         """
+        coordinates = parse_coordinate_format(coordinates)
         if index is None:
             index = (0, 0)[: self.ndim]
-        if coordinates == "detector":
+        if coordinates == "pixel":
             coords = self._lines_detector_coordinates[index]
         else:  # gnomonic
             coords = self._lines.plane_trace_coordinates[index]
@@ -308,7 +323,7 @@ class GeometricalKikuchiPatternSimulation:
     def plot(
         self,
         index: int | tuple | None = None,
-        coordinates: Literal["detector", "gnomonic"] = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "pixel",
         pattern: np.ndarray | None = None,
         lines: bool = True,
         zone_axes: bool = True,
@@ -330,8 +345,11 @@ class GeometricalKikuchiPatternSimulation:
             simulation if not given. Must be a 2-tuple if
             :attr:`navigation_shape` is 2D.
         coordinates
-            Coordinate space of the plot axes, either "detector"
-            (default) or "gnomonic".
+            Coordinate space of the plot axes, either "pixel" (default)
+            or "gnomonic".
+
+            Passing "detector" is deprecated and will raise an error
+            in version 0.13.0.
         pattern
             Pattern to plot the simulation onto. The simulation is
             plotted on a gray background if not given.
@@ -373,6 +391,7 @@ class GeometricalKikuchiPatternSimulation:
         --------
         as_collections, as_markers
         """
+        coordinates = parse_coordinate_format(coordinates)
         fig = self.detector.plot(
             coordinates=coordinates,
             pattern=pattern,
@@ -404,7 +423,7 @@ class GeometricalKikuchiPatternSimulation:
     def zone_axes_coordinates(
         self,
         index: int | tuple | None = None,
-        coordinates: Literal["detector", "gnomonic"] = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "pixel",
         exclude_nan: bool = True,
     ) -> np.ndarray:
         """Return zone axes coordinates for a single simulation.
@@ -415,7 +434,10 @@ class GeometricalKikuchiPatternSimulation:
             Index of the simulation to get zone axis coordinates for.
             This is the first simulation if not given.
         coordinates
-            Coordinate space, either "detector" (default) or "gnomonic".
+            Coordinate space, either "pixel" (default) or "gnomonic".
+
+            Passing "detector" is deprecated and will raise an error
+            in version 0.13.0.
         exclude_nan
             Whether to exclude coordinates of zone axes not present in
             the pattern. Default is True. If False, all simulations (by
@@ -430,9 +452,10 @@ class GeometricalKikuchiPatternSimulation:
         --------
         lines_coordinates
         """
+        coordinates = parse_coordinate_format(coordinates)
         if index is None:
             index = (0, 0)[: self.ndim]
-        if coordinates == "detector":
+        if coordinates == "pixel":
             coords = self._zone_axes_detector_coordinates[index]
         else:  # gnomonic
             coords = self._zone_axes._xy_within_r_gnomonic[index]
@@ -513,10 +536,10 @@ class GeometricalKikuchiPatternSimulation:
     def _lines_as_collection(
         self,
         index: int | tuple[int, ...] | None,
-        coordinates: Literal["detector", "gnomonic"],
+        coordinates: DETECTOR_PLOT_FORMATS,
         **kwargs,
     ) -> mcollections.LineCollection:
-        coords = self.lines_coordinates(index, coordinates)
+        coords = self.lines_coordinates(index=index, coordinates=coordinates)
         coords = coords.reshape((coords.shape[0], 2, 2))
         kw = {
             "color": LINE_COLOR,
@@ -531,12 +554,13 @@ class GeometricalKikuchiPatternSimulation:
     def _zone_axes_as_collection(
         self,
         index: int | tuple[int, ...] | None,
-        coordinate_fmt: Literal["detector", "gnomonic"],
+        coordinate_fmt: DETECTOR_PLOT_FORMATS,
         **kwargs,
     ) -> mcollections.PathCollection:
-        coords = self.zone_axes_coordinates(index, coordinate_fmt)
+        coordinate_fmt = parse_coordinate_format(coordinate_fmt)
+        coords = self.zone_axes_coordinates(index=index, coordinates=coordinate_fmt)
 
-        if coordinate_fmt == "detector":
+        if coordinate_fmt == "pixel":
             nrows = self.detector.nrows
         else:  # gnomonic
             if self.detector.navigation_shape == (1,):
@@ -559,14 +583,17 @@ class GeometricalKikuchiPatternSimulation:
     def _zone_axes_labels_as_list(
         self,
         index: int | tuple[int, ...] | None,
-        coordinates: Literal["detector", "gnomonic"],
+        coordinates: DETECTOR_PLOT_FORMATS,
         **kwargs,
     ) -> list[mtext.Text]:
+        coordinates = parse_coordinate_format(coordinates)
         labels = self._zone_axes_labels_as_array().tolist()
-        coords = self.zone_axes_coordinates(index, coordinates, exclude_nan=False)
+        coords = self.zone_axes_coordinates(
+            index=index, coordinates=coordinates, exclude_nan=False
+        )
 
         y_offset = 0.03
-        if coordinates == "detector":
+        if coordinates == "pixel":
             coords[..., 1] -= y_offset * self.detector.nrows
         else:  # gnomonic
             if self.detector.navigation_shape == (1,):

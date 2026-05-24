@@ -16,9 +16,11 @@ Preparation
 
 - Locally, create a minor release branch from the ``develop`` branch when making a minor
   release, or create a patch release branch from the ``main`` branch when making a patch
-  release. Ideally, a patch release is published immediately after a bug fix is merged
-  on ``main``. Therefore, it might be best to do the release updates directly on the bug
-  fix branch. This way, we do not have to create a separate patch release branch.
+  release.
+  Ideally, a patch release is published immediately after a bug fix is merged one
+  ``main``.
+  Therefore, it might be best to do the release updates directly on the bug fix branch.
+  This way, we do not have to create a separate patch release branch.
 
 - Run tutorial notebooks and examples in the documentation locally.
   Confirm that they produce the expected results.

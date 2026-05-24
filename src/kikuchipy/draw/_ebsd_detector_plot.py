@@ -361,9 +361,9 @@ def plot_detector_sample_geometry_top_view(
     # Detector local basis in microscope coordinates at zero detector
     # tilt and zero azimuthal: X_d (width) points west, Y_d (height)
     # points down in side view, and Z_d is the detector normal.
-    x_d = np.array([-1.0, 0.0, 0.0], dtype=np.float64)
-    y_d = np.array([0.0, 0.0, 1.0], dtype=np.float64)
-    z_d = np.array([0.0, 1.0, 0.0], dtype=np.float64)
+    x_d = np.ascontiguousarray([-1.0, 0.0, 0.0], dtype=np.float64)
+    y_d = np.ascontiguousarray([0.0, 0.0, 1.0], dtype=np.float64)
+    z_d = np.ascontiguousarray([0.0, 1.0, 0.0], dtype=np.float64)
 
     # Apply intrinsic rotations: detector tilt about X_d followed by
     # azimuthal tilt about Y_d.
@@ -557,6 +557,137 @@ def update_detector_plane(
         gnomonic_angles=None,
         ax=ax,
     )
+
+
+def plot_moving_screen_calibration(
+    patterns: np.ndarray,
+    points: np.ndarray,
+    pxy: np.ndarray,
+    pxy_all: np.ndarray,
+    lines_start: np.ndarray,
+    lines_end: np.ndarray,
+    lines_out_in_start: np.ndarray,
+    lines_out_in_end: np.ndarray,
+    n_lines: int,
+    n_points: int,
+    shape: tuple[int, int],
+    pattern_kwargs: dict | None = None,
+    line_kwargs: dict | None = None,
+    scatter_kwargs: dict | None = None,
+    pc_kwargs: dict | None = None,
+    return_figure: bool = False,
+    **kwargs,
+) -> mfigure.Figure | None:
+    """Plot the moving-screen PC calibration results.
+
+    Three panels are shown: the two patterns with annotated points and
+    lines, and a third with all PC estimates and the average PC.
+
+    Parameters
+    ----------
+    patterns
+        Two patterns of shape ``(2, nrows, ncols)``.
+    points
+        Two sets of corresponding points of shape ``(2, n_points, 2)``.
+    pxy
+        Average (PCx, PCy) in pixels of shape ``(2,)``.
+    pxy_all
+        All estimates of (PCx, PCy) in pixels of shape
+        ``(n_estimates, 2)``.
+    lines_start
+        Start points of lines within each pattern of shape
+        ``(2, n_lines, 2)``.
+    lines_end
+        End points of lines within each pattern of shape
+        ``(2, n_lines, 2)``.
+    lines_out_in_start
+        Start points of the lines between corresponding points in the
+        two patterns of shape ``(n_points, 2)``.
+    lines_out_in_end
+        End points of the lines between corresponding points in the
+        two patterns of shape ``(n_points, 2)``.
+    n_lines
+        Number of lines within each pattern.
+    n_points
+        Number of corresponding points.
+    shape
+        Detector shape ``(nrows, ncols)``.
+    pattern_kwargs
+        Keyword arguments passed to
+        :meth:`matplotlib.axes.Axes.imshow`.
+    line_kwargs
+        Keyword arguments passed to
+        :meth:`matplotlib.axes.Axes.axline`.
+    scatter_kwargs
+        Keyword arguments passed to
+        :meth:`matplotlib.axes.Axes.scatter`.
+    pc_kwargs
+        Keyword arguments to customize the PC marker; ``s`` and
+        ``zorder`` are forwarded to
+        :func:`get_default_projection_center_scatter_kwargs`.
+    return_figure
+        Whether to return the figure, default is ``False``.
+    **kwargs
+        Keyword arguments passed to :func:`matplotlib.pyplot.subplots`.
+
+    Returns
+    -------
+    fig
+        Figure, returned if ``return_figure=True``.
+    """
+    if pattern_kwargs is None:
+        pattern_kwargs = {"cmap": "gray"}
+    if line_kwargs is None:
+        line_kwargs = {"linewidth": 2, "zorder": 1}
+    if scatter_kwargs is None:
+        scatter_kwargs = {"zorder": 2}
+    if pc_kwargs is None:
+        pc_kwargs = {}
+
+    pat1, pat2 = patterns
+    points1, points2 = points
+    px, py = pxy
+
+    ncols = 3
+    for k, v in zip(["sharex", "sharey", "figsize"], [True, True, (20, 10)]):
+        kwargs.setdefault(k, v)
+    fig, ax = plt.subplots(ncols=ncols, **kwargs)
+
+    ax[0].set_title("In (operating) position")
+    ax[0].imshow(pat1, **pattern_kwargs)
+    ax[0].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
+    for i in range(n_lines):
+        start, end = lines_start[0, i], lines_end[0, i]
+        ax[0].axline(start, end, linestyle="-", color=f"C{i}", **line_kwargs)
+
+    ax[1].set_title("Out position")
+    ax[1].imshow(pat2, **pattern_kwargs)
+    ax[1].scatter(points2[:, 0], points2[:, 1], color="C1", **scatter_kwargs)
+    for i in range(n_lines):
+        start, end = lines_start[1, i], lines_end[1, i]
+        ax[1].axline(start, end, linestyle="--", color=f"C{i}", **line_kwargs)
+
+    ax[2].set_title("Projection center")
+    ax[2].imshow(np.ones(shape), cmap="gray", vmin=0, vmax=2)
+    ax[2].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
+    ax[2].scatter(points2[:, 0], points2[:, 1], **scatter_kwargs)
+    ax[2].scatter(pxy_all[:, 0], pxy_all[:, 1], color="k", marker="*", **scatter_kwargs)
+    for i in range(n_points):
+        start, end = lines_out_in_start[i], lines_out_in_end[i]
+        ax[2].axline(start, end, color=f"C{i}", **line_kwargs)
+
+    s = pc_kwargs.get("s", 200)
+    zorder = scatter_kwargs.get("zorder", 2)
+    circle_kwargs, cross_kwargs = get_default_projection_center_scatter_kwargs(
+        s=s, zorder=zorder
+    )
+    for i in range(ncols):
+        ax[i].scatter(px, py, **circle_kwargs)
+        ax[i].scatter(px, py, **cross_kwargs)
+
+    if return_figure:
+        return fig
+    return None
 
 
 def set_up_figure_axis(

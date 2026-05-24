@@ -34,7 +34,6 @@ from dask.diagnostics.progress import ProgressBar
 from h5py import File
 import hyperspy.api as hs
 from hyperspy.axes import AxesManager
-from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
 from hyperspy.signals import Signal2D
 import numpy as np
@@ -44,6 +43,7 @@ from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
 from kikuchipy._constants import pyopencl_context_available, verify_dependency_or_raise
+from kikuchipy._utils.hyperspy_utils import LearningResults
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
