@@ -284,5 +284,6 @@ class TestData:
         dummy_file.touch()
         monkeypatch.setenv("KIKUCHIPY_DATA_DIR", str(tmp_path))
         kp.data.clear_cache()
+        assert not dummy_file.exists()
         captured = capsys.readouterr()
         assert "dummy_file" in captured.out
