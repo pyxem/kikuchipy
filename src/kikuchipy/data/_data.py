@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -460,7 +460,8 @@ def ebsd_master_pattern(
     ----------
     phase
         Name of available phase. Options are (see *Notes* for details):
-        ni, al, si, austenite, ferrite, steel_chi, steel_sigma.
+        ni, al, si, austenite, ferrite, steel_chi, steel_sigma,
+        steel_sigma2.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is
@@ -487,17 +488,20 @@ def ebsd_master_pattern(
     The master patterns are downloaded in HDF5 files (carrying a CC BY
     4.0 license) from Zenodo.
 
-    ===========  =========  =================  ============  ==============  ======================
-    phase        Name       Symbol             Energy [keV]  File size [GB]  Zenodo DOI
-    ===========  =========  =================  ============  ==============  ======================
-    ni           nickel     Ni                 5-20          0.3             10.5281/zenodo.7628443
-    al           aluminium  Al                 10-20         0.2             10.5281/zenodo.7628365
-    si           silicon    Si                 5-20          0.3             10.5281/zenodo.7498729
-    austenite    austenite  :math:`\gamma`-Fe  10-20         0.3             10.5281/zenodo.7628387
-    ferrite      ferrite    :math:`\alpha`-Fe  5-20          0.3             10.5281/zenodo.7628394
-    steel_chi    chi        Fe36Cr15Mo7        10-20         0.6             10.5281/zenodo.7628417
-    steel_sigma  sigma      FeCr               5-20          1.5             10.5281/zenodo.7628443
-    ===========  =========  =================  ============  ==============  ======================
+    ============  =========  =================  ============  ==============  =======================
+    phase         Name       Symbol             Energy [keV]  File size [GB]  Zenodo DOI
+    ============  =========  =================  ============  ==============  =======================
+    ni            nickel     Ni                 5-20          0.3             10.5281/zenodo.7498644
+    al            aluminium  Al                 10-20         0.2             10.5281/zenodo.7628365
+    si            silicon    Si                 5-20          0.3             10.5281/zenodo.7498729
+    austenite     austenite  :math:`\gamma`-Fe  10-20         0.3             10.5281/zenodo.7628387
+    ferrite       ferrite    :math:`\alpha`-Fe  5-20          0.3             10.5281/zenodo.7628394
+    steel_chi     chi        Fe36Cr15Mo7        10-20         0.6             10.5281/zenodo.7628417
+    steel_sigma   sigma      FeCr               5-20          1.5             10.5281/zenodo.7628443
+    steel_sigma2  sigma2     FeCr               10-20         0.8             10.5281/zenodo.20376902
+    steel_r       R          FeCrMo             10-20         3.0             10.5281/zenodo.20376827
+    steel_pi      Pi         FeMo               10-20         0.5             10.5281/zenodo.20376759
+    ============  =========  =================  ============  ==============  =======================
 
     Examples
     --------
@@ -518,6 +522,9 @@ def ebsd_master_pattern(
         "ferrite": "ferrite_mc_mp_20kv.h5",
         "steel_chi": "steel_chi_mc_mp_20kv.h5",
         "steel_sigma": "steel_sigma_mc_mp_20kv.h5",
+        "steel_sigma2": "steel_sigma2_mc_mp_20kv.h5",
+        "steel_r": "r_mc_mp_20kv.h5",
+        "steel_pi": "pi_mc_mp_20kv.h5",
     }
 
     dset = Dataset("ebsd_master_pattern/" + datasets[phase.lower()])
