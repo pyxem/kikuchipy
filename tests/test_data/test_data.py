@@ -277,3 +277,11 @@ class TestData:
         to check dataset availability.
         """
         assert marshall.is_available(f"data/{dataset}")
+
+    def test_clear_cache(self, tmp_path, monkeypatch, capsys):
+        dummy_file = tmp_path / "dummy_file"
+        dummy_file.touch()
+        monkeypatch.setenv("KIKUCHIPY_DATA_DIR", str(tmp_path))
+        kp.data.clear_cache()
+        captured = capsys.readouterr()
+        assert "dummy_file" in captured.out

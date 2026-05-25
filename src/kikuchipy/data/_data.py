@@ -17,8 +17,10 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import os
 from pathlib import Path
+import shutil
 
 import hyperspy.api as hs
 import pooch
@@ -28,6 +30,8 @@ from kikuchipy.data._registry import registry_hashes, registry_urls
 from kikuchipy.io._io import load
 from kikuchipy.signals.ebsd import EBSD
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
+
+_logger = logging.getLogger(__name__)
 
 marshall = pooch.create(
     path=pooch.os_cache("kikuchipy"),
@@ -39,6 +43,31 @@ marshall = pooch.create(
     urls=registry_urls,
     retry_if_failed=5,  # Five times at increasing intervals of 1 s
 )
+
+
+def _clear_directory(path: Path) -> None:
+    for item in path.iterdir():
+        if item.is_dir():
+            for file in item.rglob("*"):
+                if file.is_file():
+                    print(f"Deleting {file}")
+            shutil.rmtree(item)
+        else:
+            print(f"Deleting {item}")
+            item.unlink()
+
+
+def clear_cache() -> None:
+    """Clear the kikuchipy data cache directory.
+
+    This deletes all directories and files in the kikuchipy data cache
+    directory, located at ``pooch.os_cache("kikuchipy")``.
+    """
+    cache_dir = Path(os.environ.get("KIKUCHIPY_DATA_DIR", pooch.os_cache("kikuchipy")))
+    if cache_dir.exists():
+        _clear_directory(cache_dir)
+    else:
+        _logger.debug("Data cache directory does not exist")
 
 
 # ----------------------- Experimental datasets ---------------------- #
@@ -485,8 +514,8 @@ def ebsd_master_pattern(
 
     Notes
     -----
-    The master patterns are downloaded in HDF5 files (carrying a CC BY
-    4.0 license) from Zenodo.
+    The master patterns are downloaded in HDF5 files from Zenodo
+    (carrying a CC BY 4.0 license).
 
     ============  ============  =====================  ============  ==============  =======================
     phase         Name          Symbol                 Energy [keV]  File size [GB]  Zenodo DOI
@@ -502,7 +531,7 @@ def ebsd_master_pattern(
     steel_r       R             Fe-Cr-Mo               10-20         3.0             10.5281/zenodo.20376827
     steel_pi      Pi            Fe-Mo                  10-20         0.5             10.5281/zenodo.20376759
     steel_cr2n    Cr2N          Cr2N                   10-20         0.5             10.5281/zenodo.20376533
-    al6mn         Al6Mn         Al:math:`_6`Mn         10-20         0.5             10.5281/zenodo.20376067
+    al6mn         Al6Mn         Al6Mn                  10-20         0.5             10.5281/zenodo.20376067
     alpha_almnsi  Alpha-AlMnSi  :math:`\alpha`-AlMnSi  10-20         1.1             10.5281/zenodo.20376378
     ============  ============  =====================  ============  ==============  =======================
 
@@ -614,9 +643,7 @@ class Dataset:
         else:
             return
 
-    def fetch_file_path_from_collection(
-        self, downloader: pooch.HTTPDownloader
-    ) -> file_path:
+    def fetch_file_path_from_collection(self, downloader: pooch.HTTPDownloader) -> str:
         file_paths = marshall.fetch(
             "data/" + self.collection_name,
             downloader=downloader,

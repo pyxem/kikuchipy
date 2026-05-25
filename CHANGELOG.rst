@@ -21,6 +21,9 @@ Added
 -----
 - More master patterns downloadable to a local cache via ``data.ebsd_master_pattern()``:
   Alternative sigma (Fe-Cr-Mo), Cr2N, R (Fe-Cr-Mo), Pi (Fe-Mo), Al6Mn, and alpha-AlMnSi.
+  (`#796 <https://github.com/pyxem/kikuchipy/pull/796>`_)
+- Function to clear the kikuchipy data cache directory.
+  (`#796 <https://github.com/pyxem/kikuchipy/pull/796>`_)
 
 Changed
 -------
