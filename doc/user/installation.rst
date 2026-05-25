@@ -111,7 +111,7 @@ This is a list of core package dependencies:
 * :doc:`numpy <numpy:index>`: Handling of N-dimensional arrays.
 * :doc:`packaging <packaging:index>`: Version comparison.
 * :doc:`orix <orix:index>`: Handling of rotations and vectors using crystal symmetry.
-* `pyyaml <https://pyyaml.org/>`__: Parcing of YAML files.
+* `pyyaml <https://pyyaml.org/>`__: Parsing of YAML files.
 * :doc:`scikit-image <skimage:index>`: Image processing like adaptive histogram
   equalization.
 * :doc:`rosettasciio <rosettasciio:index>`: Read/write of some file formats.

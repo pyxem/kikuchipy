@@ -570,8 +570,8 @@ def ebsd_master_pattern(
     austenite     Austenite     :math:`\gamma`-Fe      10-20         0.3             10.5281/zenodo.7628387
     ferrite       Ferrite       :math:`\alpha`-Fe      5-20          0.3             10.5281/zenodo.7628394
     steel_chi     Chi           Fe36Cr12Mo10           10-20         0.6             10.5281/zenodo.7628417
-    steel_sigma   Sigma         Fe-Cr                  5-20          1.5             10.5281/zenodo.7628443
-    steel_sigma2  Sigma2        Fe-Cr                  10-20         0.8             10.5281/zenodo.20376902
+    steel_sigma   Sigma         Fe-Cr-Mo               5-20          1.5             10.5281/zenodo.7628443
+    steel_sigma2  Sigma2        Fe-Cr-Mo               10-20         0.8             10.5281/zenodo.20376902
     steel_r       R             Fe-Cr-Mo               10-20         3.0             10.5281/zenodo.20376827
     steel_pi      Pi            Fe-Mo                  10-20         0.5             10.5281/zenodo.20376759
     steel_cr2n    Cr2N          Cr2N                   10-20         0.5             10.5281/zenodo.20376533
