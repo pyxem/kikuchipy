@@ -267,6 +267,9 @@ class TestData:
             "ebsd_master_pattern/steel_sigma2_mc_mp_20kv.h5",
             "ebsd_master_pattern/r_mc_mp_20kv.h5",
             "ebsd_master_pattern/pi_mc_mp_20kv.h5",
+            "ebsd_master_pattern/cr2n_mc_mp_20kv.h5",
+            "ebsd_master_pattern/al6mn_mc_mp_20kv.h5",
+            "ebsd_master_pattern/alpha_almnsi_mc_mp_20kv.h5",
         ],
     )
     def test_dataset_availability(self, dataset):

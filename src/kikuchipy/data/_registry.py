@@ -74,6 +74,9 @@ _registry_hashes = {
     "ebsd_master_pattern/steel_sigma2_mc_mp_20kv.h5":               "md5:66c36d4bc0b7029038f59d1ab423c970",
     "ebsd_master_pattern/r_mc_mp_20kv.h5":                          "md5:1a9dc668e4d27d13ab1d3cbdca5bcd84",
     "ebsd_master_pattern/pi_mc_mp_20kv.h5":                         "md5:8e642ad0464e1396beed0f6f41d97f85",
+    "ebsd_master_pattern/cr2n_mc_mp_20kv.h5":                       "md5:b0b03f41cc1ae3fa0b2f2bf69d494417",
+    "ebsd_master_pattern/al6mn_mc_mp_20kv.h5":                      "md5:a00f332a77d60be48584df779da5aa1f",
+    "ebsd_master_pattern/alpha_almnsi_mc_mp_20kv.h5":               "md5:92d18a632b539d7a4548ba99aa94d7f1",
 }
 # How to use permanent links to files on GitHub:
 # https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files
@@ -106,6 +109,9 @@ _registry_urls = {
     "ebsd_master_pattern/steel_sigma2_mc_mp_20kv.h5":   "https://zenodo.org/records/20376903/files/steel_sigma2_mc_mp_20kv.h5",
     "ebsd_master_pattern/r_mc_mp_20kv.h5":              "https://zenodo.org/records/20376828/files/r_mc_mp_20kv.h5",
     "ebsd_master_pattern/pi_mc_mp_20kv.h5":             "https://zenodo.org/records/20376759/files/pi_mc_mp_20kv.h5",
+    "ebsd_master_pattern/cr2n_mc_mp_20kv.h5":           "https://zenodo.org/records/20376534/files/cr2n_mc_mp_20kv.h5",
+    "ebsd_master_pattern/al6mn_mc_mp_20kv.h5":          "https://zenodo.org/records/20376068/files/al6mn_mc_mp_20kv.h5",
+    "ebsd_master_pattern/alpha_almnsi_mc_mp_20kv.h5":   "https://zenodo.org/records/20376379/files/alpha_almnsi_mc_mp_20kv.h5",
 }
 # fmt: on
 
