@@ -58,7 +58,9 @@ def clear_cache() -> None:
     This deletes all directories and files in the kikuchipy data cache
     directory, located at ``pooch.os_cache("kikuchipy")``.
 
-    Requires the optional :doc:`pooch <pooch:api/index>` package.
+    .. note::
+
+        Requires the optional :mod:`pooch` package.
     """
     verify_dependency_or_raise("pooch", "Clearing the cache")
     import pooch
@@ -130,6 +132,10 @@ def nickel_ebsd_large(
     pixels from nickel, acquired on a NORDIF UF-1100 detector
     :cite:`aanes2019electron`.
 
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
+
     Parameters
     ----------
     allow_download
@@ -182,6 +188,10 @@ def ni_gain(
     Ten datasets are available from the same region of interest,
     acquired with increasing gain on the detector, from no gain to
     maximum gain.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------
@@ -248,6 +258,10 @@ def ni_gain_calibration(
     The patterns are used to calibrate the detector-sample geometry
     of the datasets in :func:`~kikuchipy.data.ni_gain`. The calibration
     patterns were acquired with no gain on the detector.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------
@@ -320,6 +334,10 @@ def si_ebsd_moving_screen(
     They were acquired to test the moving-screen projection center
     estimation technique :cite:`hjelen1991electron`.
 
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
+
     Parameters
     ----------
     distance
@@ -381,6 +399,10 @@ def si_wafer(
     projection centers (PCs), e.g. the moving-screen PC estimation
     technique :cite:`hjelen1991electron`. The EBSD pattern in
     :func:`silicon_ebsd_moving_screen_in` is from this dataset.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------
@@ -502,6 +524,10 @@ def ebsd_master_pattern(
 
     Master patterns were simulated with *EMsoft*
     :cite:`callahan2013dynamical`.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------

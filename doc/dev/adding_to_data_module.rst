@@ -15,7 +15,7 @@ are considered too large to include in the package.
 If a required dataset isn't in the package, but is in the registry, it can be downloaded
 from the repository when the user passes ``allow_download=True`` to e.g.
 :func:`~kikuchipy.data.nickel_ebsd_large`.
-This requires that :doc:`pooch <pooch:api/index>` is installed.
+This requires that :mod:`pooch` is installed.
 The dataset is then downloaded to a local cache, in the location returned from
 ``pooch.os_cache("kikuchipy")``.
 The location can be set with a global `KIKUCHIPY_DATA_DIR` variable locally, e.g. by

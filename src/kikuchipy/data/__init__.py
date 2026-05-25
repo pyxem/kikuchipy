@@ -25,8 +25,9 @@ downloaded from the web. For more test datasets, see
 
 Datasets are placed in a local cache, in the location returned from
 ``pooch.os_cache("kikuchipy")`` by default (requires the optional
-:doc:`pooch <pooch:api/index>` package). The location can be overwritten
-with a global ``KIKUCHIPY_DATA_DIR`` environment variable.
+:mod:`pooch` package).
+The location can be overwritten with a global ``KIKUCHIPY_DATA_DIR``
+environment variable.
 
 With every new version of kikuchipy, a new directory of datasets with
 the version name is added to the cache directory. Any old directories
@@ -34,8 +35,8 @@ are not deleted automatically, and should then be deleted manually if
 desired.
 
 The cache directory can be cleared of all files by calling
-:func:`~kikuchipy.data.clear_cache` (requires the optional
-:doc:`pooch <pooch:api/index>` package).
+:func:`~kikuchipy.data.clear_cache` (requires the optional :mod:`pooch`
+package).
 """
 
 import lazy_loader
