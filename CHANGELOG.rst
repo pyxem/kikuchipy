@@ -19,6 +19,8 @@ Unreleased
 
 Added
 -----
+- More master patterns downloadable to a local cache via ``data.ebsd_master_pattern()``:
+  Alternative sigma (Fe-Cr-Mo), Cr2N, R (Fe-Cr-Mo), Pi (Fe-Mo), Al6Mn, and alpha-AlMnSi.
 
 Changed
 -------
