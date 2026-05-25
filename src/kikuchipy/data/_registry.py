@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # All hashes are MD5 hashes and can be checked locally with e.g. md5sum.
 # All file paths are relative to the cache directory
@@ -69,6 +71,12 @@ _registry_hashes = {
     "ebsd_master_pattern/ferrite_mc_mp_20kv.h5":                    "md5:4b6c1456ed2d90e190c7a21c4c4c1aff",
     "ebsd_master_pattern/steel_sigma_mc_mp_20kv.h5":                "md5:2d965e399dbc13cb5983f29ceef6dfcd",
     "ebsd_master_pattern/steel_chi_mc_mp_20kv.h5":                  "md5:9e4dd974bf78a3f7d159575ff0d0a28a",
+    "ebsd_master_pattern/steel_sigma2_mc_mp_20kv.h5":               "md5:66c36d4bc0b7029038f59d1ab423c970",
+    "ebsd_master_pattern/r_mc_mp_20kv.h5":                          "md5:1a9dc668e4d27d13ab1d3cbdca5bcd84",
+    "ebsd_master_pattern/pi_mc_mp_20kv.h5":                         "md5:8e642ad0464e1396beed0f6f41d97f85",
+    "ebsd_master_pattern/cr2n_mc_mp_20kv.h5":                       "md5:b0b03f41cc1ae3fa0b2f2bf69d494417",
+    "ebsd_master_pattern/al6mn_mc_mp_20kv.h5":                      "md5:a00f332a77d60be48584df779da5aa1f",
+    "ebsd_master_pattern/alpha_almnsi_mc_mp_20kv.h5":               "md5:92d18a632b539d7a4548ba99aa94d7f1",
 }
 # How to use permanent links to files on GitHub:
 # https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files
@@ -94,10 +102,16 @@ _registry_urls = {
     "ebsd_master_pattern/al_mc_mp_20kv.h5":             "https://zenodo.org/record/7628365/files/al_mc_mp_20kv.h5",
     "ebsd_master_pattern/ni_mc_mp_20kv.h5":             "https://zenodo.org/record/7498645/files/ni_mc_mp_20kv.h5",
     "ebsd_master_pattern/si_mc_mp_20kv.h5":             "https://zenodo.org/record/7498729/files/si_mc_mp_20kv.h5",
-    "ebsd_master_pattern/austenite_mc_mp_20kv.h5":  "https://zenodo.org/record/7628387/files/austenite_mc_mp_20kv.h5",
-    "ebsd_master_pattern/ferrite_mc_mp_20kv.h5":    "https://zenodo.org/record/7628394/files/ferrite_mc_mp_20kv.h5",
+    "ebsd_master_pattern/austenite_mc_mp_20kv.h5":      "https://zenodo.org/record/7628387/files/austenite_mc_mp_20kv.h5",
+    "ebsd_master_pattern/ferrite_mc_mp_20kv.h5":        "https://zenodo.org/record/7628394/files/ferrite_mc_mp_20kv.h5",
     "ebsd_master_pattern/steel_chi_mc_mp_20kv.h5":      "https://zenodo.org/record/7628417/files/steel_chi_mc_mp_20kv.h5",
     "ebsd_master_pattern/steel_sigma_mc_mp_20kv.h5":    "https://zenodo.org/record/7628443/files/steel_sigma_mc_mp_20kv.h5",
+    "ebsd_master_pattern/steel_sigma2_mc_mp_20kv.h5":   "https://zenodo.org/records/20376903/files/steel_sigma2_mc_mp_20kv.h5",
+    "ebsd_master_pattern/r_mc_mp_20kv.h5":              "https://zenodo.org/records/20376828/files/r_mc_mp_20kv.h5",
+    "ebsd_master_pattern/pi_mc_mp_20kv.h5":             "https://zenodo.org/records/20376759/files/pi_mc_mp_20kv.h5",
+    "ebsd_master_pattern/cr2n_mc_mp_20kv.h5":           "https://zenodo.org/records/20376534/files/cr2n_mc_mp_20kv.h5",
+    "ebsd_master_pattern/al6mn_mc_mp_20kv.h5":          "https://zenodo.org/records/20376068/files/al6mn_mc_mp_20kv.h5",
+    "ebsd_master_pattern/alpha_almnsi_mc_mp_20kv.h5":   "https://zenodo.org/records/20376379/files/alpha_almnsi_mc_mp_20kv.h5",
 }
 # fmt: on
 

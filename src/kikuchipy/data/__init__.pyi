@@ -16,6 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from ._data import (
+    clear_cache,
     ebsd_master_pattern,
     ni_gain,
     ni_gain_calibration,
@@ -27,6 +28,7 @@ from ._data import (
 )
 
 __all__ = [
+    "clear_cache",
     "ebsd_master_pattern",
     "ni_gain",
     "ni_gain_calibration",

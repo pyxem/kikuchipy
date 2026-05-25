@@ -45,7 +45,7 @@ import pytest
 
 import kikuchipy as kp
 from kikuchipy._constants import dependency_version
-from kikuchipy.data._data import marshall
+from kikuchipy.data._data import get_fetching_pooch
 from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_file,
     create_dummy_bruker_h5ebsd_nonrectangular_roi_file,
@@ -104,6 +104,9 @@ def skipif_no_vtk_support():
 
 def pytest_sessionstart(session):
     _ = kp.data.nickel_ebsd_large(allow_download=True)
+    _ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
+    _ = kp.data.si_ebsd_moving_screen(5, allow_download=True)
+    _ = kp.data.si_ebsd_moving_screen(10, allow_download=True)
     plt.rcParams.update({"backend": "agg", "figure.max_open_warning": False})
 
 
@@ -407,6 +410,7 @@ def kikuchipy_h5ebsd_path() -> Generator[Path, None, None]:
 
 @pytest.fixture
 def nickel_ebsd_large_h5ebsd_renamed() -> Generator[Path, None, None]:
+    marshall = get_fetching_pooch()
     f1 = Path(marshall.path) / "data/nickel_ebsd_large/patterns.h5"
     f2 = f1.rename(f1.with_suffix(".bak"))
     yield f2

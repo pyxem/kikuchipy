@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,28 +17,78 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from functools import cache
+import hashlib
+import logging
 import os
 from pathlib import Path
+import shutil
+from typing import TYPE_CHECKING
 
 import hyperspy.api as hs
-import pooch
 
 from kikuchipy import __version__
+from kikuchipy._constants import verify_dependency_or_raise
 from kikuchipy.data._registry import registry_hashes, registry_urls
 from kikuchipy.io._io import load
 from kikuchipy.signals.ebsd import EBSD
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
-marshall = pooch.create(
-    path=pooch.os_cache("kikuchipy"),
-    base_url="",
-    version=__version__.replace(".dev", "+"),
-    version_dev="develop",
-    env="KIKUCHIPY_DATA_DIR",
-    registry=registry_hashes,
-    urls=registry_urls,
-    retry_if_failed=5,  # Five times at increasing intervals of 1 s
-)
+if TYPE_CHECKING:  # pragma: no cover
+    import pooch
+
+_logger = logging.getLogger(__name__)
+
+
+def _clear_directory(path: Path) -> None:
+    for item in path.iterdir():
+        if item.is_dir():
+            for file in item.rglob("*"):
+                if file.is_file():
+                    print(f"Deleting {file}")
+            shutil.rmtree(item)
+        else:
+            print(f"Deleting {item}")
+            item.unlink()
+
+
+def clear_cache() -> None:
+    """Clear the kikuchipy data cache directory.
+
+    This deletes all directories and files in the kikuchipy data cache
+    directory, located at ``pooch.os_cache("kikuchipy")`` or the
+    environment variable ``KIKUCHIPY_DATA_DIR`` if set.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package.
+    """
+    verify_dependency_or_raise("pooch", "Clearing the cache")
+    import pooch
+
+    cache_dir = Path(os.environ.get("KIKUCHIPY_DATA_DIR", pooch.os_cache("kikuchipy")))
+    if cache_dir.exists():
+        _clear_directory(cache_dir)
+    else:
+        _logger.debug("Data cache directory does not exist")
+
+
+@cache
+def get_fetching_pooch() -> "pooch.Pooch":
+    verify_dependency_or_raise("pooch", "Downloading data from external sources")
+
+    import pooch
+
+    return pooch.create(
+        path=pooch.os_cache("kikuchipy"),
+        base_url="",
+        version=__version__.replace(".dev", "+"),
+        version_dev="develop",
+        env="KIKUCHIPY_DATA_DIR",
+        registry=registry_hashes,
+        urls=registry_urls,
+        retry_if_failed=5,  # Five times at increasing intervals of 1 s
+    )
 
 
 # ----------------------- Experimental datasets ---------------------- #
@@ -82,6 +132,10 @@ def nickel_ebsd_large(
     """4125 EBSD patterns in a (55, 75) navigation shape of (60, 60)
     pixels from nickel, acquired on a NORDIF UF-1100 detector
     :cite:`aanes2019electron`.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------
@@ -135,6 +189,10 @@ def ni_gain(
     Ten datasets are available from the same region of interest,
     acquired with increasing gain on the detector, from no gain to
     maximum gain.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------
@@ -201,6 +259,10 @@ def ni_gain_calibration(
     The patterns are used to calibrate the detector-sample geometry
     of the datasets in :func:`~kikuchipy.data.ni_gain`. The calibration
     patterns were acquired with no gain on the detector.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------
@@ -273,6 +335,10 @@ def si_ebsd_moving_screen(
     They were acquired to test the moving-screen projection center
     estimation technique :cite:`hjelen1991electron`.
 
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
+
     Parameters
     ----------
     distance
@@ -334,6 +400,10 @@ def si_wafer(
     projection centers (PCs), e.g. the moving-screen PC estimation
     technique :cite:`hjelen1991electron`. The EBSD pattern in
     :func:`silicon_ebsd_moving_screen_in` is from this dataset.
+
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
 
     Parameters
     ----------
@@ -456,11 +526,15 @@ def ebsd_master_pattern(
     Master patterns were simulated with *EMsoft*
     :cite:`callahan2013dynamical`.
 
+    .. note::
+
+        Requires the optional :mod:`pooch` package to be installed.
+
     Parameters
     ----------
     phase
-        Name of available phase. Options are (see *Notes* for details):
-        ni, al, si, austenite, ferrite, steel_chi, steel_sigma.
+        Name of available phase. Options are listed in the *phase*
+        column in the table in *Notes*.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is
@@ -484,20 +558,26 @@ def ebsd_master_pattern(
 
     Notes
     -----
-    The master patterns are downloaded in HDF5 files (carrying a CC BY
-    4.0 license) from Zenodo.
+    The master patterns are downloaded in HDF5 files from Zenodo
+    (carrying a CC BY 4.0 license).
 
-    ===========  =========  =================  ============  ==============  ======================
-    phase        Name       Symbol             Energy [keV]  File size [GB]  Zenodo DOI
-    ===========  =========  =================  ============  ==============  ======================
-    ni           nickel     Ni                 5-20          0.3             10.5281/zenodo.7628443
-    al           aluminium  Al                 10-20         0.2             10.5281/zenodo.7628365
-    si           silicon    Si                 5-20          0.3             10.5281/zenodo.7498729
-    austenite    austenite  :math:`\gamma`-Fe  10-20         0.3             10.5281/zenodo.7628387
-    ferrite      ferrite    :math:`\alpha`-Fe  5-20          0.3             10.5281/zenodo.7628394
-    steel_chi    chi        Fe36Cr15Mo7        10-20         0.6             10.5281/zenodo.7628417
-    steel_sigma  sigma      FeCr               5-20          1.5             10.5281/zenodo.7628443
-    ===========  =========  =================  ============  ==============  ======================
+    ============  ============  =====================  ============  ==============  =======================
+    phase         Name          Symbol                 Energy [keV]  File size [GB]  Zenodo DOI
+    ============  ============  =====================  ============  ==============  =======================
+    ni            Nickel        Ni                     5-20          0.3             10.5281/zenodo.7498644
+    al            Aluminium     Al                     10-20         0.2             10.5281/zenodo.7628365
+    si            Silicon       Si                     5-20          0.3             10.5281/zenodo.7498729
+    austenite     Austenite     :math:`\gamma`-Fe      10-20         0.3             10.5281/zenodo.7628387
+    ferrite       Ferrite       :math:`\alpha`-Fe      5-20          0.3             10.5281/zenodo.7628394
+    steel_chi     Chi           Fe36Cr12Mo10           10-20         0.6             10.5281/zenodo.7628417
+    steel_sigma   Sigma         Fe-Cr-Mo               5-20          1.5             10.5281/zenodo.7628443
+    steel_sigma2  Sigma2        Fe-Cr-Mo               10-20         0.8             10.5281/zenodo.20376902
+    steel_r       R             Fe-Cr-Mo               10-20         3.0             10.5281/zenodo.20376827
+    steel_pi      Pi            Fe-Mo                  10-20         0.5             10.5281/zenodo.20376759
+    steel_cr2n    Cr2N          Cr2N                   10-20         0.5             10.5281/zenodo.20376533
+    al6mn         Al6Mn         Al6Mn                  10-20         0.5             10.5281/zenodo.20376067
+    alpha_almnsi  Alpha-AlMnSi  :math:`\alpha`-AlMnSi  10-20         1.1             10.5281/zenodo.20376378
+    ============  ============  =====================  ============  ==============  =======================
 
     Examples
     --------
@@ -518,6 +598,12 @@ def ebsd_master_pattern(
         "ferrite": "ferrite_mc_mp_20kv.h5",
         "steel_chi": "steel_chi_mc_mp_20kv.h5",
         "steel_sigma": "steel_sigma_mc_mp_20kv.h5",
+        "steel_sigma2": "steel_sigma2_mc_mp_20kv.h5",
+        "steel_r": "r_mc_mp_20kv.h5",
+        "steel_pi": "pi_mc_mp_20kv.h5",
+        "steel_cr2n": "cr2n_mc_mp_20kv.h5",
+        "al6mn": "al6mn_mc_mp_20kv.h5",
+        "alpha_almnsi": "alpha_almnsi_mc_mp_20kv.h5",
     }
 
     dset = Dataset("ebsd_master_pattern/" + datasets[phase.lower()])
@@ -529,7 +615,7 @@ def ebsd_master_pattern(
 class Dataset:
     file_relpath: Path
     file_package_path: Path
-    file_cache_path: Path
+    file_cache_path: Path | None
     expected_md5_hash: str = ""
     collection_name: str | None = None
 
@@ -544,7 +630,12 @@ class Dataset:
 
         file_relpath = "data" / file_relpath
         self.file_relpath = file_relpath
-        self.file_cache_path = Path(marshall.path) / self.file_relpath
+
+        try:
+            file_cache_path = Path(get_fetching_pooch().path) / self.file_relpath
+        except ImportError:
+            file_cache_path = None
+        self.file_cache_path = file_cache_path
 
         self.expected_md5_hash = registry_hashes[self.file_relpath_str]
 
@@ -564,27 +655,34 @@ class Dataset:
 
     @property
     def is_in_cache(self) -> bool:
-        return self.file_cache_path.exists()
+        return self.file_cache_path is not None and self.file_cache_path.exists()
 
     @property
     def file_directory(self) -> Path:
         return Path(os.path.join(*self.file_relpath.parts[1:-1]))
 
     @property
-    def file_path(self) -> Path:
+    def file_path(self) -> Path | None:
         if self.is_in_package:
             return self.file_package_path
         else:
             return self.file_cache_path
 
     @property
-    def file_path_str(self) -> str:
-        return self.file_path.as_posix()
+    def file_path_str(self) -> str | None:
+        if self.file_path is not None:
+            return self.file_path.as_posix()
+        else:
+            return
 
     @property
     def md5_hash(self) -> str | None:
-        if self.file_path.exists():
-            return pooch.file_hash(self.file_path_str, alg="md5")
+        if self.file_path is not None and self.file_path.exists():
+            h = hashlib.md5()
+            with open(self.file_path.as_posix(), "rb") as f:
+                for chunk in iter(lambda: f.read(65536), b""):
+                    h.update(chunk)
+            return h.hexdigest()
         else:
             return
 
@@ -602,15 +700,19 @@ class Dataset:
             return
 
     def fetch_file_path_from_collection(
-        self, downloader: pooch.HTTPDownloader
-    ) -> file_path:
+        self, downloader: "pooch.HTTPDownloader"
+    ) -> str:
+        verify_dependency_or_raise("pooch", "Downloading data from external sources")
+        import pooch
+
+        marshall = get_fetching_pooch()
         file_paths = marshall.fetch(
-            "data/" + self.collection_name,
+            "data/" + str(self.collection_name),
             downloader=downloader,
             processor=pooch.Unzip(extract_dir=self.file_directory),
         )
 
-        os.remove(Path(marshall.path) / "data" / self.collection_name)
+        os.remove(Path(marshall.path) / "data" / str(self.collection_name))
 
         # Ensure the file is in the collection
         desired_name = self.file_relpath.name
@@ -630,16 +732,10 @@ class Dataset:
     def fetch_file_path(
         self, allow_download: bool = False, show_progressbar: bool | None = None
     ) -> str:
-        if show_progressbar is None:
-            show_progressbar = hs.preferences.General.show_progressbar
-        downloader = pooch.HTTPDownloader(
-            progressbar=show_progressbar, headers={"User-Agent": "agent"}
-        )
-
         if self.is_in_package:
             if self.has_correct_hash:
                 # Bypass pooch since the file is not in the cache
-                return self.file_path_str
+                return self.file_path.as_posix()
             else:
                 raise AttributeError(
                     f"File {self.file_path_str} has incorrect MD5 hash {self.md5_hash}"
@@ -647,7 +743,20 @@ class Dataset:
                     " is surprising. Please report it to the developers at "
                     "https://github.com/pyxem/kikuchipy/issues/new."
                 )
-        elif self.is_in_cache:
+
+        verify_dependency_or_raise("pooch", "Downloading data from external sources")
+        import pooch
+
+        marshall = get_fetching_pooch()
+
+        if show_progressbar is None:
+            show_progressbar = hs.preferences.General.show_progressbar
+
+        downloader = pooch.HTTPDownloader(
+            progressbar=show_progressbar, headers={"User-Agent": "agent"}
+        )
+
+        if self.is_in_cache:
             if self.has_correct_hash:
                 file_path = self.file_relpath_str
             elif allow_download:

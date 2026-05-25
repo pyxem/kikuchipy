@@ -98,45 +98,46 @@ Dependencies
 kikuchipy builds on the great work and effort of many people.
 This is a list of core package dependencies:
 
-* :doc:`dask <dask:index>`: Out-of-memory processing of data larger than RAM
-* :doc:`diffpy.structure <diffpy.structure:index>`: Handling of crystal structures
+* :doc:`dask <dask:index>`: Out-of-memory processing of data larger than RAM.
+* :doc:`diffpy.structure <diffpy.structure:index>`: Handling of crystal structures.
 * :doc:`diffsims <diffsims:index>`: Handling of reciprocal lattice vectors and structure
-  factors
-* :doc:`hyperspy <hyperspy:index>`: Multi-dimensional data handling (EBSD class etc.)
-* :doc:`h5py <h5py:index>`: Read/write of HDF5 files
-* :doc:`imageio <imageio:index>`: Read image formats
-* `lazy_loader`_: Lazy loading of functions, classes, and modules
-* :doc:`matplotlib <matplotlib:index>`: Visualization
-* :doc:`numba <numba:index>`: CPU acceleration via just-in-time compilation
-* :doc:`numpy <numpy:index>`: Handling of N-dimensional arrays
-* :doc:`packaging <packaging:index>`: Version comparison
-* :doc:`orix <orix:index>`: Handling of rotations and vectors using crystal symmetry
-* :doc:`pooch <pooch:api/index>`: Downloading and caching of datasets
-* `pyyaml <https://pyyaml.org/>`__: Parcing of YAML files
+  factors.
+* :doc:`hyperspy <hyperspy:index>`: Multi-dimensional data handling (EBSD class etc.).
+* :doc:`h5py <h5py:index>`: Read/write of HDF5 files.
+* :doc:`imageio <imageio:index>`: Read image formats.
+* `lazy_loader`_: Lazy loading of functions, classes, and modules.
+* :doc:`matplotlib <matplotlib:index>`: Visualization.
+* :doc:`numba <numba:index>`: CPU acceleration via just-in-time compilation.
+* :doc:`numpy <numpy:index>`: Handling of N-dimensional arrays.
+* :doc:`packaging <packaging:index>`: Version comparison.
+* :doc:`orix <orix:index>`: Handling of rotations and vectors using crystal symmetry.
+* `pyyaml <https://pyyaml.org/>`__: Parsing of YAML files.
 * :doc:`scikit-image <skimage:index>`: Image processing like adaptive histogram
-  equalization
-* :doc:`rosettasciio <rosettasciio:index>`: Read/write of some file formats
-* `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis
-* :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more
-* `tqdm <https://tqdm.github.io/>`__: Progressbars
+  equalization.
+* :doc:`rosettasciio <rosettasciio:index>`: Read/write of some file formats.
+* `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis.
+* :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more.
+* `tqdm <https://tqdm.github.io/>`__: Progressbars.
 * :doc:`typing-extensions <typing-extensions:index>`: Type hints only available from
-  Python >= 3.11
+  Python >= 3.11.
 
 .. _lazy_loader: https://scientific-python.org/specs/spec-0001/#lazy_loader
 
 Some functionality requires optional dependencies:
 
 * :doc:`ipywidgets <ipywidgets:index>`: Interactive widgets in Jupyter notebooks.
-* :doc:`IPython <ipython:index>`: Interactive widgets in Jupyter notebooks.
-* :doc:`psygnal <psygnal:index>`: Trigger actions based on state changes.
-* :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing.
-  We recommend to install with optional GPU support via :doc:`pyopencl<pyopencl:index>`
-  with ``pip install "pyebsdindex[gpu]""`` or
-  ``conda install pyebsdindex -c conda-forge``.
+* `IPython <https://ipython.readthedocs.io>`__: Interactive widgets in Jupyter
+  notebooks.
 * `nlopt <https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/>`__: Extra
   optimization algorithms used in EBSD orientation and/or projection center refinement.
   Installation from conda ``conda install nlopt -c conda-forge`` is recommended.
-* :doc:`pyvista<pyvista:index>`: 3D plotting of master patterns.
+* :doc:`pooch <pooch:api/index>`: Downloading and caching of datasets.
+* `psygnal <https://psygnal.readthedocs.io>`__: Trigger actions based on state changes.
+* :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing.
+  We recommend to install with optional GPU support via :doc:`pyopencl<pyopencl:index>`
+  with ``pip install "pyebsdindex[gpu]"`` or
+  ``conda install pyebsdindex -c conda-forge``.
+* :doc:`pyvista <pyvista:index>`: 3D plotting of master patterns.
 
 Note that installing with the optional dependencies, ``pip install "kikuchipy[all]"``,
 will not install ``pyopencl``, which is required for GPU support in ``pyebsdindex``.

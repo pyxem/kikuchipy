@@ -53,7 +53,6 @@ dependencies = [
     "numpy            >= 1.23.0",
     "orix             >= 0.12.1",
     "packaging",
-    "pooch            >= 1.3.0",
     "pyyaml",
     "rosettasciio     >= 0.3.0",
     "scikit-image     >= 0.16.2",
@@ -69,6 +68,7 @@ all = [
     "ipywidgets",
     "IPython",
     "nlopt",
+    "pooch >= 1.3.0",
     "psygnal",
     "pyebsdindex >= 0.3.9.2",
     "pyvista",
@@ -95,6 +95,7 @@ doc = [
 ]
 tests = [
     "numpydoc",
+    "pooch",
     "pytest                       >= 5.4",
     "pytest-benchmark",
     "pytest-rerunfailures",

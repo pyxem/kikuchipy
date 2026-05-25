@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Example datasets for use when testing functionality.
 
@@ -22,13 +24,19 @@ downloaded from the web. For more test datasets, see
 :doc:`/user/open_datasets`.
 
 Datasets are placed in a local cache, in the location returned from
-``pooch.os_cache("kikuchipy")`` by default. The location can be
-overwritten with a global ``KIKUCHIPY_DATA_DIR`` environment variable.
+``pooch.os_cache("kikuchipy")`` by default (requires the optional
+:mod:`pooch` package).
+The location can be overwritten with a global ``KIKUCHIPY_DATA_DIR``
+environment variable.
 
 With every new version of kikuchipy, a new directory of datasets with
 the version name is added to the cache directory. Any old directories
 are not deleted automatically, and should then be deleted manually if
 desired.
+
+The cache directory can be cleared of all files by calling
+:func:`~kikuchipy.data.clear_cache` (requires the optional :mod:`pooch`
+package).
 """
 
 import lazy_loader

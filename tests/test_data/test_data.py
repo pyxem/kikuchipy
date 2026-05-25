@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.data._data import Dataset, marshall
+from kikuchipy.data._data import Dataset, get_fetching_pooch
 
 
 class TestData:
@@ -264,10 +264,26 @@ class TestData:
             "ebsd_master_pattern/ferrite_mc_mp_20kv.h5",
             "ebsd_master_pattern/steel_chi_mc_mp_20kv.h5",
             "ebsd_master_pattern/steel_sigma_mc_mp_20kv.h5",
+            "ebsd_master_pattern/steel_sigma2_mc_mp_20kv.h5",
+            "ebsd_master_pattern/r_mc_mp_20kv.h5",
+            "ebsd_master_pattern/pi_mc_mp_20kv.h5",
+            "ebsd_master_pattern/cr2n_mc_mp_20kv.h5",
+            "ebsd_master_pattern/al6mn_mc_mp_20kv.h5",
+            "ebsd_master_pattern/alpha_almnsi_mc_mp_20kv.h5",
         ],
     )
     def test_dataset_availability(self, dataset):
         """Ping registry URLs of remote repositories (GitHub and Zenodo)
         to check dataset availability.
         """
+        marshall = get_fetching_pooch()
         assert marshall.is_available(f"data/{dataset}")
+
+    def test_clear_cache(self, tmp_path, monkeypatch, capsys):
+        dummy_file = tmp_path / "dummy_file"
+        dummy_file.touch()
+        monkeypatch.setenv("KIKUCHIPY_DATA_DIR", str(tmp_path))
+        kp.data.clear_cache()
+        assert not dummy_file.exists()
+        captured = capsys.readouterr()
+        assert "dummy_file" in captured.out
