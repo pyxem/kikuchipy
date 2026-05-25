@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.data._data import Dataset, marshall
+from kikuchipy.data._data import Dataset, get_fetching_pooch
 
 
 class TestData:
@@ -276,6 +276,7 @@ class TestData:
         """Ping registry URLs of remote repositories (GitHub and Zenodo)
         to check dataset availability.
         """
+        marshall = get_fetching_pooch()
         assert marshall.is_available(f"data/{dataset}")
 
     def test_clear_cache(self, tmp_path, monkeypatch, capsys):

@@ -45,7 +45,7 @@ import pytest
 
 import kikuchipy as kp
 from kikuchipy._constants import dependency_version
-from kikuchipy.data._data import marshall
+from kikuchipy.data._data import get_fetching_pooch
 from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_file,
     create_dummy_bruker_h5ebsd_nonrectangular_roi_file,
@@ -410,6 +410,7 @@ def kikuchipy_h5ebsd_path() -> Generator[Path, None, None]:
 
 @pytest.fixture
 def nickel_ebsd_large_h5ebsd_renamed() -> Generator[Path, None, None]:
+    marshall = get_fetching_pooch()
     f1 = Path(marshall.path) / "data/nickel_ebsd_large/patterns.h5"
     f2 = f1.rename(f1.with_suffix(".bak"))
     yield f2

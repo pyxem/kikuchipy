@@ -35,6 +35,7 @@ deps_for_version_check = [
     "IPython",
     "ipywidgets",
     "nlopt",
+    "pooch",
     "psygnal",
     "pyvista",
     "pyebsdindex",

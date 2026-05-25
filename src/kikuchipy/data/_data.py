@@ -17,32 +17,27 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from functools import cache
+import hashlib
 import logging
 import os
 from pathlib import Path
 import shutil
+from typing import TYPE_CHECKING
 
 import hyperspy.api as hs
-import pooch
 
 from kikuchipy import __version__
+from kikuchipy._constants import verify_dependency_or_raise
 from kikuchipy.data._registry import registry_hashes, registry_urls
 from kikuchipy.io._io import load
 from kikuchipy.signals.ebsd import EBSD
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
-_logger = logging.getLogger(__name__)
+if TYPE_CHECKING:  # pragma: no cover
+    import pooch
 
-marshall = pooch.create(
-    path=pooch.os_cache("kikuchipy"),
-    base_url="",
-    version=__version__.replace(".dev", "+"),
-    version_dev="develop",
-    env="KIKUCHIPY_DATA_DIR",
-    registry=registry_hashes,
-    urls=registry_urls,
-    retry_if_failed=5,  # Five times at increasing intervals of 1 s
-)
+_logger = logging.getLogger(__name__)
 
 
 def _clear_directory(path: Path) -> None:
@@ -62,12 +57,35 @@ def clear_cache() -> None:
 
     This deletes all directories and files in the kikuchipy data cache
     directory, located at ``pooch.os_cache("kikuchipy")``.
+
+    Requires the optional :doc:`pooch <pooch:api/index>` package.
     """
+    verify_dependency_or_raise("pooch", "Clearing the cache")
+    import pooch
+
     cache_dir = Path(os.environ.get("KIKUCHIPY_DATA_DIR", pooch.os_cache("kikuchipy")))
     if cache_dir.exists():
         _clear_directory(cache_dir)
     else:
         _logger.debug("Data cache directory does not exist")
+
+
+@cache
+def get_fetching_pooch() -> "pooch.Pooch":
+    verify_dependency_or_raise("pooch", "Downloading data from external sources")
+
+    import pooch
+
+    return pooch.create(
+        path=pooch.os_cache("kikuchipy"),
+        base_url="",
+        version=__version__.replace(".dev", "+"),
+        version_dev="develop",
+        env="KIKUCHIPY_DATA_DIR",
+        registry=registry_hashes,
+        urls=registry_urls,
+        retry_if_failed=5,  # Five times at increasing intervals of 1 s
+    )
 
 
 # ----------------------- Experimental datasets ---------------------- #
@@ -571,7 +589,7 @@ def ebsd_master_pattern(
 class Dataset:
     file_relpath: Path
     file_package_path: Path
-    file_cache_path: Path
+    file_cache_path: Path | None
     expected_md5_hash: str = ""
     collection_name: str | None = None
 
@@ -586,7 +604,12 @@ class Dataset:
 
         file_relpath = "data" / file_relpath
         self.file_relpath = file_relpath
-        self.file_cache_path = Path(marshall.path) / self.file_relpath
+
+        try:
+            file_cache_path = Path(get_fetching_pooch().path) / self.file_relpath
+        except ImportError:
+            file_cache_path = None
+        self.file_cache_path = file_cache_path
 
         self.expected_md5_hash = registry_hashes[self.file_relpath_str]
 
@@ -606,27 +629,34 @@ class Dataset:
 
     @property
     def is_in_cache(self) -> bool:
-        return self.file_cache_path.exists()
+        return self.file_cache_path is not None and self.file_cache_path.exists()
 
     @property
     def file_directory(self) -> Path:
         return Path(os.path.join(*self.file_relpath.parts[1:-1]))
 
     @property
-    def file_path(self) -> Path:
+    def file_path(self) -> Path | None:
         if self.is_in_package:
             return self.file_package_path
         else:
             return self.file_cache_path
 
     @property
-    def file_path_str(self) -> str:
-        return self.file_path.as_posix()
+    def file_path_str(self) -> str | None:
+        if self.file_path is not None:
+            return self.file_path.as_posix()
+        else:
+            return
 
     @property
     def md5_hash(self) -> str | None:
-        if self.file_path.exists():
-            return pooch.file_hash(self.file_path_str, alg="md5")
+        if self.file_path is not None and self.file_path.exists():
+            h = hashlib.md5()
+            with open(self.file_path.as_posix(), "rb") as f:
+                for chunk in iter(lambda: f.read(65536), b""):
+                    h.update(chunk)
+            return h.hexdigest()
         else:
             return
 
@@ -643,14 +673,20 @@ class Dataset:
         else:
             return
 
-    def fetch_file_path_from_collection(self, downloader: pooch.HTTPDownloader) -> str:
+    def fetch_file_path_from_collection(
+        self, downloader: "pooch.HTTPDownloader"
+    ) -> str:
+        verify_dependency_or_raise("pooch", "Downloading data from external sources")
+        import pooch
+
+        marshall = get_fetching_pooch()
         file_paths = marshall.fetch(
-            "data/" + self.collection_name,
+            "data/" + str(self.collection_name),
             downloader=downloader,
             processor=pooch.Unzip(extract_dir=self.file_directory),
         )
 
-        os.remove(Path(marshall.path) / "data" / self.collection_name)
+        os.remove(Path(marshall.path) / "data" / str(self.collection_name))
 
         # Ensure the file is in the collection
         desired_name = self.file_relpath.name
@@ -670,16 +706,10 @@ class Dataset:
     def fetch_file_path(
         self, allow_download: bool = False, show_progressbar: bool | None = None
     ) -> str:
-        if show_progressbar is None:
-            show_progressbar = hs.preferences.General.show_progressbar
-        downloader = pooch.HTTPDownloader(
-            progressbar=show_progressbar, headers={"User-Agent": "agent"}
-        )
-
         if self.is_in_package:
             if self.has_correct_hash:
                 # Bypass pooch since the file is not in the cache
-                return self.file_path_str
+                return self.file_path.as_posix()
             else:
                 raise AttributeError(
                     f"File {self.file_path_str} has incorrect MD5 hash {self.md5_hash}"
@@ -687,7 +717,20 @@ class Dataset:
                     " is surprising. Please report it to the developers at "
                     "https://github.com/pyxem/kikuchipy/issues/new."
                 )
-        elif self.is_in_cache:
+
+        verify_dependency_or_raise("pooch", "Downloading data from external sources")
+        import pooch
+
+        marshall = get_fetching_pooch()
+
+        if show_progressbar is None:
+            show_progressbar = hs.preferences.General.show_progressbar
+
+        downloader = pooch.HTTPDownloader(
+            progressbar=show_progressbar, headers={"User-Agent": "agent"}
+        )
+
+        if self.is_in_cache:
             if self.has_correct_hash:
                 file_path = self.file_relpath_str
             elif allow_download:
