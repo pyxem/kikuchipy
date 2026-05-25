@@ -126,17 +126,17 @@ This is a list of core package dependencies:
 Some functionality requires optional dependencies:
 
 * :doc:`ipywidgets <ipywidgets:index>`: Interactive widgets in Jupyter notebooks.
-* :doc:`IPython <ipython:index>`: Interactive widgets in Jupyter notebooks.
-  We recommend to install with optional GPU support via :doc:`pyopencl<pyopencl:index>`
-  with ``pip install "pyebsdindex[gpu]""`` or
-  ``conda install pyebsdindex -c conda-forge``.
+* `IPython <https://ipython.readthedocs.io>`__: Interactive widgets in Jupyter
+  notebooks.
 * `nlopt <https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/>`__: Extra
   optimization algorithms used in EBSD orientation and/or projection center refinement.
   Installation from conda ``conda install nlopt -c conda-forge`` is recommended.
 * :doc:`pooch <pooch:api/index>`: Downloading and caching of datasets.
-* :doc:`psygnal <https://psygnal.readthedocs.io>`: Trigger actions based on state
-  changes.
+* `psygnal <https://psygnal.readthedocs.io>`__: Trigger actions based on state changes.
 * :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing.
+  We recommend to install with optional GPU support via :doc:`pyopencl<pyopencl:index>`
+  with ``pip install "pyebsdindex[gpu]"`` or
+  ``conda install pyebsdindex -c conda-forge``.
 * :doc:`pyvista <pyvista:index>`: 3D plotting of master patterns.
 
 Note that installing with the optional dependencies, ``pip install "kikuchipy[all]"``,
