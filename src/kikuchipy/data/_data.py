@@ -56,7 +56,8 @@ def clear_cache() -> None:
     """Clear the kikuchipy data cache directory.
 
     This deletes all directories and files in the kikuchipy data cache
-    directory, located at ``pooch.os_cache("kikuchipy")``.
+    directory, located at ``pooch.os_cache("kikuchipy")`` or the
+    environment variable ``KIKUCHIPY_DATA_DIR`` if set.
 
     .. note::
 
@@ -532,9 +533,8 @@ def ebsd_master_pattern(
     Parameters
     ----------
     phase
-        Name of available phase. Options are (see *Notes* for details):
-        ni, al, si, austenite, ferrite, steel_chi, steel_sigma,
-        steel_sigma2.
+        Name of available phase. Options are listed in the *phase*
+        column in the table in *Notes*.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is
