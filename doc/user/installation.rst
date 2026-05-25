@@ -134,9 +134,10 @@ Some functionality requires optional dependencies:
   optimization algorithms used in EBSD orientation and/or projection center refinement.
   Installation from conda ``conda install nlopt -c conda-forge`` is recommended.
 * :doc:`pooch <pooch:api/index>`: Downloading and caching of datasets.
-* :doc:`psygnal <psygnal:index>`: Trigger actions based on state changes.
+* :doc:`psygnal <https://psygnal.readthedocs.io>`: Trigger actions based on state
+  changes.
 * :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing.
-* :doc:`pyvista<pyvista:index>`: 3D plotting of master patterns.
+* :doc:`pyvista <pyvista:index>`: 3D plotting of master patterns.
 
 Note that installing with the optional dependencies, ``pip install "kikuchipy[all]"``,
 will not install ``pyopencl``, which is required for GPU support in ``pyebsdindex``.
