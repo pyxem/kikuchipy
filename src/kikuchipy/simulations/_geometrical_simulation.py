@@ -58,7 +58,7 @@ def _bands_and_zone_axes_kernel(
     nb_bands = 0
     nb_za = 0
 
-    # Bands
+    # {hkl} row vectors from reciprocal lattice -> detector
     for i in range(n_hkl):
         v_h = hkl[i, 0]
         v_k = hkl[i, 1]
@@ -84,7 +84,7 @@ def _bands_and_zone_axes_kernel(
         band_buf[nb_bands, 3] = max_r * np.sin(a2)
         nb_bands += 1
 
-    # Zone axes
+    # <uvw> row vectors from direct lattice -> detector
     for i in range(n_uvw):
         u0 = uvw[i, 0]
         u1 = uvw[i, 1]
@@ -103,69 +103,6 @@ def _bands_and_zone_axes_kernel(
         nb_za += 1
 
     return band_buf[:nb_bands], za_buf[:nb_za]
-
-
-def _get_geometrical_bands_and_zone_axes_gnomonic(
-    hkl: np.ndarray,
-    uvw: np.ndarray,
-    base: np.ndarray,
-    recbase: np.ndarray,
-    rotation_matrix: np.ndarray,
-    u_s: np.ndarray,
-    max_r_gnomonic: float = 10.0,
-) -> tuple[np.ndarray, np.ndarray]:
-    r"""Return gnomonic coordinates of visible Kikuchi bands
-    :math:`{hkl}` and zone axes :math:`\left<uvw\right>` for a single
-    crystal orientation.
-
-    Parameters
-    ----------
-    hkl
-        Miller indices of the reflectors, shape (n, 3).
-    uvw
-        Zone axis indices, shape (m, 3). These should be obtained from
-        the cross products of *hkl*.
-    base
-        Direct lattice basis (3, 3), from
-        ``phase.structure.lattice.base``.
-    recbase
-        Reciprocal lattice basis (3, 3), from
-        ``phase.structure.lattice.recbase``.
-    rotation_matrix
-        Crystal orientation rotation matrix (3, 3), from
-        ``rotation.to_matrix().squeeze()``.
-    u_s
-        Detector-to-sample rotation matrix (3, 3), from
-        ``(~detector.sample_to_detector).to_matrix().squeeze()``.
-    max_r_gnomonic
-        Maximum gnomonic radius. Default is 10.0.
-
-    Returns
-    -------
-    band_coords
-        Gnomonic plane-trace endpoints (x0, y0, x1, y1) of visible
-        Kikuchi bands, shape (k, 4).
-    zone_axes_coords
-        Gnomonic (x, y) positions of visible zone axes, shape (l, 2).
-    """
-    u_os = rotation_matrix @ u_s
-
-    # Reciprocal lattice -> crystal -> sample -> detector
-    u_kstar = recbase.T @ u_os
-
-    # Direct lattice -> crystal -> sample -> detector
-    u_k = base @ u_os
-
-    u_kstar = np.ascontiguousarray(u_kstar, dtype=np.float64)
-    u_k = np.ascontiguousarray(u_k, dtype=np.float64)
-    hkl = np.ascontiguousarray(hkl, dtype=np.float64)
-    uvw = np.ascontiguousarray(uvw, dtype=np.float64)
-
-    band_coords, zone_axes_coords = _bands_and_zone_axes_kernel(
-        hkl, uvw, u_kstar, u_k, max_r_gnomonic
-    )
-
-    return band_coords, zone_axes_coords
 
 
 def _get_zone_axes_from_hkl(hkl: np.ndarray) -> np.ndarray:
@@ -229,14 +166,39 @@ def _get_geometrical_simulation(
         (x, y) positions of visible zone axes in the requested
         coordinate system, shape (l, 2).
     """
-    # Setup
+    # Setup row vectors (n, 3) and row matrices (3, 3)
     lattice: dst.Lattice = reflectors.phase.structure.lattice
-    hkl = reflectors.hkl.astype(float).reshape(-1, 3)
     base = np.asarray(lattice.base).reshape(3, 3)
-    recbase = np.asarray(lattice.recbase).reshape(3, 3)
-    rotation_matrix = rotation.to_matrix().squeeze()
-    u_s = (~detector.sample_to_detector).to_matrix().squeeze()
+    recbase = np.asarray(lattice.recbase).reshape(3, 3).T
+    hkl = np.ascontiguousarray(reflectors.hkl.reshape(-1, 3), dtype=np.float64)
+    u_o = rotation.to_matrix().squeeze()  # Sample -> crystal
+    u_s = detector.sample_to_detector.to_matrix().squeeze().T
+
+    # Crystal -> sample -> detector
+    u_os = u_o @ u_s
+
+    # Reciprocal lattice -> crystal -> sample -> detector
+    u_kstar = recbase @ u_os
+
+    # Direct lattice -> crystal -> sample -> detector
+    u_k = base @ u_os
+
+    u_kstar = np.ascontiguousarray(u_kstar, dtype=np.float64)
+    u_k = np.ascontiguousarray(u_k, dtype=np.float64)
+
+    if uvw is None:
+        uvw = _get_zone_axes_from_hkl(hkl)
+    uvw = np.ascontiguousarray(uvw, dtype=np.float64)
+
     max_r_gnomonic = np.float64(np.max(detector.r_max))
+
+    band_gnomonic, za_gnomonic = _bands_and_zone_axes_kernel(
+        hkl=hkl,
+        uvw=uvw,
+        u_kstar=u_kstar,
+        u_k=u_k,
+        max_r=max_r_gnomonic,
+    )
 
     # PC components and detector scales (needed for both coordinate
     # formats to filter zone axes by rectangular detector bounds)
@@ -251,19 +213,6 @@ def _get_geometrical_simulation(
     x_range[1] += x_scale
     y_range[0] -= y_scale
     y_range[1] += y_scale
-
-    if uvw is None:
-        uvw = _get_zone_axes_from_hkl(hkl)
-
-    band_gnomonic, za_gnomonic = _get_geometrical_bands_and_zone_axes_gnomonic(
-        hkl=hkl,
-        uvw=uvw,
-        base=base,
-        recbase=recbase,
-        rotation_matrix=rotation_matrix,
-        u_s=u_s,
-        max_r_gnomonic=max_r_gnomonic,
-    )
 
     if coords_fmt == "gnomonic":
         if za_gnomonic.shape[0] == 0:
