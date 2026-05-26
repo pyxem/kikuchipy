@@ -135,8 +135,8 @@ def _get_geometrical_bands_and_zone_axes_gnomonic(
         Crystal orientation rotation matrix (3, 3), from
         ``rotation.to_matrix().squeeze()``.
     u_s
-        Sample-to-detector rotation matrix (3, 3), from
-        ``detector.sample_to_detector.to_matrix().squeeze()``.
+        Detector-to-sample rotation matrix (3, 3), from
+        ``(~detector.sample_to_detector).to_matrix().squeeze()``.
     max_r_gnomonic
         Maximum gnomonic radius. Default is 10.0.
 
@@ -206,9 +206,9 @@ def _get_geometrical_simulation(
     rotation
         Single crystal orientation.
     uvw
-        Pre-computed zone axis directions, shape (m, 3). If not given
-        (default), they are derived as pairwise cross products of the
-        *reflectors* hkl indices.
+        Pre-computed zone axis directions as row vectors, shape (m, 3).
+        If not given (default), they are derived as pairwise cross
+        products of the *reflectors* hkl indices.
 
         Pass a pre-computed array when calling this function repeatedly
         with the same *reflectors* to avoid redundant work.
@@ -235,7 +235,7 @@ def _get_geometrical_simulation(
     base = np.asarray(lattice.base).reshape(3, 3)
     recbase = np.asarray(lattice.recbase).reshape(3, 3)
     rotation_matrix = rotation.to_matrix().squeeze()
-    u_s = detector.sample_to_detector.to_matrix().squeeze()
+    u_s = (~detector.sample_to_detector).to_matrix().squeeze()
     max_r_gnomonic = np.float64(np.max(detector.r_max))
 
     # PC components and detector scales (needed for both coordinate
