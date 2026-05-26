@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
 import orix.quaternion as oqu
+import orix.vector as ove
 import pytest
 
 import kikuchipy as kp
@@ -257,9 +258,9 @@ class TestEBSDDetector:
     @pytest.mark.parametrize(
         "tilt, azimuthal, twist, sample_tilt, expected_rotation",
         [
-            (0, 0, 0, 90.0, [0.7071, 0.0, 0.0, 0.7071]),
-            (0, 0, 0, 70.0, [0.6964, 0.1228, 0.1228, 0.6964]),
-            (8.3, 4.7, -1.02, 70.0, [0.6861, 0.2021, 0.1428, 0.6841]),
+            (0, 0, 0, 90.0, [0.7071, 0.0, 0.0, -0.7071]),
+            (0, 0, 0, 70.0, [0.6964, -0.1228, -0.1228, -0.6964]),
+            (8.3, 4.7, -1.02, 70.0, [0.6861, -0.2021, -0.1428, -0.6841]),
         ],
     )
     def test_sample_to_detector(
@@ -272,6 +273,20 @@ class TestEBSDDetector:
         assert isinstance(rot_sample_to_det, oqu.Rotation)
         assert np.allclose(rot_sample_to_det.data, expected_rotation, atol=1e-4)
 
+    def test_sample_to_detector_numpy_comparison(self):
+        det = kp.detectors.EBSDDetector()
+        v = ove.Vector3d.random(4)
+
+        R_s2d = det.sample_to_detector
+        om_s2d = R_s2d.to_matrix().squeeze()
+        assert np.allclose((R_s2d * v).data, (om_s2d @ v.data.T).T, atol=1e-4)
+        assert np.allclose((R_s2d * v).data, np.dot(om_s2d, v.data.T).T, atol=1e-4)
+
+        R_d2s = ~R_s2d
+        om_d2s = R_d2s.to_matrix().squeeze()
+        assert np.allclose((R_d2s * v).data, (om_d2s @ v.data.T).T, atol=1e-4)
+        assert np.allclose((R_d2s * v).data, np.dot(om_d2s, v.data.T).T, atol=1e-4)
+
     @pytest.mark.parametrize("sample_tilt", [0.0, 70.0])
     def test_sample_to_detector_azimuthal_about_detector_y(self, sample_tilt):
         det = kp.detectors.EBSDDetector(
@@ -280,11 +295,11 @@ class TestEBSDDetector:
             azimuthal=0.0,
             twist=0.0,
         )
-        y0 = (~det.sample_to_detector).to_matrix().squeeze()[1]
+        y0 = det.sample_to_detector.to_matrix().squeeze()[1]
 
         for azimuthal in [20.0, -40.0]:
             det.azimuthal = azimuthal
-            y = (~det.sample_to_detector).to_matrix().squeeze()[1]
+            y = det.sample_to_detector.to_matrix().squeeze()[1]
             assert np.allclose(y, y0, atol=1e-8)
 
     @pytest.mark.parametrize(
