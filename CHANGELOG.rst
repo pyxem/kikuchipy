@@ -13,7 +13,6 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
-
 Unreleased
 ==========
 
@@ -36,6 +35,19 @@ Fixed
 
 Deprecated
 ----------
+
+
+0.12.1 (2026-05-30)
+===================
+
+Fixed
+-----
+- Invert the rotation ``EBSDDetector.sample_to_detector`` so that it transforms vectors
+  in the correct sense, i.e. represent vectors in the sample reference frame in the
+  detector reference frame: ``v_d = R_s2d * v_s``.
+  (`#797 <https://github.com/pyxem/kikuchipy/pull/797>`_)
+- Disallow PyEBSDIndex 0.3.10 due to bug in gnomonic correction for EMsoft PC.
+  (`#797 <https://github.com/pyxem/kikuchipy/pull/797>`_)
 
 
 0.12.0 (2026-05-24)

@@ -97,11 +97,16 @@ PC_CONVENTIONS_ALIASES: dict[PC_CONVENTIONS_SINGLE, list[PC_CONVENTIONS]] = {
     fastmath=True,
     nogil=True,
 )
-def _detector_to_sample_intrinsic_matrix(
+def _sample_to_detector_matrix(
     sigma: float, theta: float, omega: float, gamma: float
 ) -> np.ndarray:
-    """Return detector axes in sample frame from intrinsic rotations."""
-    # Rows are detector (X_d, Y_d, Z_d) in sample coordinates.
+    """Return the passive sample-to-detector rotation matrix.
+
+    Rows of the returned matrix are the detector basis vectors
+    (X_d, Y_d, Z_d) expressed in sample-frame coordinates, so that
+    ``M @ v_sample = v_det`` for column vectors.
+    """
+    # Rows are detector (X_d, Y_d, Z_d) in sample coordinates
     basis = np.array(
         [
             [0, 1, 0],
@@ -829,29 +834,15 @@ class EBSDDetector:
 
     @property
     def sample_to_detector(self) -> oqu.Rotation:
-        """Return a rotation that transforms vectors in the sample
-        reference frame to the detector reference frame.
-
-        Examples
-        --------
-        Get both transformations as rotations and orientation matrices
-
-        >>> import kikuchipy as kp
-        >>> det = kp.detectors.EBSDDetector()
-        >>> R_s2d = det.sample_to_detector
-        >>> om_s2d = R_s2d.to_matrix().squeeze()
-        >>> R_d2s = ~R_s2d
-        >>> om_d2s = om_s2d.T
+        """Return a rotation that transform vectors given in the sample
+        reference frame in the detector reference frame.
         """
         sigma = np.deg2rad(self.sample_tilt)
         theta = np.deg2rad(self.tilt)
         omega = np.deg2rad(self.azimuthal)
         gamma = np.deg2rad(self.twist)
-        detector_to_sample = _detector_to_sample_intrinsic_matrix(
-            sigma, theta, omega, gamma
-        )
-        sample_to_detector = oqu.Rotation.from_matrix(detector_to_sample.T)
-        return sample_to_detector
+        m = _sample_to_detector_matrix(sigma, theta, omega, gamma)
+        return oqu.Rotation.from_matrix(m)
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:

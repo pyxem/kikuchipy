@@ -98,54 +98,52 @@ def _refine_orientation_solver_scipy(
 ):
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the orientation
-    (Rodrigues-Frank vector) used in the projection.
+    (Euler) used in the projection.
 
     Parameters
     ----------
     pattern
         Flattened experimental pattern.
     rotation
-        Rodrigues-Frank vector components (Rx, Ry, Rz), unscaled.
+        Euler components (phi1, Phi, phi2), unscaled.
     signal_mask
         Boolean mask equal to the experimental patterns' detector shape
-        ``(n rows, n columns)``, where only pixels equal to ``False``
-        are matched.
+        (n rows, n columns), where only pixels equal to False are
+        matched.
     rescale
         Whether pattern intensities must be rescaled to [-1, 1] and the
         data type set to 32-bit floats.
     method
-        A supported :mod:`scipy.optimize` function. See ``method``
+        A supported :mod:`scipy.optimize` function. See *method*
         parameter in :meth:`kikuchipy.signals.EBSD.refine_orientation`.
     method_kwargs
-        Keyword arguments passed to the ``method`` function. For the
-        list of possible arguments, see the SciPy documentation.
+        Keyword arguments passed to the *method* function. For the list
+        of possible arguments, see the SciPy documentation.
     fixed_parameters
         Fixed parameters used in the projection.
     direction_cosines
         Vector array of shape (n pixels, 3) and data type 32-bit floats.
-        If not given, ``pcx``, ``pcy``, ``pcz``, ``nrows``, ``ncols``,
-        ``tilt``, ``azimuthal``, and ``sample_tilt`` must be passed.
+        If not given, *pcx*, *pcy*, *pcz*, *nrows*, *ncols*, *tilt*,
+        *azimuthal*, and *sample_tilt* must be passed.
     pcx
         Projection center (PC) x coordinate. Must be passed if
-        ``direction_cosines`` is not given.
+        *direction_cosines* is not given.
     pcy
-        PC y coordinate. Must be passed if ``direction_cosines`` is not
+        PC y coordinate. Must be passed if *direction_cosines* is not
         given.
     pcz
-        PC z coordinate. Must be passed if ``direction_cosines`` is not
+        PC z coordinate. Must be passed if *direction_cosines* is not
         given.
     nrows
-        Number of detector rows. Must be passed if ``direction_cosines``
+        Number of detector rows. Must be passed if *direction_cosines*
         is not given.
     ncols
         Number of detector columns. Must be passed if
-        ``direction_cosines`` is not given.
+        *direction_cosines* is not given.
     om_detector_to_sample
-        Orientation matrix used for transforming from the detector
-        reference frame to the sample reference frame. This is the
-        inverse of EBSDDetector.sample_to_detector expressed as a
-        3x3 numpy array rather than an orix Rotation. Must be passed
-        if ``direction_cosines`` is not given.
+        Orientation matrix for transforming from the detector reference
+        frame to the sample reference frame. Must be passed if
+        *direction_cosines* is not given.
     n_pseudo_symmetry_ops
         Number of pseudo-symmetry operators. Default is 0.
 
@@ -155,8 +153,12 @@ def _refine_orientation_solver_scipy(
         Highest normalized cross-correlation score.
     num_evals
         Number of optimization evaluations.
-    phi1, Phi, phi2
-        Optimized orientation (Euler angles) in radians.
+    phi1
+        First optimized Euler angle from *rotation* in radians.
+    Phi
+        Second optimized Euler angle from *rotation* in radians.
+    phi2
+        Third optimized Euler angle from *rotation* in radians.
     """
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
