@@ -79,7 +79,9 @@ def pytest_runtest_setup(item):
     # https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_runtest_setup
     for marker in MARKERS:
         marker_str = f"--{marker}"
-        if marker in item.keywords and not item.config.getoption(marker_str):
+        if marker in item.keywords and not item.config.getoption(
+            marker_str, default=False
+        ):
             pytest.skip(f"Needs {marker_str} flag to run")
 
 
