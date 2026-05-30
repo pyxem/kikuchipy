@@ -70,7 +70,8 @@ all = [
     "IPython",
     "nlopt",
     "psygnal",
-    "pyebsdindex >= 0.3.9.2",
+    # Restriction due to https://github.com/USNavalResearchLaboratory/PyEBSDIndex/issues/80
+    "pyebsdindex >= 0.3.9.2, != 0.3.10",
     "pyvista",
 ]
 doc = [
@@ -83,7 +84,7 @@ doc = [
     "numpydoc != 1.9.0",
     "nlopt",
     "pydata-sphinx-theme",
-    "pyebsdindex                  ~= 0.2",
+    "pyebsdindex                  >= 0.3.9.2, != 0.3.10",
     "pyvista",
     "sphinx                       >= 3.0.2",
     "sphinx-codeautolink[ipython] <  0.14",

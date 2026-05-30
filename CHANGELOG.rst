@@ -22,6 +22,8 @@ Fixed
   in the correct sense, i.e. represent vectors in the sample reference frame in the
   detector reference frame: ``v_d = R_s2d * v_s``.
   (`#797 <https://github.com/pyxem/kikuchipy/pull/797>`_)
+- Disallow PyEBSDIndex 0.3.10 due to bug in gnomonic correction for EMsoft PC.
+  (`#797 <https://github.com/pyxem/kikuchipy/pull/797>`_)
 
 
 0.12.0 (2026-05-24)
