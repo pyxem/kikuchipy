@@ -12,8 +12,41 @@ If you think your work should be listed here, please raise an issue `on GitHub
 Most of these works are also listed when searching for ``"kikuchipy"`` `on Google Scholar
 <https://scholar.google.com/scholar?hl=no&as_sdt=0%2C5&q=%22kikuchipy%22&btnG=>`__.
 
+2026
+====
+
+- H W. Ånes, P. Crout, L. A. Lervik, O. Natlandsmyr, T. Bergh, J. Hjelen,
+  A. T. J. van Helvoort and K. Marthinsen, "kikuchipy: an open-source toolbox for
+  analysis of EBSD patterns," arXiv preprint (2026).
+  https://doi.org/10.48550/arXiv.2605.25722.
+- L. Kokosza, J. Pawlak, M. Marciszko-Wiąckowska, G. Cios, P. Jabłoński, A. Naumov,
+  M. Przybylski and Z. Mitura, "The growth and structural characterization of a
+  La0.67Sr0.33MnO3/BaTiO3 superstructure (superlattice)," *Foundations of
+  Crystallography* **82** (2026).
+  https://doi.org/10.1107/S205327332600313X.
+
+
+2024
+====
+
+- Z. Xu, H. W. Ånes, S. Gorelick, X. Fang and P. Miller, "OpenECCI-A Streamlined
+  Open-Source Workflow for Electron Channelling Contrast Imaging of Crystal Defects,"
+  *In BIO Web of Conferences* **129** (2024).
+  https://doi.org/10.1051/bioconf/202412907004.
+- Z. Mitura, G. Szwachta, L. Kokosza and M. Przybylski, "Identification of Kikuchi lines
+  in electron diffraction patterns collected in small-angle geometry," *Foundations of
+  Crystallography* **80** (2024).
+  https://doi.org/10.1107/S2053273323009385.
+- A. Celotto, L. Sandnes, Ø. Grong, J. A. Sørhaug, G. Stefani, D. Wan, P. E. Vullum, R.
+  Holmestad and F. Berto, "Cold butt welding of dissimilar aluminum alloys:
+  Characterization and interface bonding conditions," *Materials Science and
+  Engineering: A* **897** (2024).
+  https://doi.org/10.1016/j.msea.2024.146279.
+
+
 2023
 ====
+
 - A. V. Bugten, L. Michels, R. B. Brurok, C. Hartung, E. Ott, L. Vines, Y. Li,
   L. Arnberg and M. Di Sabatino, "The Role of Boron in Low Copper Spheroidal Graphite
   Irons," *Metallurgical and Materials Transactions A* **54** (2023).
@@ -30,11 +63,13 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
   (`arXiv <https://doi.org/10.48550/arxiv.2212.03527>`__).
 - T. Bergh, H. W. Ånes, R. Aune, S. Wenner, R. Holmestad, X. Ren and P. E. Vullum,
   "Intermetallic Phase Layers in Cold Metal Transfer Aluminium-Steel Welds with an
-  Al-Si–Mn Filler Alloy," *Materials Transactions* **64(2)** (2023).
+  Al-Si-Mn Filler Alloy," *Materials Transactions* **64(2)** (2023).
   https://doi.org/10.2320/matertrans.MT-LA2022046.
+
 
 2022
 ====
+
 - O. M. Akselsen, R. Bjørge, H. W. Ånes, X. Ren, and B. Nyhus, "Microstructure and
   Properties of Wire Arc Additive Manufacturing of Inconel 625," *Metals* **12(11)**
   (2022).
@@ -50,6 +85,7 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
   https://doi.org/10.1002/adma.202203449
   (`arXiv <https://doi.org/10.48550/arxiv.2204.07979>`__).
 
+
 2021
 ====
 
@@ -57,6 +93,7 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
   Wire Arc Additive Manufacturing of Superduplex Stainless Steel," *Metals* **11(12)**
   (2021).
   https://doi.org/10.3390/met11122045.
+
 
 2020
 ====
