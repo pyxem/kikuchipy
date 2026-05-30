@@ -809,7 +809,7 @@ class TestFitPatternDetectorOrientation:
 
         sim_lines = self.simulator.on_detector(det, self.rotations)
 
-        u_os = np.matmul(self.u_o, det.sample_to_detector.to_matrix().squeeze())
+        u_os = np.matmul(self.u_o, det.sample_to_detector.to_matrix().squeeze().T)
 
         return det, sim_lines, u_os
 

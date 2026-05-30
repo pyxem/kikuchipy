@@ -100,11 +100,11 @@ def _get_direction_cosines_from_detector(
         Flattened direction cosines.
     """
     if detector.navigation_shape == (1,):
-        pcx, pcy, pcz = detector.pc.squeeze().astype(np.float64)
+        pcz = np.float64(detector.pcz.squeeze())
         gnomonic_bounds = detector.gnomonic_bounds.squeeze().astype(np.float64)
         func = _get_direction_cosines_for_fixed_pc
     else:
-        pcx, pcy, pcz = detector.pc_flattened.T.astype(np.float64)
+        pcz = detector.pcz.ravel().astype(np.float64)
         gnomonic_bounds = detector.gnomonic_bounds.reshape((-1, 4)).astype(np.float64)
         func = _get_direction_cosines_for_varying_pc
 
@@ -140,8 +140,6 @@ def _get_direction_cosines_for_fixed_pc(
 ) -> np.ndarray:
     """Return direction cosines for a single projection center (PC).
 
-    Algorithm adapted from that used in :cite:`britton2016tutorial`.
-
     Parameters
     ----------
     gnomonic_bounds
@@ -153,13 +151,10 @@ def _get_direction_cosines_for_fixed_pc(
     ncols
         Number of detector columns.
     om_detector_to_sample
-        The orientation matrix which transforms
-        vectors in the detector reference frame, CSd,
-        to the sample reference frame, CSs. This is
-        the inverse rotation of the
-        EBSDDetector.sample_to_detector property.
+        Orientation matrix that transforms vectors in the detector
+        reference frame, CSd, to the sample reference frame, CSs.
     signal_mask
-        1D signal mask with ``True`` values for pixels to get direction
+        1D signal mask with True values for pixels to get direction
         cosines for.
 
     Returns
@@ -168,17 +163,13 @@ def _get_direction_cosines_for_fixed_pc(
         Direction cosines for detector pixels in the mask of shape
         (n_pixels, 3) and data type of 64-bit floats.
 
-    See Also
-    --------
-    kikuchipy.detectors.EBSDDetector
-
     Notes
     -----
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
 
-    A previous version of this algorithm was adapted from EMsoft,
-    see :cite:`callahan2013dynamical`.
+    A previous version of this algorithm was adapted from EMsoft, see
+    :cite:`callahan2013dynamical`.
     """
     x_scale = (gnomonic_bounds[1] - gnomonic_bounds[0]) / ncols
     y_scale = (gnomonic_bounds[3] - gnomonic_bounds[2]) / nrows
@@ -202,7 +193,8 @@ def _get_direction_cosines_for_fixed_pc(
         r_g_array[i, 1] = (det_gn_y[rows[i]] - y_half_step) * pcz
         r_g_array[i, 2] = pcz
 
-    r_g_array = np.dot(r_g_array, om_detector_to_sample)
+    # Transpose orientation matrix to multiply row vectors
+    r_g_array = np.dot(r_g_array, om_detector_to_sample.T)
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -232,8 +224,6 @@ def _get_direction_cosines_for_varying_pc(
     """Return sets of direction cosines for varying projection centers
     (PCs).
 
-    Algorithm adapted from that used in :cite:`britton2016tutorial`.
-
     Parameters
     ----------
     gnomonic_bounds
@@ -246,24 +236,18 @@ def _get_direction_cosines_for_varying_pc(
     ncols
         Number of detector columns.
     om_detector_to_sample
-        The orientation matrix which transforms
-        vectors in the detector reference frame, CSd, to the
-        sample reference frame, CSs. One matrix valid for
-        ALL PCs. This is the inverse rotation of the
-        EBSDDetector.sample_to_detector property.
+        The orientation matrix which transforms column vectors in the
+        detector reference frame, CSd, to the sample reference frame,
+        CSs. One matrix valid for ALL PCs.
     signal_mask
-        1D signal mask with ``True`` values for pixels to get direction
+        1D signal mask with True values for pixels to get direction
         cosines for.
 
     Returns
     -------
     r_g_array
         Direction cosines for each detector pixel for each PC, of shape
-        (n PCs, n_pixels, 3) and data type of 64-bit floats.
-
-    See Also
-    --------
-    kikuchipy.detectors.EBSDDetector
+        (n PCs, n pixels, 3) and data type of 64-bit floats.
 
     Notes
     -----
@@ -277,6 +261,9 @@ def _get_direction_cosines_for_varying_pc(
     n_pcs = pcz.size
     n_pixels = idx_1d.size
     r_g_array = np.zeros((n_pcs, n_pixels, 3), dtype=np.float64)
+
+    # Transpose orientation matrix to multiple row vectors
+    om_detector_to_sample_row = om_detector_to_sample.T
 
     for i in nb.prange(n_pcs):
         x_scale = (gnomonic_bounds[i, 1] - gnomonic_bounds[i, 0]) / ncols
@@ -296,7 +283,7 @@ def _get_direction_cosines_for_varying_pc(
             r_g_a[j, 1] = (det_gn_y[rows[j]] - y_half_step) * pcz[i]
             r_g_a[j, 2] = pcz[i]
 
-        r_g_a = np.dot(r_g_a, om_detector_to_sample)
+        r_g_a = np.dot(r_g_a, om_detector_to_sample_row)
 
         r_g_array[i] = r_g_a
 

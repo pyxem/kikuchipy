@@ -79,7 +79,9 @@ def pytest_runtest_setup(item):
     # https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_runtest_setup
     for marker in MARKERS:
         marker_str = f"--{marker}"
-        if marker in item.keywords and not item.config.getoption(marker_str):
+        if marker in item.keywords and not item.config.getoption(
+            marker_str, default=False
+        ):
             pytest.skip(f"Needs {marker_str} flag to run")
 
 
@@ -104,6 +106,9 @@ def skipif_no_vtk_support():
 
 def pytest_sessionstart(session):
     _ = kp.data.nickel_ebsd_large(allow_download=True)
+    _ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
+    _ = kp.data.si_ebsd_moving_screen(5, allow_download=True)
+    _ = kp.data.si_ebsd_moving_screen(10, allow_download=True)
     plt.rcParams.update({"backend": "agg", "figure.max_open_warning": False})
 
 
