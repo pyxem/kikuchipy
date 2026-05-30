@@ -84,5 +84,8 @@ Learning resources
 Citing kikuchipy
 ================
 
-If you are using kikuchipy in your scientific research, please help our scientific
-visibility by citing the Zenodo DOI: https://doi.org/10.5281/zenodo.3597646.
+If you are using kikuchipy in your research, please help our scientific visibility by
+citing our work!
+
+- Pre-print: https://doi.org/10.48550/arXiv.2605.25722
+- Software: https://doi.org/10.5281/zenodo.3597646

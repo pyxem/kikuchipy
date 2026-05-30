@@ -50,6 +50,9 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.14"
             LABEL: -minimum_requirement
+          - os: ubuntu-latest
+            python-version: "3.14"
+            LABEL: -build-install-wheel
     steps:
       - uses: actions/checkout@v6
 
@@ -58,13 +61,27 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies and package
+      - name: Install dependencies
         shell: bash
         run: |
           pip install wheel
-          pip install -U -e ".[tests,coverage]"
+          pip install -U ".[tests,coverage]"
 
-      - name: Install oldest supported version
+      - name: Install package in editable mode
+        if: ${{ contains(matrix.LABEL, 'build-install-wheel') == false }}
+        shell: bash
+        run: |
+          pip install -U -e .
+
+      - name: Install package from built wheel
+        if: contains(matrix.LABEL, 'build-install-wheel')
+        shell: bash
+        run: |
+          pip install build
+          python -m build
+          python -m pip install dist/kikuchipy-*-any.whl
+
+      - name: Install oldest supported versions of dependencies
         if: contains(matrix.LABEL, 'oldest')
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
@@ -73,14 +90,13 @@ jobs:
         if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os != 'macos-latest' }}
         shell: bash
         run: |
-          pip install -e ".[all]"
+          pip install ".[all]"
           pip install pyopencl
 
       - name: Install optional dependencies on macOS (without nlopt)
         if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os == 'macos-latest' }}
         shell: bash
         run: |
-          pip install -e .
           pip install "pyebsdindex[gpu]" pyvista
 
       - name: Display Python, pip and package versions

@@ -19,7 +19,7 @@
 
 import pytest
 
-_ = pytest.importorskip("psygnal", reason="psygnal is not installed")
+_ = pytest.importorskip("psygnal.testing", reason="psygnal is not installed")
 
 import numpy as np
 import psygnal.testing as pt

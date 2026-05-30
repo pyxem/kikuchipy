@@ -251,27 +251,25 @@ class KikuchiPatternSimulator:
                 "`detector.navigation_shape` is not (1,) or equal to `rotations.shape`"
             )
 
+        # Set up row vectors (n, 3) and row matrices (3, 3)
         lattice = self.phase.structure.lattice
         ref = self._reflectors
         hkl = ref.hkl
 
-        # Transformation from detector reference frame CSd to sample
-        # reference frame CSs.
-        u_s = da.from_array(detector.sample_to_detector.to_matrix().squeeze())
+        # Sample -> detector
+        u_s = da.from_array(detector.sample_to_detector.to_matrix().squeeze().T)
 
-        # Transformation from CSs to cartesian crystal reference frame
-        # CSc
+        # Crystal -> sample -> detector
         u_o = da.from_array(rotations.to_matrix())
         u_os = da.matmul(u_o, u_s)
 
-        # Transformation from CSc to reciprocal crystal reference frame
-        # CSk*
+        # Reciprocal lattice -> crystal
         u_astar = da.from_array(lattice.recbase.T)
 
-        # Combine transformations
+        # Reciprocal lattice -> crystal -> sample -> detector
         u_kstar = da.matmul(u_astar, u_os)
 
-        # Transform {hkl} from CSk* to CSd
+        # {hkl} from reciprocal lattice -> detector
         hkl_d = da.matmul(da.from_array(hkl), u_kstar)
 
         nav_axes = (0, 1)[: rotations.ndim]
@@ -298,13 +296,13 @@ class KikuchiPatternSimulator:
         uvw_miller = uvw_miller.round()
         uvw_miller = uvw_miller.unique()
 
-        # Transformation from CSc to direct crystal reference frame CSk
+        # Direct lattice -> crystal
         u_a = da.from_array(lattice.base)
 
-        # Combine transformations
+        # Direct lattice -> crystal -> sample -> detector
         u_k = da.matmul(u_a, u_os)
 
-        # Transform direct lattice vectors from CSk to CSd
+        # <uvw> from direct lattice -> detector
         uvw_d = da.matmul(da.from_array(uvw_miller.uvw), u_k)
 
         # Find zone axes that are in some pattern

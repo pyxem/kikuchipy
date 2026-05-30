@@ -339,7 +339,7 @@ def _get_crystal_map_parameters(
 
 def _refine_orientation(
     xmap: CrystalMap,
-    detector,
+    detector: "EBSDDetector",
     master_pattern,
     energy: int | float,
     patterns: np.ndarray | da.Array,
