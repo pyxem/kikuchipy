@@ -31,7 +31,10 @@ library.
 .. |conda_downloads| image:: https://img.shields.io/conda/dn/conda-forge/kikuchipy.svg?label=conda%20downloads
    :target: https://anaconda.org/conda-forge/kikuchipy
 
-.. |doi| image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
+.. |arxiv_doi| image:: https://img.shields.io/badge/DOI-10.48550/arXiv.2605.25722-blue
+   :target: https://doi.org/10.48550/arXiv.2605.25722
+
+.. |zenodo_doi| image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
    :target: https://doi.org/10.5281/zenodo.3597646
 
 .. |GPLv3| image:: https://img.shields.io/github/license/pyxem/kikuchipy
@@ -58,7 +61,7 @@ library.
 +----------------------+------------------------------------------------+
 | Activity             | |pypi_downloads| |conda_downloads|             |
 +----------------------+------------------------------------------------+
-| Citation             | |doi|                                          |
+| Citation             | |arxiv_doi| |zenodo_doi|                       |
 +----------------------+------------------------------------------------+
 | License              | |GPLv3|                                        |
 +----------------------+------------------------------------------------+
@@ -95,5 +98,8 @@ Further details are available in the
 Citing kikuchipy
 ----------------
 
-If you are using kikuchipy in your scientific research, please help our scientific
-visibility by citing the `Zenodo DOI <https://doi.org/10.5281/zenodo.3597646>`__.
+If you are using kikuchipy in your research, please help our scientific visibility by
+citing our work!
+
+- Pre-print: https://doi.org/10.48550/arXiv.2605.25722
+- Software: https://doi.org/10.5281/zenodo.3597646
