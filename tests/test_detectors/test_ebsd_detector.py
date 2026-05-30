@@ -730,15 +730,13 @@ class TestEstimateTilts:
             step_sizes=(50, 50),
         )
 
-        xtilt = det.estimate_xtilt(degrees=True)
+        xtilt, fig = det.estimate_xtilt(degrees=True, return_figure=True)
         assert np.isclose(xtilt, 90 - self.det0.sample_tilt + self.det0.tilt)
-        assert plt.get_fignums() == [1]
-        ax = plt.gca()
-        assert not any(["Outliers" in t.get_text() for t in ax.get_legend().texts])
-
-        xtilt, is_outliers, _ = det.estimate_xtilt(
-            return_outliers=True, return_figure=True
+        assert not any(
+            ["Outliers" in t.get_text() for t in fig.axes[0].get_legend().texts]
         )
+
+        xtilt, is_outliers = det.estimate_xtilt(return_outliers=True)
         assert isinstance(is_outliers, np.ndarray)
         assert is_outliers.sum() == 0
 
