@@ -22,7 +22,7 @@ exclude: ^\.github/pull_request_template.md
 repos:
   # https://docs.astral.sh/ruff/configuration
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.15
+    rev: v0.16.1
     hooks:
       - id: ruff
       - id: ruff-format
