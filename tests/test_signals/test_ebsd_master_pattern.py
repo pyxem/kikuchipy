@@ -28,6 +28,10 @@ import pytest
 
 import kikuchipy as kp
 from kikuchipy._constants import dependency_version
+from kikuchipy._kikuchi_sphere._lambert_projection import (
+    _lambert_to_sphere,
+    _sphere_to_lambert,
+)
 from kikuchipy._utils.numba import rotate_vector
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_fixed_pc,
@@ -35,7 +39,6 @@ from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_from_detector,
     _get_lambert_interpolation_parameters,
     _get_pixel_from_master_pattern,
-    _lambert2vector,
     _project_patterns_from_master_pattern_with_fixed_pc,
     _project_patterns_from_master_pattern_with_varying_pc,
     _project_single_pattern_from_master_pattern,
@@ -632,12 +635,84 @@ class TestAsLambert:
         x_lambert_flat = x_lambert.ravel()
         y_lambert_flat = y_lambert.ravel()
 
-        xyz = _lambert2vector.py_func(x_lambert_flat, y_lambert_flat)
+        xyz = _lambert_to_sphere.py_func(x_lambert_flat, y_lambert_flat)
 
         assert xyz.shape == (arr.size**2, 3)
         assert np.all(xyz[:, 2] >= 0)
         assert np.isclose(xyz.max(), 1)
         assert np.isclose(xyz.min(), -1)
+
+
+class TestAsStereo:
+    def test_as_stereo(self, capsys):
+        mp_lp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        assert mp_lp.projection == "lambert"
+        assert mp_lp.hemisphere == "upper"
+
+        # Upper hemisphere
+        mp_sp = mp_lp.as_stereo(show_progressbar=True)
+        assert mp_sp.projection == "stereographic"
+        assert mp_sp.data.shape == mp_lp.data.shape
+        assert np.issubdtype(mp_sp.data.dtype, np.float32)
+        assert mp_sp.hemisphere == mp_lp.hemisphere
+        assert mp_sp.phase.point_group == mp_lp.phase.point_group
+
+        # Warns and raises
+        mp_sp_ref = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
+        with pytest.warns(UserWarning, match="Already in the stereographic projection"):
+            mp_sp_ref2 = mp_sp_ref.as_stereo()
+            assert not np.may_share_memory(mp_sp_ref.data, mp_sp_ref2.data)
+
+        mp_lp_lazy = mp_lp.as_lazy()
+        with pytest.raises(NotImplementedError, match="Only implemented for non-lazy "):
+            _ = mp_lp_lazy.as_stereo()
+
+        # Quite similar to EMsoft's stereographic master pattern
+        ncc = kp.indexing.NormalizedCrossCorrelationMetric(1, 1)
+        assert ncc(mp_sp.data, mp_sp_ref.data).compute() > 0.96
+
+        # "Lower" hemisphere identical to upper
+        mp_lp.hemisphere = "lower"
+        mp_sp2 = mp_lp.as_stereo(show_progressbar=False)
+        out, _ = capsys.readouterr()
+        assert not out
+        assert mp_sp2.projection == "stereographic"
+        assert np.allclose(mp_sp.data, mp_sp2.data)
+
+    def test_as_stereo_multiple_energies_hemispheres(self):
+        mp_both = kp.data.nickel_ebsd_master_pattern_small(
+            projection="lambert", hemisphere="both"
+        )
+
+        mp_sp_both = mp_both.as_stereo()
+        assert mp_sp_both.data.ndim == 3
+
+        # Create a signal with two "energies"
+        mp = hs.stack([mp_both, mp_both])
+        mp.axes_manager[1].name = "energy"
+        mp.hemisphere = mp_both.hemisphere
+        mp.projection = mp_both.projection
+        mp.phase = mp_both.phase.deepcopy()
+
+        mp_sp_energy = mp.as_stereo()
+        assert mp_sp_energy.data.ndim == 4
+
+    def test_sphere2lambert_numba(self):
+        arr = np.linspace(-1, 1, 41, dtype=np.float64)
+        x_lam, y_lam = np.meshgrid(arr, arr)
+        x_flat = np.ascontiguousarray(x_lam.ravel())
+        y_flat = np.ascontiguousarray(y_lam.ravel())
+
+        xyz = _lambert_to_sphere.py_func(x_flat, y_flat)
+        xy = _sphere_to_lambert.py_func(
+            np.ascontiguousarray(xyz[:, 0]),
+            np.ascontiguousarray(xyz[:, 1]),
+            np.ascontiguousarray(xyz[:, 2]),
+        )
+
+        assert xy.shape == (arr.size**2, 2)
+        assert np.allclose(xy[:, 0], x_flat, atol=1e-10)
+        assert np.allclose(xy[:, 1], y_flat, atol=1e-10)
 
 
 class TestIntensityScaling:

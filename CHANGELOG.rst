@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Project master pattern from the Lambert to the stereographic projection.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
 
 Fixed
 -----

@@ -25,6 +25,13 @@
 # An unwanted side-effect of this is that test files cannot import
 # anything from the conftest file.
 
+# Use 'agg' backend to avoid displaying figure when running tests.
+# Put it here to avoid the backend being set elsewhere before test
+# collection.
+import matplotlib
+
+matplotlib.use("agg")
+
 from io import TextIOWrapper
 from numbers import Number
 import os
@@ -121,7 +128,7 @@ def pytest_sessionstart(session):
     _ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
     _ = kp.data.si_ebsd_moving_screen(5, allow_download=True)
     _ = kp.data.si_ebsd_moving_screen(10, allow_download=True)
-    plt.rcParams.update({"backend": "agg", "figure.max_open_warning": False})
+    plt.rcParams.update({"figure.max_open_warning": False})
 
 
 # ---------------------- pytest doctest-modules ---------------------- #
