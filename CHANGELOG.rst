@@ -21,7 +21,7 @@ Added
 - ``pattern.optimize_pattern_processing()`` for Bayesian optimization of a single
   pattern's dynamic background subtraction, adaptive histogram equalization, and FFT
   bandpass filter parameters against a reference pattern. Requires the optional
-  dependency ``scikit-optimize``. (#XXX)
+  dependency ``scikit-optimize``. (#816)
 
 Fixed
 -----
