@@ -13,6 +13,17 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+Unreleased
+==========
+
+Fixed
+-----
+
+Changed
+-------
+- Increased minimal version of ebsdsim >= 0.1.4.
+  (`#818 <https://github.com/pyxem/kikuchipy/pull/818>`_)
+
 
 0.13.0 (2026-06-14)
 ===================
