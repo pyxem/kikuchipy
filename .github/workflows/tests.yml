@@ -114,7 +114,7 @@ jobs:
 
       - name: Set up headless display necessary for PyVista on Windows
         if: ${{ matrix.os == 'windows-latest' }}
-        uses: pyvista/setup-headless-display-action@v4
+        uses: pyvista/setup-headless-display-action@v5
 
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
