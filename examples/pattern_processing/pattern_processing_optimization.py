@@ -49,12 +49,14 @@ s = kp.data.nickel_ebsd_small()
 mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
 
 rotations = s.xmap.rotations.reshape(*s.xmap.shape)
-sim = mp.get_patterns(rotations=rotations, detector=s.detector, energy=20, compute=True)
+sim = mp.get_patterns(
+    rotations=rotations, detector=s.detector, energy=20, dtype_out="uint8", compute=True
+)
 
 # Pick one map point to optimize the processing recipe for
 i, j = 1, 1
-pattern = s.inav[i, j].data.astype("float32")
-reference = sim.inav[i, j].data.astype("float32")
+pattern = s.inav[i, j].data.copy()
+reference = sim.inav[i, j].data.copy()
 
 # %%
 # Run the Bayesian optimization.

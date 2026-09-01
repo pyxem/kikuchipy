@@ -28,12 +28,7 @@ import numpy as np
 
 from kikuchipy._constants import verify_dependency_or_raise
 from kikuchipy.filters.window import Window
-from kikuchipy.pattern._pattern import (
-    _adaptive_histogram_equalization,
-    fft_filter,
-    get_image_quality,
-    remove_dynamic_background,
-)
+from kikuchipy.pattern._pattern import get_image_quality
 
 
 def _normalized_cross_correlation(
@@ -132,22 +127,34 @@ def _process_pattern_pipeline(
         Normalized cross-correlation against *reference* after each of
         the four stages above, in that order.
     """
+    from kikuchipy.signals import EBSD
+
     image_quality = np.zeros(4)
     ncc = np.zeros(4)
+
+    pattern = pattern.copy()
+    reference = reference.copy()
 
     image_quality[0] = get_image_quality(pattern, normalize=True)
     ncc[0] = _normalized_cross_correlation(pattern, reference)
 
+    p0 = EBSD(pattern)
+
     # 1) Dynamic background subtraction
-    pattern_dbs = remove_dynamic_background(
-        pattern,
+    # inplace=False both avoids mutating
+    # p0 and keeps the output in p0's own dtype (e.g. uint8), matching what
+    # a real experimental pattern's intensity range should look like at
+    # every stage -- rather than being rescaled to some other dtype's range.
+    p1 = p0.remove_dynamic_background(
         operation="subtract",
         filter_domain="frequency",
         std=int(dynamic_background_std),
         truncate=int(dynamic_background_truncate),
+        inplace=False,
+        show_progressbar=False,
     )
-    image_quality[1] = get_image_quality(pattern_dbs, normalize=True)
-    ncc[1] = _normalized_cross_correlation(pattern_dbs, reference)
+    image_quality[1] = get_image_quality(p1.data, normalize=True)
+    ncc[1] = _normalized_cross_correlation(p1.data, reference)
 
     # 2) Adaptive histogram equalization (optional)
     if ahe_on:
@@ -157,20 +164,22 @@ def _process_pattern_pipeline(
         # floor-division on a fixed-width lookup table internally, which
         # raises under NumPy >= 2.0's stricter same-kind casting rules if
         # nbins isn't a plain Python int. Coerce defensively here.
-        pattern_ahe = _adaptive_histogram_equalization(
-            pattern_dbs,
-            kernel_size=(int(ahe_kernel_size), int(ahe_kernel_size)),
+        kernel_size = int(ahe_kernel_size)
+        p2 = p1.adaptive_histogram_equalization(
+            kernel_size=(kernel_size, kernel_size),
             clip_limit=float(ahe_clip_limit),
             nbins=int(ahe_nbins),
+            inplace=False,
+            show_progressbar=False,
         )
     else:
-        pattern_ahe = pattern_dbs
-    image_quality[2] = get_image_quality(pattern_ahe, normalize=True)
-    ncc[2] = _normalized_cross_correlation(pattern_ahe, reference)
+        p2 = p1
+    image_quality[2] = get_image_quality(p2.data, normalize=True)
+    ncc[2] = _normalized_cross_correlation(p2.data, reference)
 
     # 3) FFT bandpass filter (lowpass to filter noise, highpass to
     # filter large variations across the detector)
-    pattern_shape = pattern.shape
+    pattern_shape = p2.axes_manager.signal_shape[::-1]
     w_low = Window(
         window="lowpass",
         cutoff=int(fft_lowpass_cutoff),
@@ -183,19 +192,21 @@ def _process_pattern_pipeline(
         cutoff_width=2,
         shape=pattern_shape,
     )
-    pattern_fft = fft_filter(
-        pattern_ahe,
+    p3 = p2.fft_filter(
         transfer_function=w_low * w_high,
+        function_domain="frequency",
         shift=True,
+        inplace=False,
+        show_progressbar=False,
     )
-    image_quality[3] = get_image_quality(pattern_fft, normalize=True)
-    ncc[3] = _normalized_cross_correlation(pattern_fft, reference)
+    image_quality[3] = get_image_quality(p3.data, normalize=True)
+    ncc[3] = _normalized_cross_correlation(p3.data, reference)
 
     patterns = {
         "raw": pattern,
-        "dynamic_background": pattern_dbs,
-        "ahe": pattern_ahe,
-        "fft": pattern_fft,
+        "dynamic_background": p1.data,
+        "ahe": p2.data,
+        "fft": p3.data,
     }
 
     return patterns, image_quality, ncc
