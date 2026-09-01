@@ -76,6 +76,44 @@ print("Best NCC score:", result["best_score"])
 # %%
 # Plot the pattern at each processing stage, labeled with its image quality
 # (IQ) and normalized cross-correlation (NCC) against the reference.
-fig = kp.pattern.plot_pattern_processing_result(result, reference=reference)
+fig = kp.draw.plot_pattern_processing_result(result, reference=reference)
 fig.savefig("pattern_processing_optimization_result.png", dpi=100)
 plt.show()
+
+
+# %%
+# Apply the optimized parameters to the full pattern stack.
+#
+# ``optimize_pattern_processing()`` works on a single pattern. To apply the
+# chosen parameters to every pattern in the map, pass them to the
+# corresponding public :class:`~kikuchipy.signals.EBSD` methods.
+params = result["best_parameters"]
+pattern_shape = s.axes_manager.signal_shape[::-1]
+
+s2 = s.deepcopy()
+s2.remove_dynamic_background(
+    operation="subtract",
+    filter_domain="frequency",
+    std=int(params["dynamic_background_std"]),
+    truncate=int(params["dynamic_background_truncate"]),
+)
+if params["ahe_on"]:
+    kernel_size = int(params["ahe_kernel_size"])
+    s2.adaptive_histogram_equalization(
+        kernel_size=(kernel_size, kernel_size),
+        clip_limit=float(params["ahe_clip_limit"]),
+        nbins=int(params["ahe_nbins"]),
+    )
+w_low = kp.filters.Window(
+    window="lowpass",
+    cutoff=int(params["fft_lowpass_cutoff"]),
+    cutoff_width=10,
+    shape=pattern_shape,
+)
+w_high = kp.filters.Window(
+    window="highpass",
+    cutoff=int(params["fft_highpass_cutoff"]),
+    cutoff_width=2,
+    shape=pattern_shape,
+)
+s2.fft_filter(transfer_function=w_low * w_high, function_domain="frequency", shift=True)
