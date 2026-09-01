@@ -74,6 +74,44 @@ def get_orix_phase_dictionary_from_ebsdsim_cell(cell: ebsdsimCell) -> dict[str, 
     return {"space_group": sg, "structure": structure}
 
 
+def get_upper_energy_bin_edges_kv(
+    voltages: np.ndarray, meta: dict[str, Any]
+) -> np.ndarray:
+    """Return the upper edge in kV of each energy bin, given the bin
+    *voltages* and the *meta* data read from an ebsdsim file.
+
+    ebsdsim < 0.1.6:
+
+        bin_voltages_kv = voltage_kv - (i + 0.5) * energy_binwidth_keV.
+
+    ebsdsim >= 0.1.6:
+
+        bin_voltages_kv = voltage_kv - i * energy_binwidth_keV.
+
+    Nothing in the file distinguishes the two (``format_version`` did
+    not change across the switch), so which one it is has to be
+    inferred: centers sit half an energy bin width away from a whole
+    number of bins below the beam voltage, upper edges sit a whole
+    number of bins below it.
+
+    Files whose metadata does not give both the beam voltage and the
+    energy bin width are assumed to hold upper edges.
+    """
+    beam_kv = meta.get("voltage_kv")
+    binwidth = meta.get("energy_binwidth_keV")
+    if beam_kv is None or binwidth is None or binwidth <= 0:
+        return voltages
+
+    # Distance from the beam voltage in whole energy bins: ~i for upper
+    # edges, ~i + 0.5 for centers
+    offsets = (float(beam_kv) - voltages.astype(np.float64)) / float(binwidth)
+    fractions = np.abs(offsets - np.round(offsets))
+    if np.median(fractions) > 0.25:
+        voltages += np.float32(binwidth / 2)
+
+    return voltages
+
+
 def file_reader(
     filename: str | Path, hemisphere: HEMISPHERE = "upper", lazy: bool = False
 ) -> list[dict]:
@@ -126,8 +164,11 @@ def file_reader(
     # integrated slice
     if n_bins > 0 and axes_meta["energy_dim"] > 1:
         bin_indices = axes_meta["bin_to_energy_index"]
-        energy_data = energy_data[bin_indices, :, :, :]  # (n_bins, H, side, side)
-        voltages = np.asarray(loaded.bin_voltages_kv, dtype=np.float32)
+        # (n_bins, H, side, side)
+        energy_data = energy_data[bin_indices, :, :, :]
+        voltages = get_upper_energy_bin_edges_kv(
+            np.asarray(loaded.bin_voltages_kv, dtype=np.float32), loaded.meta
+        )
     else:
         energy_data = energy_data[0:1, :, :, :]  # (1, H, side, side)
         voltages = np.zeros(1, dtype=np.float32)
@@ -144,9 +185,10 @@ def file_reader(
             )
         data = energy_data[:, 1, :, :]  # (n_energy, side, side)
     else:  # "both"
-        # For centrosymmetric materials, ebsdsim only stores the northern
-        # hemisphere (hemisphere_dim=1). Duplicate it so "both" always
-        # yields a size-2 hemisphere axis, consistent with EMsoft behaviour.
+        # For centrosymmetric materials, ebsdsim only stores the
+        # northern hemisphere (hemisphere_dim=1). Duplicate it so "both"
+        # always yields a size-2 hemisphere axis, consistent with EMsoft
+        # behaviour.
         nh = energy_data[:, 0:1, :, :]  # (n_energy, 1, side, side)
         if n_hemispheres == 1:
             sh = nh
@@ -183,8 +225,10 @@ def file_reader(
         idx += 1
 
     if n_energy > 1:
+        # Voltages are the upper edge of each energy bin, so they can be
+        # used as the energy axis values directly
         energy_scale = float(np.mean(np.diff(voltages)))
-        energy_offset = float(voltages[0]) - energy_scale / 2
+        energy_offset = float(voltages[0])
         axes.append(
             {
                 "size": n_energy,
