@@ -78,6 +78,12 @@ def xmap_from_hough_indexing_data(
     -------
     xmap
         Crystal map.
+
+    Notes
+    -----
+    If you use Hough indexing in kikuchipy in your work, please cite
+    both kikuchipy :cite:`aanes2026kikuchipy` *and* PyEBSDIndex
+    :cite:`rowenhorst2024fast`.
     """
     if navigation_shape is None:
         navigation_shape = (data.shape[1],)
