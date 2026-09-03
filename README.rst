@@ -113,5 +113,29 @@ Citing kikuchipy
 If you are using kikuchipy in your research, please help our scientific visibility by
 citing our work!
 
-- Pre-print: https://doi.org/10.48550/arXiv.2605.25722
-- Software: https://doi.org/10.5281/zenodo.3597646
+Paper:
+
+.. code:: bibtex
+
+   @article{aanes2026kikuchipy,
+     author  = {{\AA}nes, H{\aa}kon W and Crout, Phillip and Lervik, Lars Andreas and Natlandsmyr, Ole and Bergh, Tina and Hjelen, Jarle and van Helvoort, Antonius TJ and Marthinsen, Knut},
+     title   = {{kikuchipy: an open-source toolbox for analysis of EBSD patterns}},
+     doi     = {https://doi.org/10.1093/mam/ozag097},
+     pages   = {Accepted},
+     journal = {Microscopy and Microanalysis},
+     year    = {2026},
+   }
+
+Pre-print:
+
+.. code:: bibtex
+
+   @article{aanes2026kikuchipy_arxiv,
+     author  = {{\AA}nes, H{\aa}kon W and Crout, Phillip and Lervik, Lars Andreas and Natlandsmyr, Ole and Bergh, Tina and Hjelen, Jarle and van Helvoort, Antonius TJ and Marthinsen, Knut},
+     title   = {{kikuchipy: an open-source toolbox for analysis of EBSD patterns}},
+     doi     = {10.48550/arXiv.2605.25722},
+     journal = {arXiv preprint arXiv:2605.25722},
+     year    = {2026},
+   }
+
+Software DOI on Zenodo: https://doi.org/10.5281/zenodo.3597646.
