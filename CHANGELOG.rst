@@ -13,6 +13,25 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+Unreleased
+==========
+
+Added
+-----
+
+Fixed
+-----
+
+Changed
+-------
+
+Removed
+-------
+
+Deprecated
+----------
+
+
 0.13.1 (2026-09-04)
 ===================
 
