@@ -120,7 +120,7 @@ Paper:
    @article{aanes2026kikuchipy,
      author  = {{\AA}nes, H{\aa}kon W and Crout, Phillip and Lervik, Lars Andreas and Natlandsmyr, Ole and Bergh, Tina and Hjelen, Jarle and van Helvoort, Antonius TJ and Marthinsen, Knut},
      title   = {{kikuchipy: an open-source toolbox for analysis of EBSD patterns}},
-     doi     = {https://doi.org/10.1093/mam/ozag097},
+     doi     = {10.1093/mam/ozag097},
      pages   = {Accepted},
      journal = {Microscopy and Microanalysis},
      year    = {2026},
