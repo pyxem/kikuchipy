@@ -137,9 +137,7 @@ jobs:
       - name: Run GPU tests on macOS
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          # TODO: Replace with patched version once it's released
-          pip install "ebsdsim @ git+https://github.com/hakonanes/ebsdsim@fix-1-multiprocessing-start-method-with-script"
-
+          pip install ebsdsim
           pytest ${{ env.PYTEST_ARGS }} -m gpu --gpu
 
       - name: Generate line coverage
