@@ -1635,14 +1635,18 @@ class EBSDDetector:
             :meth:`~kikuchipy.signals.EBSD.hough_indexing`.
             ``indexer.PC`` is set equal to :attr:`pc_flattened`.
 
+        See Also
+        --------
+        pyebsdindex.tripletvote.addphase
+
         Notes
         -----
         Requires that PyEBSDIndex is installed, which is an optional
         dependency of kikuchipy. See :ref:`dependencies` for details.
 
-        See Also
-        --------
-        pyebsdindex.tripletvote.addphase
+        If you use Hough indexing in kikuchipy in your work, please cite
+        both kikuchipy :cite:`aanes2026kikuchipy` *and* PyEBSDIndex
+        :cite:`rowenhorst2024fast`.
         """
         self._warn_if_angles_ignored(
             "get_indexer() passes only sample_tilt and tilt to PyEBSDIndex;"

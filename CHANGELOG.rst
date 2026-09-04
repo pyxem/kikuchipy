@@ -37,6 +37,22 @@ Deprecated
 ----------
 
 
+0.13.1 (2026-09-04)
+===================
+
+Fixed
+-----
+- Energy axis of master patterns read from ebsdsim files written by ebsdsim >= 0.1.6 are
+  now correct.
+  Files written by older versions of ebsdsim still read correctly.
+  (`#820 <https://github.com/pyxem/kikuchipy/pull/820>`_)
+
+Changed
+-------
+- Increased minimal version of ebsdsim >= 0.1.4.
+  (`#820 <https://github.com/pyxem/kikuchipy/pull/820>`_)
+
+
 0.13.0 (2026-06-14)
 ===================
 
