@@ -100,7 +100,7 @@ intersphinx_mapping = {
     "pytest": ("https://docs.pytest.org/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
-    "pyxem": ("https://www.pyxem.org/en/latest", None),
+    "pyxem": ("https://pyxem.readthedocs.io/en/stable", None),
     "readthedocs": ("https://docs.readthedocs.com/platform/stable", None),
     "rosettasciio": ("https://rosettasciio.readthedocs.io/en/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),

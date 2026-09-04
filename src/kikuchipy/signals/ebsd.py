@@ -1662,13 +1662,17 @@ class EBSD(KikuchipySignal2D):
 
         Notes
         -----
-        Requires :mod:`pyebsdindex` to be installed. See
-        :ref:`dependencies` for further details.
+        Requires :mod:`pyebsdindex` :cite:`rowenhorst2024fast` to be
+        installed. See :ref:`dependencies` for further details.
 
         This wrapper of PyEBSDIndex is meant for convenience more than
         speed. It uses the GPU if :mod:`pyopencl` is installed, but only
         uses a single thread. If you need the fastest indexing, refer to
         the PyEBSDIndex documentation for multi-threading and more.
+
+        If you use Hough indexing in kikuchipy in your work, please cite
+        both kikuchipy :cite:`aanes2026kikuchipy` *and* PyEBSDIndex
+        :cite:`rowenhorst2024fast`.
         """
         verify_dependency_or_raise("pyebsdindex", "Hough indexing")
 
@@ -1761,8 +1765,12 @@ class EBSD(KikuchipySignal2D):
 
         Notes
         -----
-        Requires :mod:`pyebsdindex` to be installed. See
-        :ref:`dependencies` for further details.
+        Requires :mod:`pyebsdindex` :cite:`rowenhorst2024fast` to be
+        installed. See :ref:`dependencies` for further details.
+
+        If you use Hough indexing in kikuchipy in your work, please cite
+        both kikuchipy :cite:`aanes2026kikuchipy` *and* PyEBSDIndex
+        :cite:`rowenhorst2024fast`.
         """
         verify_dependency_or_raise(
             "pyebsdindex", "Projection center optimization with Hough indexing"

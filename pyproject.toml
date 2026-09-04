@@ -69,7 +69,7 @@ dependencies = [
 
 [project.optional-dependencies]
 all = [
-    "ebsdsim     >= 0.1.3",
+    "ebsdsim     >= 0.1.4",
     "ipywidgets",
     "IPython",
     "nlopt",
@@ -80,7 +80,7 @@ all = [
     "pyvista",
 ]
 doc = [
-    "ebsdsim                      >= 0.1.3",
+    "ebsdsim                      >= 0.1.4",
     "ipywidgets",
     "IPython",
     "ipympl",
