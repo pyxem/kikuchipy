@@ -18,6 +18,11 @@ Unreleased
 
 Added
 -----
+- ``pattern.optimize_pattern_processing()`` for Bayesian optimization of a single
+  pattern's dynamic background subtraction, adaptive histogram equalization, and FFT
+  bandpass filter parameters against a reference pattern. Requires the optional
+  dependency ``scikit-optimize``. (#816)
+- ``draw.plot_pattern_processing_result()`` for plotting the pattern from each stage of an ``optimize_pattern_processing()`` result, annotated with image quality and normalized cross-correlation. (#816)'
 
 Fixed
 -----

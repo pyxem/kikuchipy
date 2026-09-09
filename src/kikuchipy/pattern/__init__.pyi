@@ -28,6 +28,7 @@ from ._pattern import (
     remove_dynamic_background,
     rescale_intensity,
 )
+from ._processing_optimization import optimize_pattern_processing
 
 __all__ = [
     "chunk",
@@ -39,6 +40,7 @@ __all__ = [
     "get_image_quality",
     "ifft",
     "normalize_intensity",
+    "optimize_pattern_processing",
     "remove_dynamic_background",
     "rescale_intensity",
 ]

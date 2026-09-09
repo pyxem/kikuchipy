@@ -78,6 +78,7 @@ all = [
     # Restriction due to https://github.com/USNavalResearchLaboratory/PyEBSDIndex/issues/80
     "pyebsdindex >= 0.3.9.2, != 0.3.10",
     "pyvista",
+    "scikit-optimize",
 ]
 doc = [
     "ebsdsim                      >= 0.1.4",
