@@ -107,6 +107,10 @@ intersphinx_mapping = {
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master", None),
+    "sphinxcontrib-bibtex": (
+        "https://sphinxcontrib-bibtex.readthedocs.io/en/latest",
+        None,
+    ),
     "sphinx-gallery": ("https://sphinx-gallery.github.io/stable", None),
     # TODO: Remove once Python >= 3.11
     "typing-extensions": ("https://typing-extensions.readthedocs.io/en/latest", None),
