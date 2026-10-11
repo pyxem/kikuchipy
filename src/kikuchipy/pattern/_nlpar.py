@@ -23,31 +23,32 @@ from kikuchipy._constants import verify_dependency_or_raise
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern.chunk import _rescale_neighbour_averaged_patterns
 
+
 def _estimate_sigma_nlpar(
     patterns: np.ndarray,
     signal_mask: np.ndarray,
 ) -> np.ndarray:
-    """Estimate patterns' approximate standard deviation (sigma) of the 
-    noise. 
-    
-    If :mod:`pyebsdindex` is installed, the 
-    :func:`pyebsdindex.nlpar.NLPAR.sigma_numba` is run to calculate the 
-    patterns' standard deviation of the noise. If not, the patterns' 
-    standard deviation is calculated and returned. 
-    
+    """Estimate patterns' approximate standard deviation (sigma) of the
+    noise.
+
+    If :mod:`pyebsdindex` is installed, the
+    :func:`pyebsdindex.nlpar.NLPAR.sigma_numba` is run to calculate the
+    patterns' standard deviation of the noise. If not, the patterns'
+    standard deviation is calculated and returned.
+
     See docstring of :func:
     `kikuchipy.signals.ebsd.average_non_local_neighbour_patterns`.
-    
+
     Parameters
     ----------
     patterns
         EBSD patterns.
     signal_mask
-        A boolean mask of detector pixels to consider in the 
-        calculations. (equal to ``False``, i.e. pixels to *mask 
-        out* are ``True``.) The mask must be equal to the signal's 
+        A boolean mask of detector pixels to consider in the
+        calculations. (equal to ``False``, i.e. pixels to *mask
+        out* are ``True``.) The mask must be equal to the signal's
         signal shape. If not given all pixels are used.
-        
+
     Returns
     -------
     sigma
@@ -55,11 +56,11 @@ def _estimate_sigma_nlpar(
     """
     if verify_dependency_or_raise("pyebsdindex", "Sigma estimation") is None:
         from pyebsdindex import nlpar
-        
+
         sigma_numba = getattr(nlpar.NLPAR(), "sigma_numba")
-        
+
         pats = np.asarray(patterns, dtype=np.float32)
-        
+
         ndim = np.ndim(pats)
         if ndim == 3:
             nrows, ncols = pats.shape[0], 1
@@ -67,45 +68,47 @@ def _estimate_sigma_nlpar(
             nrows, ncols = pats.shape[:2]
         h, w = pats.shape[-2:]
         npix = h * w
-        
+
         if signal_mask is not None:
             if signal_mask.shape != (h,w):
-                raise InputError("Invalid signal_mask shape.")
+                raise ValueError(
+                    "The shape of 'signal_mask' must match the signal shape."
+                )
         elif signal_mask is None:
             signal_mask = np.zeros((h,w), dtype = bool)
 
         indices = np.arange(npix) * ~signal_mask.flatten()
-        
-        # Line 754: sigma, corr. accumulated squared difference, and 
+
+        # Line 754: sigma, corr. accumulated squared difference, and
         # norm. distances for lamdada opt.:
         sigma, _d2, _n2 = sigma_numba(
-            pats.reshape((nrows * ncols,) + (-1,)).copy(), 
+            pats.reshape((nrows * ncols,) + (-1,)).copy(),
             nn = 1, # search_radius
-            nrows = nrows, 
-            ncols = ncols, 
-            rowstartcount = np.asarray((0,nrows)), 
-            colstartcount = np.asarray((0,ncols)), 
+            nrows = nrows,
+            ncols = ncols,
+            rowstartcount = np.asarray((0,nrows)),
+            colstartcount = np.asarray((0,ncols)),
             indices = indices,
             saturation_protect = True
         )
     else:
         # A crude estimate:
         sigma = np.std(patterns, axis=(-2,-1), astype = np.float32)
-    
+
     return sigma.astype(np.float32)
-    
+
 def _optimise_lambda(
     patterns: np.ndarray,
     search_radius: int = 1,
     dthresh: float = 0.0,
     signal_mask: np.ndarray | None = None,
-    target_weights: tuple | list = (0.5, 0.34, 0.25), 
+    target_weights: tuple | list = (0.5, 0.34, 0.25),
 ) -> np.ndarray:
-    """This function is essentially the same as 
-    :func:`pyebsdindex.nlpar_cpu.opt_lambda_cpu`, but slightly modified 
-    to enable optimisation of lambda through 
+    """This function is essentially the same as
+    :func:`pyebsdindex.nlpar_cpu.opt_lambda_cpu`, but slightly modified
+    to enable optimisation of lambda through
     :func:`average_non_local_neighbour_patterns`.
-    
+
     Parameters
     ----------
     patterns
@@ -113,15 +116,15 @@ def _optimise_lambda(
     search_radius
         Pattern nearest neighbour search radius.
     dthresh
-        Distance threshold used during NLPAR weighting to 
+        Distance threshold used during NLPAR weighting to
         suppress neighbours that are too dissimilar.
     signal_mask
-        A boolean mask of detector pixels to consider in the 
-        calculations. (equal to ``False``, i.e. pixels to *mask 
-        out* are ``True``.) The mask must be equal to the signal's 
+        A boolean mask of detector pixels to consider in the
+        calculations. (equal to ``False``, i.e. pixels to *mask
+        out* are ``True``.) The mask must be equal to the signal's
         signal shape. If not given all pixels are used.'
     target_weights
-        Target average weights (over all points in the EBSD scan) 
+        Target average weights (over all points in the EBSD scan)
         that corresponds to an optimised lambda.
 
     Returns
@@ -130,14 +133,14 @@ def _optimise_lambda(
         Array of optimised lamda corresponding to the target weights.
     """
     # C.f. line 94:
-    # will accept all keywords to calcsigma_cpu. 
+    # will accept all keywords to calcsigma_cpu.
     # See NLPAR __init__ for default values
     from pyebsdindex import nlpar
-    
+
     patterns = np.asarray(patterns, dtype=np.float32)
 
     ny, nx, sy, sx = patterns.shape
-    
+
     target_weights = np.asarray(target_weights)
     dthresh = np.float64(dthresh)
 
@@ -147,13 +150,9 @@ def _optimise_lambda(
       w = np.sum(dw, axis=2) + 1e-12
       metric = np.mean(np.abs(tw - 1.0 / w))
       return metric
-        
-    nrows = np.uint64(nx)
-    ncols = np.uint64(ny) 
 
-    pwidth = np.uint64(sy)
-    pheight = np.uint64(sx)
-    phw = pheight * pwidth
+    nrows = np.uint64(nx)
+    ncols = np.uint64(ny)
 
     nn = search_radius
     nn = np.uint64(nn)
@@ -162,20 +161,20 @@ def _optimise_lambda(
 
     if signal_mask is None:
         signal_mask = np.ones((sy,sx), bool)
-    
+
     indices = np.arange(
         sy * sx
     ) * signal_mask.flatten()
-    
+
     # C.f. lines 266 & 486:
     # https://github.com/USNavalResearchLaboratory/PyEBSDIndex/blob/main/pyebsdindex/nlpar_cpu.py
     sigma, d2, n2 = sigma_numba(
-        patterns.reshape((ny*nx, sy*sx)).copy(), 
-        nn = search_radius, 
-        nrows = nrows, 
-        ncols = ncols, 
-        rowstartcount = np.asarray((0,ny)), 
-        colstartcount = np.asarray((0,nx)), 
+        patterns.reshape((ny*nx, sy*sx)).copy(),
+        nn = search_radius,
+        nrows = nrows,
+        ncols = ncols,
+        rowstartcount = np.asarray((0,ny)),
+        colstartcount = np.asarray((0,nx)),
         indices = indices,
     )
 
@@ -195,7 +194,7 @@ def _optimise_lambda(
 
         lamopt_values.append(lambopt1['x'])
 
-    print('', end='')    
+    print('', end='')
     lamopt_values = np.asarray(lamopt_values)
 
     print("With target weights", target_weights)
@@ -203,7 +202,7 @@ def _optimise_lambda(
     print("Optimal choice (median): ", np.median(lamopt_values))
 
     return lamopt_values.flatten()
-    
+
 def _average_non_local_neighbour_patterns(
     patterns: np.ndarray,
     sigma: np.ndarray,
@@ -212,10 +211,10 @@ def _average_non_local_neighbour_patterns(
     signal_mask: np.ndarray,
     dtype_out: np.dtype,
     omin: int | float,
-    omax: int | float
+    omax: int | float,
 ) -> np.ndarray:
     """See docstring of :func:`average_non_local_neighbour_patterns`."""
-    
+
     pats = patterns.astype("float32")
     nrows, ncols, h, w = pats.shape
 
@@ -227,7 +226,7 @@ def _average_non_local_neighbour_patterns(
     # Tot. num. of pixels of interest per pattern
     npix = center.shape[-1]
     win = window.shape[:2]
-    
+
     sr = tuple(
         (
             size // 2,
@@ -235,14 +234,14 @@ def _average_non_local_neighbour_patterns(
         )
         for size in win
     )
-    
+
     # Preparing patterns, neighbour patterns, and sigmas
     padded_pat = np.pad(
         array = center,
         pad_width = (sr[0], sr[1], (0, 0)),
         mode="edge",
     )
-    
+
     padded_sigma = np.pad(
         array = sigma,
         pad_width = (sr[0], sr[1], (0, 0), (0, 0)),
@@ -254,7 +253,7 @@ def _average_non_local_neighbour_patterns(
         win,
         axis=(0, 1),
     )
-    
+
     neigh = np.moveaxis(
         neigh,
         (-2,-1),
@@ -265,70 +264,70 @@ def _average_non_local_neighbour_patterns(
         np.prod(win),
         npix,
     )
-    
+
     win_mask = np.asarray(
         window[:,:,0,0],
         dtype = bool
     ).ravel()
-    
+
     neigh = neigh[:,:, win_mask,:]
-    
+
     neigh_sigma = sliding_window_view(
         padded_sigma,
         win,
         axis=(0, 1),
     )
-    
+
     # (X, Y, 1, 1, x1+x2, y1+y2)
     neigh_sigma = neigh_sigma.reshape(
         nrows,
         ncols,
         np.prod(win),
     )[:,:, win_mask]
-    
+
     # Expanding the dimensions
     center = center[:, :, None, :]
-    
+
     # Euclidean distance | Eq. 3
     diff = neigh - center
 
     d2 = np.sum(diff * diff, axis=-1, dtype = np.float32)
-    
+
     # Sum of sigmas squared | c.f. Eq. 7
     sig2 = (
         sigma[:, :, 0, 0, None] ** 2
         + neigh_sigma ** 2
     )
-    
+
     # Normalised distance | Eq. 7
     dnorm = (
         d2 - (npix * sig2)
     ) / (
         sig2 * np.sqrt(2.0 * npix)
     )
-    
+
     # Weights | Eq. 8
     weights = np.exp(
         -np.maximum(dnorm, 0.0)
         / (lamda * lamda)
     ).astype("float32")
-    
+
     weights /= (
         weights.sum(axis=-1, keepdims=True)
         + 1e-12 # 1e-6
     )
-    
+
     # Processed pattern vectors | Eq. 1
     pats[:, :, ~signal_mask] = np.sum(
         neigh * weights[..., None],
         axis=2,
     )
-    
+
     rescaled_patterns = _rescale_neighbour_averaged_patterns(
-        patterns = pats, 
-        window_sums = np.ones((nrows, ncols)), 
-        dtype_out = dtype_out, 
-        omin = omin, 
+        patterns = pats,
+        window_sums = np.ones((nrows, ncols)),
+        dtype_out = dtype_out,
+        omin = omin,
         omax = omax
     )
 

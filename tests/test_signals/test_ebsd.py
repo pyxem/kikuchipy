@@ -1692,11 +1692,10 @@ class TestAverageNeighbourPatternsEBSD:
         s3 = dummy_signal.as_lazy()
         s4 = s3.average_neighbour_patterns(inplace=False, lazy_output=False)
         assert isinstance(s4, kp.signals.EBSD)
-        
+
 class TestAverageNonLocalNeighbourPatternsEBSD:
     @pytest.mark.parametrize(
         "window, window_shape, sigma, lamda, lazy, answer, kwargs",
-        
         [
             (
                 "circular",
@@ -1721,7 +1720,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
                 "rectangular",
                 (2,3),
                 None,
-                None, 
+                None,
                 False,
                 np.array(
                     [
@@ -1771,7 +1770,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
         """Test averaging with different windows and parameters."""
         if lazy:
             dummy_signal = dummy_signal.as_lazy()
-            
+
         if kwargs is None:
             dummy_signal.average_non_local_neighbour_patterns(
                 window=window,
@@ -1783,8 +1782,8 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
 
         else:
             dummy_signal.average_non_local_neighbour_patterns(
-                window=window, 
-                window_shape=window_shape, 
+                window=window,
+                window_shape=window_shape,
                 sigma=sigma,
                 lamda=lamda,
                 **kwargs
@@ -1793,11 +1792,11 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
         d = dummy_signal.data
         if lazy:
             d = d.compute()
-        
+
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
         assert np.allclose(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
-        
+
     def test_average_non_local_neighbour_patterns_no_averaging(self, dummy_signal):
         answer = dummy_signal.data.copy()
         with pytest.warns(UserWarning, match="A window of shape .* was "):
@@ -1806,7 +1805,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
             )
         assert np.allclose(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
-        
+
     def test_average_non_local_neighbour_patterns_one_nav_dim(self, dummy_signal):
         dummy_signal_1d = dummy_signal.inav[:, 0]
         dummy_signal_1d.average_non_local_neighbour_patterns(window_shape=(3,))
@@ -1822,7 +1821,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
         # fmt: on
         assert np.allclose(dummy_signal_1d.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
-        
+
     def test_average_non_local_neighbour_patterns_window_1d(self, dummy_signal):
         dummy_signal.average_non_local_neighbour_patterns(window_shape=(3,))
         # fmt: off
@@ -1840,7 +1839,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
         # fmt: on
         assert np.allclose(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
-        
+
     def test_average_non_local_neighbour_patterns_pass_window(self, dummy_signal):
         w = kp.filters.Window()
         dummy_signal.average_non_local_neighbour_patterns(w)
@@ -1859,14 +1858,14 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
         ).reshape(dummy_signal.axes_manager.shape)
         # fmt: on
         assert np.allclose(dummy_signal.data, answer)
-        assert dummy_signal.data.dtype == answer.dtype    
-        
+        assert dummy_signal.data.dtype == answer.dtype
+
     def test_average_non_local_neighbour_patterns_lazy(self):
         chunks = ((3, 3, 4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3, 4), (75,), (6,), (6,))
         s = kp.signals.LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
         s.average_non_local_neighbour_patterns()
         s.compute()
-        
+
     def test_average_non_local_neighbour_patterns_inplace(self, dummy_signal):
         # Current signal is unaffected
         s2 = dummy_signal.deepcopy()
@@ -1889,7 +1888,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
         assert isinstance(s5, kp.signals.LazyEBSD)
         s5.compute()
         assert np.allclose(s5.data, s2.data)
-        
+
     def test_lazy_output(self, dummy_signal):
         with pytest.raises(
             ValueError, match='`lazy_output=True` requires `inplace=False`'
@@ -1902,7 +1901,6 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
         s3 = dummy_signal.as_lazy()
         s4 = s3.average_non_local_neighbour_patterns(inplace=False, lazy_output=False)
         assert isinstance(s4, kp.signals.EBSD)
-
 
 class TestVirtualBackscatterElectronImaging:
     @pytest.mark.parametrize("out_signal_axes", [None, (0, 1), ("x", "y")])

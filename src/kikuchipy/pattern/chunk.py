@@ -28,7 +28,6 @@ from scipy.ndimage import correlate
 
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import _rescale_with_min_max, rescale_intensity
-from kikuchipy._constants import verify_dependency_or_raise
 
 
 def get_dynamic_background(
