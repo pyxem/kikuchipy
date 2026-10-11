@@ -126,6 +126,7 @@ def fft_filter(
 
     return filtered_patterns
 
+
 def _average_neighbour_patterns(
     patterns: np.ndarray,
     window_sums: np.ndarray,
@@ -141,6 +142,7 @@ def _average_neighbour_patterns(
         correlated_patterns, window_sums, dtype_out, omin, omax
     )
     return rescaled_patterns
+
 
 @njit(cache=True, fastmath=True, nogil=True)
 def _rescale_neighbour_averaged_patterns(

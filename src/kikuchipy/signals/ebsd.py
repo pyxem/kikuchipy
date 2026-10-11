@@ -1114,7 +1114,7 @@ class EBSD(KikuchipySignal2D):
     def average_non_local_neighbour_patterns(
         self,
         window: str | np.ndarray | da.Array | Window[bool, ...] = "circular",
-        window_shape: tuple[int, ...] = (7,7),
+        window_shape: tuple[int, ...] = (7, 7),
         sigma: np.ndarray | da.Array | None = None,
         lamda: int | float | None = 0.9,
         signal_mask: np.ndarray | None = None,
@@ -1219,9 +1219,7 @@ class EBSD(KikuchipySignal2D):
         # Add signal dimensions to window array to enable its use with
         # Dask's map_overlap()
         sig_dim = self.axes_manager.signal_dimension
-        search_window = search_window.reshape(
-            search_window.shape + (1,) * sig_dim
-        )
+        search_window = search_window.reshape(search_window.shape + (1,) * sig_dim)
 
         # Create dask array of signal patterns and do processing on this
         if self._lazy:
@@ -1238,10 +1236,8 @@ class EBSD(KikuchipySignal2D):
 
         if sigma is None:
             from kikuchipy.pattern._nlpar import _estimate_sigma_nlpar
-            sigma = _estimate_sigma_nlpar(
-                patterns = self.data,
-                signal_mask = signal_mask
-            )
+
+            sigma = _estimate_sigma_nlpar(patterns=self.data, signal_mask=signal_mask)
             gc.collect()
         else:
             if sigma.shape != self._navigation_shape_rc:
@@ -1259,13 +1255,13 @@ class EBSD(KikuchipySignal2D):
 
             lamda = np.median(
                 _optimise_lambda(
-                    patterns = self.data,
-                    search_radius = 1,
-                    dthresh = 0.0,
-                    signal_mask = signal_mask,
-                    target_weights = (0.5, 0.34, 0.25),
+                    patterns=self.data,
+                    search_radius=1,
+                    dthresh=0.0,
+                    signal_mask=signal_mask,
+                    target_weights=(0.5, 0.34, 0.25),
                 ),
-                axis = -1
+                axis=-1,
             )
 
         # Add signal dimensions to array be able to use with Dask's
@@ -1281,9 +1277,7 @@ class EBSD(KikuchipySignal2D):
         if search_window.ndim != nav_dim_internal:
             diff = search_window.ndim - nav_dim_internal
             for i in range(diff):
-                search_window = search_window.reshape(
-                    search_window.shape + (1,)
-                )
+                search_window = search_window.reshape(search_window.shape + (1,))
 
         # Create overlap between chunks to enable correlation with the
         # window using Dask's map_overlap()
@@ -1317,7 +1311,7 @@ class EBSD(KikuchipySignal2D):
         )
 
         if is_1d_nav:
-            averaged_patterns = averaged_patterns[:,0,:,:]
+            averaged_patterns = averaged_patterns[:, 0, :, :]
 
         return_lazy = lazy_output or (lazy_output is None and self._lazy)
         register_pbar = show_progressbar or (
@@ -1337,9 +1331,7 @@ class EBSD(KikuchipySignal2D):
 
                 with dask.config.set(**dask_config_kwargs):
                     averaged_patterns.store(
-                        self.data,
-                        compute=True,
-                        scheduler="threads"
+                        self.data, compute=True, scheduler="threads"
                     )
             else:
                 averaged_patterns = averaged_patterns.rechunk(old_chunks)
