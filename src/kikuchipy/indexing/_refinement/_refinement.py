@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Callable
 import dask.array as da
 from dask.diagnostics.progress import ProgressBar
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arrays
+from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 import scipy.optimize
 
@@ -44,7 +44,10 @@ from kikuchipy.indexing._refinement._solvers import (
     _refine_pc_solver_scipy,
 )
 from kikuchipy.pattern import rescale_intensity
-from kikuchipy.signals.util._crystal_map import _get_indexed_points_in_data_in_xmap
+from kikuchipy.signals.util._crystal_map import (
+    _create_coordinate_arrays,
+    _get_indexed_points_in_data_in_xmap,
+)
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -311,7 +314,7 @@ def _get_crystal_map_parameters(
         if step_size != 0:
             step_sizes += (step_size,)
 
-    xmap_dict, _ = create_coordinate_arrays(xmap.shape, step_sizes=step_sizes)
+    xmap_dict, _ = _create_coordinate_arrays(xmap.shape, step_sizes=step_sizes)
     xmap_dict.update(
         {
             "rotations": Rotation.identity((nav_size,)),

@@ -73,6 +73,10 @@ extensions = [
 # Create links to references within kikuchipy's documentation to these
 # packages
 intersphinx_mapping = {
+    "bayesian-optimization": (
+        "https://bayesian-optimization.github.io/BayesianOptimization/3.4.0/",
+        None,
+    ),
     "black": ("https://black.readthedocs.io/en/stable", None),
     "conda": ("https://docs.conda.io/projects/conda/en/latest", None),
     "coverage": ("https://coverage.readthedocs.io/en/latest", None),

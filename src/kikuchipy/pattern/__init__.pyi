@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from . import chunk
 from ._pattern import (
@@ -23,10 +25,17 @@ from ._pattern import (
     fft_spectrum,
     get_dynamic_background,
     get_image_quality,
+    get_signal_mask,
     ifft,
     normalize_intensity,
     remove_dynamic_background,
     rescale_intensity,
+)
+from ._processing_optimization import (
+    optimize_adaptive_histogram_equalization,
+    optimize_bandpass_filter,
+    optimize_pattern_processing,
+    optimize_remove_dynamic_background,
 )
 
 __all__ = [
@@ -37,8 +46,13 @@ __all__ = [
     "fft_spectrum",
     "get_dynamic_background",
     "get_image_quality",
+    "get_signal_mask",
     "ifft",
     "normalize_intensity",
+    "optimize_adaptive_histogram_equalization",
+    "optimize_bandpass_filter",
+    "optimize_remove_dynamic_background",
+    "optimize_pattern_processing",
     "remove_dynamic_background",
     "rescale_intensity",
 ]

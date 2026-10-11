@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Utilities for working with a :class:`~orix.crystal_map.CrystalMap`
 and an :class:`~kikuchipy.signals.EBSD` signal.
@@ -22,7 +24,24 @@ and an :class:`~kikuchipy.signals.EBSD` signal.
 import warnings
 
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase
+from orix.crystal_map import CrystalMap, Phase, create_coordinate_arrays
+
+
+def _create_coordinate_arrays(
+    shape: tuple[()] | tuple[int] | tuple[int, int],
+    step_sizes: tuple[()] | tuple[float] | tuple[float, float] | None = None,
+) -> tuple[dict, int]:
+    """Return coordinate arrays for a crystal map via
+    :func:`orix.crystal_map.create_coordinate_arrays`, with coordinates
+    of a single point if *shape* is empty.
+
+    orix creates coordinates of a map of shape (5, 10) if *shape* is
+    empty, which happens for the navigation shape of a single pattern.
+    """
+    if not shape:
+        shape = (1,)
+        step_sizes = None
+    return create_coordinate_arrays(shape, step_sizes)
 
 
 def _xmap_is_compatible_with_signal(
@@ -143,7 +162,7 @@ def _get_indexed_points_in_data_in_xmap(
     in_data_indexed = np.logical_and(in_data, is_indexed)
 
     # Check if the (possibly combined) mask is continuous
-    if xmap.ndim == 1:
+    if xmap.ndim <= 1:
         points_in_data_idx = np.where(in_data)[0]
         mask_size = points_in_data_idx[-1] - points_in_data_idx[0] + 1
         mask_is_continuous = mask_size == in_data.sum()

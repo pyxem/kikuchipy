@@ -27,7 +27,6 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy._constants import dependency_version
 from kikuchipy._utils.numba import rotate_vector
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_fixed_pc,
@@ -539,9 +538,7 @@ class TestProjectFromLambert:
 
 
 class TestMasterPatternPlotting:
-    @pytest.mark.skipif(
-        dependency_version["pyvista"] is None, reason="PyVista is not installed"
-    )
+    @pytest.mark.skipif_pyvista_not_installed
     def test_plot_spherical(self, skipif_no_vtk_support):
         """Returns expected data and raises correct error."""
         import pyvista as pv
@@ -563,9 +560,7 @@ class TestMasterPatternPlotting:
         with pytest.raises(ValueError):
             mp.plot_spherical()
 
-    @pytest.mark.skipif(
-        dependency_version["pyvista"] is not None, reason="PyVista is installed"
-    )
+    @pytest.mark.skipif_pyvista_installed
     def test_plot_spherical_raises(self):
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         with pytest.raises(ImportError):

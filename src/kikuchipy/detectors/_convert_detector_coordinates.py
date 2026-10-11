@@ -27,8 +27,6 @@ import warnings
 import numba as nb
 import numpy as np
 
-from kikuchipy._constants import VisibleDeprecationWarning
-
 # TODO: Remove deprecated "detector" format and this then unnecessary
 # handling once 0.12 is released
 ALL_DETECTOR_PLOT_FORMATS = Literal["pixel", "gnomonic", "detector"]
@@ -41,7 +39,7 @@ def parse_coordinate_format(fmt: ALL_DETECTOR_PLOT_FORMATS) -> DETECTOR_PLOT_FOR
         warnings.warn(
             "Pass 'pixel' instead. Passing 'detector' is deprecated and will throw an "
             "error in 0.13.0",
-            VisibleDeprecationWarning,
+            np.exceptions.VisibleDeprecationWarning,
             stacklevel=2,
         )
         fmt = "pixel"

@@ -68,6 +68,8 @@ from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
 from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 from kikuchipy.io._io import _save
 from kikuchipy.pattern._pattern import (
+    FILTER_DOMAIN,
+    REMOVAL_OPERATION,
     _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality,
@@ -441,7 +443,7 @@ class EBSD(KikuchipySignal2D):
 
     def remove_static_background(
         self,
-        operation: str = "subtract",
+        operation: REMOVAL_OPERATION = "subtract",
         static_bg: np.ndarray | da.Array | None = None,
         scale_bg: bool = False,
         show_progressbar: bool | None = None,
@@ -574,8 +576,8 @@ class EBSD(KikuchipySignal2D):
 
     def remove_dynamic_background(
         self,
-        operation: str = "subtract",
-        filter_domain: str = "frequency",
+        operation: REMOVAL_OPERATION = "subtract",
+        filter_domain: FILTER_DOMAIN = "frequency",
         std: int | float | None = None,
         truncate: int | float = 4.0,
         show_progressbar: bool | None = None,
@@ -697,7 +699,7 @@ class EBSD(KikuchipySignal2D):
 
     def get_dynamic_background(
         self,
-        filter_domain: str = "frequency",
+        filter_domain: FILTER_DOMAIN = "frequency",
         std: int | float | None = None,
         truncate: int | float = 4.0,
         dtype_out: str | np.dtype | type | None = None,
@@ -3019,7 +3021,7 @@ class EBSD(KikuchipySignal2D):
         # Flatten dimensions for masking
         am = self.axes_manager
         patterns = da.atleast_3d(patterns)
-        patterns = patterns.reshape((am.navigation_size, am.signal_size))
+        patterns = patterns.reshape((max(am.navigation_size, 1), am.signal_size))
 
         if not points_to_refine.all():
             patterns = patterns[points_to_refine, :]
