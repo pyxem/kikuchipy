@@ -1233,7 +1233,8 @@ class EBSD(KikuchipySignal2D):
         
         is_1d_nav = self.axes_manager.navigation_dimension == 1
         if is_1d_nav:
-            dask_array = da.expand_dims(dask_array, axis=1)
+            # Expanding dimension:
+            dask_array = dask_array[:, None, ...]
         
         if signal_mask is None:
             signal_mask = np.zeros(self._signal_shape_rc, bool)

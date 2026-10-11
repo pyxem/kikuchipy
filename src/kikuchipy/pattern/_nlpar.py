@@ -16,11 +16,11 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-import scipy.optimize as opt
 from numpy.lib.stride_tricks import sliding_window_view
+import scipy.optimize as opt
 
-from kikuchipy.filters.window import Window
 from kikuchipy._constants import verify_dependency_or_raise
+from kikuchipy.filters.window import Window
 from kikuchipy.pattern.chunk import _rescale_neighbour_averaged_patterns
 
 def _estimate_sigma_nlpar(
