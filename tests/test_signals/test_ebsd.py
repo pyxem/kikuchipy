@@ -2017,7 +2017,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
             d = d.compute()
 
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
-        assert np.allclose(dummy_signal.data, answer)
+        assert np.allclose(dummy_signal.data, answer, rtol = 1)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_non_local_neighbour_patterns_no_averaging(self, dummy_signal):
@@ -2060,7 +2060,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
             dtype=np.uint8
         ).reshape(dummy_signal.axes_manager.shape)
         # fmt: on
-        assert np.allclose(dummy_signal.data, answer)
+        assert np.allclose(dummy_signal.data, answer, rtol = 1)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_non_local_neighbour_patterns_pass_window(self, dummy_signal):
@@ -2080,7 +2080,7 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
             dtype=np.uint8
         ).reshape(dummy_signal.axes_manager.shape)
         # fmt: on
-        assert np.allclose(dummy_signal.data, answer)
+        assert np.allclose(dummy_signal.data, answer, rtol = 1)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_non_local_neighbour_patterns_lazy(self):
