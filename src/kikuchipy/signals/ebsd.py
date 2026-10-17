@@ -67,6 +67,7 @@ from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
 )
 from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 from kikuchipy.io._io import _save
+from kikuchipy.pattern._nlpar import _average_non_local_neighbour_patterns
 from kikuchipy.pattern._pattern import (
     _downsample2d,
     _dynamic_background_frequency_space_setup,
@@ -1110,6 +1111,246 @@ class EBSD(KikuchipySignal2D):
         if s_out:
             return s_out
 
+    def average_non_local_neighbour_patterns(
+        self,
+        window: str | np.ndarray | da.Array | Window[bool, ...] = "circular",
+        window_shape: tuple[int, ...] = (7, 7),
+        sigma: np.ndarray | da.Array | None = None,
+        lamda: int | float | None = 0.9,
+        signal_mask: np.ndarray | None = None,
+        show_progressbar: bool | None = None,
+        inplace: bool = True,
+        lazy_output: bool | None = None,
+        dask_config_kwargs: dict | None = None,
+        **kwargs,
+    ) -> None | EBSD | LazyEBSD:
+        """Average non-local patterns within a window.
+
+        The amount of averaging is weighted based on sigma and lamda.
+        All patterns are averaged within the same window. Resulting pattern
+        intensities are rescaled to fill the input patterns' data type range
+        individually.
+
+        For further details, see :cite:`brewick2019nlpar`.
+
+        Parameters
+        ----------
+        window
+            Name of averaging window or an array. Available types are
+            listed in :func:`scipy.signal.windows.get_window`, in
+            addition to a ``circular`` window (default) filled with
+            ones in which corner coefficients are set to zero. See
+            :func:`~kikuchipy.signals.ebsd.average_neighbour_patterns`
+            for details.
+        window_shape
+            Shape of averaging window. Not used if a custom window or
+            :class:`~kikuchipy.filters.Window` is passed to ``window``.
+            This can be either 1D or 2D, and can be asymmetrical.
+            Default is ``(7, 7)``.
+        sigma
+            Standard deviation of the signal noise. Default is ``None``.
+        lamda
+            Parameter controlling the averaging weight decay. If None,
+            an optimised value will be estimated using pyebsdindex'
+            implementation. Default is ``0.9``.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector/
+            signal shape, where only pixels equal to ``False`` are averaged.
+            If not given, all pixels are used. Default is ``None``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used. Default is ``None``.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``. Default is ``None``.
+        dask_config_kwargs
+            Keyword arguments passed to the :mod:`dask.config`
+            when computing the average patterns. For example, to adjust
+            the number of workers locally, pass
+            ``dask_config_kwargs=dict(num_workers=4)``. Default is
+            ``None``.
+        **kwargs
+            Keyword arguments passed to the available window type listed
+            in :func:`~scipy.signal.windows.get_window`. If not given,
+            the default values of that particular window are used.
+            Default is ``None``.
+
+        Returns
+        -------
+        s_out
+            Averaged signal, returned if ``inplace=False``. Whether it
+            is lazy is determined from ``lazy_output``.
+        """
+
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
+        if signal_mask is not None:
+            if signal_mask.sum() == np.prod(self._signal_shape_rc):
+                warnings.warn(
+                    "A signal mask excluding the whole signal was passed. No "
+                    "averaging is therefore performed."
+                )
+                return
+
+        if isinstance(window, Window) and window.is_valid:
+            search_window = copy.copy(window)
+        else:
+            search_window = Window(window=window, shape=window_shape, **kwargs)
+        search_window = search_window.astype(bool)
+
+        nav_shape = self._navigation_shape_rc
+        window_shape = search_window.shape
+        if window_shape in [(1,), (1, 1)]:
+            # Do nothing if a window of shape (1,) or (1, 1) is passed
+            warnings.warn(
+                f"A window of shape {window_shape} was passed, no averaging is "
+                "therefore performed"
+            )
+            return
+        elif len(nav_shape) > len(window_shape):
+            search_window = search_window.reshape(window_shape + (1,))
+
+        # Add signal dimensions to window array to enable its use with
+        # Dask's map_overlap()
+        sig_dim = self.axes_manager.signal_dimension
+        search_window = search_window.reshape(search_window.shape + (1,) * sig_dim)
+
+        # Create dask array of signal patterns and do processing on this
+        if self._lazy:
+            old_chunks = self.data.chunks
+        dask_array = get_dask_array(signal=self, chunk_bytes=8e6, rechunk=True)
+
+        is_1d_nav = self.axes_manager.navigation_dimension == 1
+        if is_1d_nav:
+            # Expanding dimension:
+            dask_array = dask_array[:, None, ...]
+
+        if signal_mask is None:
+            signal_mask = np.zeros(self._signal_shape_rc, bool)
+
+        if sigma is None:
+            from kikuchipy.pattern._nlpar import _estimate_sigma_nlpar
+
+            sigma = _estimate_sigma_nlpar(patterns=self.data, signal_mask=signal_mask)
+            gc.collect()
+        else:
+            if sigma.shape != self._navigation_shape_rc:
+                raise ValueError(
+                    f"The sigma shape {sigma.shape} must be identical to the "
+                    f"signal's navigation shape {nav_shape}."
+                )
+
+        if is_1d_nav:
+            sigma = sigma.reshape(sigma.shape[0], 1)
+
+        if lamda is None:
+            verify_dependency_or_raise("pyebsdindex", "Lamda optimisation")
+            from kikuchipy.pattern._nlpar import _optimise_lambda
+
+            lamda = np.median(
+                _optimise_lambda(
+                    patterns=self.data,
+                    search_radius=1,
+                    dthresh=0.0,
+                    signal_mask=signal_mask,
+                    target_weights=(0.5, 0.34, 0.25),
+                ),
+                axis=-1,
+            )
+
+        # Add signal dimensions to array be able to use with Dask's
+        # map_overlap()
+        nav_dim_internal = dask_array.ndim - sig_dim
+        for i in range(sig_dim):
+            sigma = np.expand_dims(sigma, axis=sigma.ndim)
+
+        sigma = da.from_array(
+            sigma, chunks=dask_array.chunks[:nav_dim_internal] + (1,) * sig_dim
+        )
+
+        if search_window.ndim != nav_dim_internal:
+            diff = search_window.ndim - nav_dim_internal
+            for i in range(diff):
+                search_window = search_window.reshape(search_window.shape + (1,))
+
+        # Create overlap between chunks to enable correlation with the
+        # window using Dask's map_overlap()
+        window_dim = search_window.ndim
+        overlap_depth = {}
+        for i in range(nav_dim_internal):
+            if i < window_dim and dask_array.chunks[i][0] < dask_array.shape[i]:
+                overlap_depth[i] = (window_shape[i] // 2) + 1
+            else:
+                overlap_depth[i] = 1
+        overlap_depth.update(
+            {i: 0 for i in self.axes_manager.signal_indices_in_array[::-1]}
+        )
+
+        dtype_out = self.data.dtype
+        omin, omax = dtype_range[dtype_out.type]
+
+        averaged_patterns = da.overlap.map_overlap(
+            _average_non_local_neighbour_patterns,
+            dask_array,
+            sigma,
+            window=search_window,
+            lamda=lamda,
+            signal_mask=signal_mask,
+            dtype_out=dtype_out,
+            omin=omin,
+            omax=omax,
+            dtype=dtype_out,
+            depth=overlap_depth,
+            boundary="none",
+        )
+
+        if is_1d_nav:
+            averaged_patterns = averaged_patterns[:, 0, :, :]
+
+        return_lazy = lazy_output or (lazy_output is None and self._lazy)
+        register_pbar = show_progressbar or (
+            show_progressbar is None and hs.preferences.General.show_progressbar
+        )
+        if not return_lazy and register_pbar:
+            pbar = ProgressBar()
+            pbar.register()
+
+        if inplace:
+            if not return_lazy:
+                if dask_config_kwargs is None:
+                    dask_config_kwargs = dict()
+
+                if dask_config_kwargs.get("num_workers") is None:
+                    dask_config_kwargs.setdefault("num_workers", 2)
+
+                with dask.config.set(**dask_config_kwargs):
+                    averaged_patterns.store(
+                        self.data, compute=True, scheduler="threads"
+                    )
+            else:
+                averaged_patterns = averaged_patterns.rechunk(old_chunks)
+                self.data = averaged_patterns
+            s_out = None
+        else:
+            s_out = LazyEBSD(averaged_patterns, **self._get_custom_attributes())
+            if not return_lazy:
+                s_out.compute()
+
+        # Don't sink:
+        gc.collect()
+
+        if not return_lazy and register_pbar:
+            pbar.unregister()
+
+        if s_out:
+            return s_out
+
     def downsample(
         self,
         factor: int,
@@ -1870,7 +2111,7 @@ class EBSD(KikuchipySignal2D):
             Number of dictionary patterns to compare to all experimental
             patterns in each indexing iteration. If not given, and the
             dictionary is a ``LazyEBSD`` signal, it is equal to the
-            chunk size of the first pattern array axis, while if if is
+            chunk size of the first pattern array axis, while if it is
             an ``EBSD`` signal, it is set equal to the number of
             dictionary patterns, yielding only one iteration. This
             parameter can be increased to use less memory during
