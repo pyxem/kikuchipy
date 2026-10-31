@@ -106,8 +106,7 @@ doc = [
 tests = [
     "numpydoc",
     "pooch                  >= 1.3.0",
-    # TODO: Remove upper limit once PR 809 is merged and this is rebased on that.
-    "pytest                 >= 5.4, < 9.1",
+    "pytest                 >= 5.4",
     "pytest-benchmark",
     "pytest-rerunfailures",
     "pytest-xdist",
