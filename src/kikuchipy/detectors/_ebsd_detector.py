@@ -738,7 +738,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return -self.aspect_ratio * (self.pcx / self.pcz)
+        return self.gnomonic_bounds[..., 0]
 
     @property
     def x_max(self) -> np.ndarray | float:
@@ -747,7 +747,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return self.aspect_ratio * (1 - self.pcx) / self.pcz
+        return self.gnomonic_bounds[..., 1]
 
     @property
     def x_range(self) -> np.ndarray:
@@ -756,7 +756,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return np.dstack((self.x_min, self.x_max)).reshape(self.navigation_shape + (2,))
+        return self.gnomonic_bounds[..., :2]
 
     @property
     def y_min(self) -> np.ndarray | float:
@@ -765,7 +765,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return -(1 - self.pcy) / self.pcz
+        return self.gnomonic_bounds[..., 2]
 
     @property
     def y_max(self) -> np.ndarray | float:
@@ -774,7 +774,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return self.pcy / self.pcz
+        return self.gnomonic_bounds[..., 3]
 
     @property
     def y_range(self) -> np.ndarray:
@@ -783,7 +783,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
+        return self.gnomonic_bounds[..., 2:]
 
     @property
     def x_scale(self) -> np.ndarray:
@@ -819,7 +819,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return np.concatenate((self.x_range, self.y_range), axis=-1)
+        return get_gnomonic_bounds(self.nrows, self.ncols, self.pcx, self.pcy, self.pcz)
 
     @property
     def r_max(self) -> np.ndarray:
@@ -2587,43 +2587,44 @@ class EBSDDetector:
 
 
 def get_gnomonic_bounds(
-    nrows: int, ncols: int, pcx: float, pcy: float, pcz: float
+    nrows: int,
+    ncols: int,
+    pcx: float | np.ndarray,
+    pcy: float | np.ndarray,
+    pcz: float | np.ndarray,
 ) -> np.ndarray:
-    """Return a 1D array of gnomonic bounds for a single projection
-    center (PC).
+    """Return the gnomonic bounds for one or more projection centers
+    (PCs).
 
-    This function is used in by the objective functions for refining
-    orientations and PCs.
+    The calculation of gnomonic coordinates is based on the
+    supplementary material to :cite:`britton2016tutorial`.
 
     Parameters
     ----------
     nrows
         Number of rows on the EBSD pattern.
-        Same as EBSDDetector.nrows
     ncols
         Number of columns on the EBSD pattern.
-        Same as EBSDDetector.ncols.
     pcx
-        The x-coordinate of the pattern centre.
-        Same as EBSDDetector.pcx
+        The x-coordinate(s) of the pattern centre.
     pcy
-        The y-coordinate of the pattern centre.
-        Same as EBSDDetector.pcy
+        The y-coordinate(s) of the pattern centre, of the same shape as
+        *pcx*.
     pcz
-        The z-coordinate of the pattern centre.
-        Same as EBSDDetector.pcz
+        The z-coordinate(s) of the pattern centre, of the same shape as
+        *pcx*.
 
     Returns
     -------
     gnomonic_bounds
-        Array of the gnomonic bounds
-        [x_min, x_max, y_min, y_max].
+        Array of the gnomonic bounds [x_min, x_max, y_min, y_max] in the
+        last axis, of shape (4,) for a single PC or the shape of *pcx*
+        + (4,) otherwise.
     """
     aspect_ratio = ncols / nrows
     x_min = -aspect_ratio * (pcx / pcz)
     x_max = aspect_ratio * (1 - pcx) / pcz
     y_min = -(1 - pcy) / pcz
     y_max = pcy / pcz
-    gnomonic_bounds = np.array([x_min, x_max, y_min, y_max])
-
+    gnomonic_bounds = np.stack([x_min, x_max, y_min, y_max], axis=-1)
     return gnomonic_bounds
