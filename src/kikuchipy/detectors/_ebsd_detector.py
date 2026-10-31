@@ -39,7 +39,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, overload
 import warnings
 
+import dask.array as da
 from diffsims.crystallography import ReciprocalLatticeVector
+import hyperspy.api as hs
 import numba as nb
 import numpy as np
 import orix.crystal_map as ocm
@@ -47,6 +49,7 @@ import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
+from kikuchipy._kikuchi_sphere._detector_to_stereo import _detector_to_stereo
 from kikuchipy.detectors._convert_detector_coordinates import (
     convert_gnomonic_to_pixel_coords,
     convert_pixel_to_gnomonic_coords,
@@ -62,6 +65,8 @@ PROJECTION_CENTER_PLOT_MODES = Literal["map", "scatter", "3d"]
 if TYPE_CHECKING:  # pragma: no cover
     import matplotlib.axes as maxes
     import matplotlib.figure as mfigure
+
+    from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
@@ -981,6 +986,157 @@ class EBSDDetector:
             pos,
         )
         return coords_out
+
+    def to_stereo(
+        self,
+        pattern: np.ndarray | da.Array,
+        orientation: oqu.Orientation | oqu.Rotation | oqu.Quaternion,
+        size: int = 1_001,
+        symmetrize: bool = False,
+        exclude_outside_equator: bool = True,
+        show_progressbar: bool | None = None,
+    ) -> EBSDMasterPattern:
+        """Return one or more patterns on this detector projected onto
+        the sphere, as a master pattern in the stereographic projection.
+
+        The intensity in each pixel is the mean over all patterns (and
+        symmetrically equivalent orientations, if *symmetrize* is True)
+        which contribute to that pixel.
+
+        Parameters
+        ----------
+        pattern
+            One or more patterns of any navigation shape, with the
+            detector :attr:`shape` as the last two dimensions. If a Dask
+            array, chunks are computed one at a time.
+        orientation
+            Orientation(s) of the crystal for each pattern, transforming
+            vectors from the sample to the crystal. Must be of the same
+            size as the number of patterns. Must be an orientation with
+            a valid symmetry if *symmetrize* is True.
+        size
+            Side length of the square stereographic grid. Minimum of 2.
+            Default is 1001.
+        symmetrize
+            Whether to project each pattern also for all proper
+            symmetrically equivalent orientations. Default is False.
+        exclude_outside_equator
+            Whether to set intensities outside the equator to NaN.
+            Default is True. If False, these pixels get intensities from
+            the opposite hemisphere.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
+        Returns
+        -------
+        master_pattern
+            Master pattern in the stereographic projection with both
+            hemispheres, of shape (2, *size*, *size*) and 64-bit floating
+            point data type. Pixels without contributions are NaN. If
+            *orientation* is an orientation, the phase's point group is
+            set to its symmetry.
+
+        Raises
+        ------
+        TypeError
+            If *pattern* is not a NumPy or Dask array, or if
+            *orientation* is not an orientation when *symmetrize* is
+            True.
+        ValueError
+            If the pattern shape does not match the detector shape, if
+            the number of orientations or PCs does not match the number
+            of patterns, or if *size* is less than 2.
+
+        See Also
+        --------
+        kikuchipy.signals.EBSDMasterPattern.get_patterns
+        """
+        # Avoid circular import
+        from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
+
+        # Validate input pattern(s)
+        if not isinstance(pattern, (np.ndarray, da.Array)):
+            raise TypeError(
+                f"Pattern must be a NumPy or Dask array, not {type(pattern)}"
+            )
+        if pattern.ndim < 2 or pattern.shape[-2:] != self.shape:
+            raise ValueError(
+                f"Pattern shape {pattern.shape} must end with the detector shape "
+                f"{self.shape}"
+            )
+        patterns = pattern.reshape((-1,) + self.shape)
+        n_patterns = patterns.shape[0]
+
+        if self.navigation_size not in (1, n_patterns):
+            raise ValueError(
+                f"Detector must have either one PC or as many PCs as there are patterns"
+                f" {n_patterns}, but has {self.navigation_size}"
+            )
+
+        # Validate input orientation(s)
+        if symmetrize and not isinstance(orientation, oqu.Orientation):
+            raise TypeError(
+                "Orientation must be an orix Orientation when symmetrize=True"
+            )
+        if not isinstance(orientation, oqu.Quaternion):
+            raise TypeError(
+                "Orientation must be an orix Orientation, Rotation, or Quaternion, not "
+                f"{type(orientation)}"
+            )
+        if orientation.size != n_patterns:
+            raise ValueError(
+                f"Number of orientations {orientation.size} must match the number of "
+                f"patterns {n_patterns}"
+            )
+        if isinstance(orientation, oqu.Orientation):
+            rot_s2c = orientation.flatten()  # Crystal <- sample
+            phase = ocm.Phase(point_group=orientation.symmetry)
+        else:
+            rot_s2c = oqu.Rotation(orientation).flatten()
+            phase = ocm.Phase()
+
+        if size < 2:
+            raise ValueError(f"Size must be at least 2, not {size}")
+
+        if show_progressbar is None:
+            show_progressbar = hs.preferences.General.show_progressbar
+
+        sphere = _detector_to_stereo(
+            detector=self,
+            pattern=patterns,
+            mat_s2c=rot_s2c,
+            size=size,
+            symmetrize=symmetrize,
+            exclude_outside_equator=exclude_outside_equator,
+            show_progressbar=show_progressbar,
+        )
+
+        names = ["hemisphere", "height", "width"]
+        units = ["", "px", "px"]
+        offsets = [0, -size // 2, -size // 2]
+        axes = []
+        for i in range(3):
+            axis = {
+                "size": sphere.shape[i],
+                "index_in_array": i,
+                "name": names[i],
+                "scale": 1,
+                "offset": offsets[i],
+                "units": units[i],
+            }
+            axes.append(axis)
+
+        master_pattern = EBSDMasterPattern(
+            sphere,
+            axes=axes,
+            phase=phase,
+            projection="stereographic",
+            hemisphere="both",
+        )
+
+        return master_pattern
 
     def crop(self, extent: tuple[int, int, int, int] | list[int]) -> Self:
         """Return a new detector with its :attr:`shape` cropped and
@@ -2428,3 +2584,46 @@ class EBSDDetector:
         raise TypeError(
             "Sample position must be None, an integer, or a tuple with length 1 or 2"
         )
+
+
+def get_gnomonic_bounds(
+    nrows: int, ncols: int, pcx: float, pcy: float, pcz: float
+) -> np.ndarray:
+    """Return a 1D array of gnomonic bounds for a single projection
+    center (PC).
+
+    This function is used in by the objective functions for refining
+    orientations and PCs.
+
+    Parameters
+    ----------
+    nrows
+        Number of rows on the EBSD pattern.
+        Same as EBSDDetector.nrows
+    ncols
+        Number of columns on the EBSD pattern.
+        Same as EBSDDetector.ncols.
+    pcx
+        The x-coordinate of the pattern centre.
+        Same as EBSDDetector.pcx
+    pcy
+        The y-coordinate of the pattern centre.
+        Same as EBSDDetector.pcy
+    pcz
+        The z-coordinate of the pattern centre.
+        Same as EBSDDetector.pcz
+
+    Returns
+    -------
+    gnomonic_bounds
+        Array of the gnomonic bounds
+        [x_min, x_max, y_min, y_max].
+    """
+    aspect_ratio = ncols / nrows
+    x_min = -aspect_ratio * (pcx / pcz)
+    x_max = aspect_ratio * (1 - pcx) / pcz
+    y_min = -(1 - pcy) / pcz
+    y_max = pcy / pcz
+    gnomonic_bounds = np.array([x_min, x_max, y_min, y_max])
+
+    return gnomonic_bounds

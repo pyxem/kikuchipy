@@ -18,6 +18,12 @@ Unreleased
 
 Added
 -----
+- ``EBSDDetector.to_stereo()`` for projecting one or more patterns from the detector
+  onto the sphere, returned as a master pattern in the stereographic projection with
+  both hemispheres.
+  Intensities from multiple patterns, and optionally from all symmetrically equivalent
+  orientations, are averaged.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
 - Optimization of processing parameters of a single pattern against a reference pattern,
   scored by the normalized cross-correlation:
   ``pattern.optimize_remove_dynamic_background()``,
