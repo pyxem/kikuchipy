@@ -131,7 +131,7 @@ def _get_crystal_to_detector_matrices(
 @nb.njit(
     (
         "float64[:]"
-        "(float64[:, :], bool[:], float64[:, :], float64[:, :], float64, float64, "
+        "(float64[:, :], boolean[:], float64[:, :], float64[:, :], float64, float64, "
         "float64, float64, int64, int64)"
     ),
     cache=True,
