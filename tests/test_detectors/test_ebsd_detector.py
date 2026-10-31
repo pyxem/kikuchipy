@@ -19,6 +19,7 @@
 
 from copy import deepcopy
 
+import dask.array as da
 import matplotlib.collections as mcollections
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,6 +29,7 @@ import orix.vector as ove
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.detectors._ebsd_detector import get_gnomonic_bounds
 
 
 class TestEBSDDetector:
@@ -246,6 +248,27 @@ class TestEBSDDetector:
         detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
         assert np.allclose(detector.x_scale, desired_x_scale, atol=1e-6)
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "detector", [[(1,), (60, 60)], [(2, 3), (60, 50)]], indirect=["detector"]
+    )
+    def test_gnomonic_parameters(self, detector):
+        params = detector._get_gnomonic_parameters()
+        n_pcs = detector.navigation_size
+        assert params.shape == (n_pcs, 4)
+
+        gn = detector.gnomonic_bounds.reshape(-1, 4)
+        assert np.allclose(params[:, 0], gn[:, 0])
+        assert np.allclose(params[:, 1], gn[:, 3])
+        assert np.allclose(params[:, 2] * detector.ncols, gn[:, 1] - gn[:, 0])
+        assert np.allclose(params[:, 3] * detector.nrows, gn[:, 3] - gn[:, 2])
+
+    def test_gnomonic_bounds(self, detector):
+        pcx, pcy, pcz = detector.pc_average
+        bounds = get_gnomonic_bounds(
+            nrows=detector.nrows, ncols=detector.ncols, pcx=pcx, pcy=pcy, pcz=pcz
+        )
+        assert np.allclose(bounds, np.squeeze(detector.gnomonic_bounds[0]))
 
     @pytest.mark.parametrize(
         "tilt, azimuthal, twist, sample_tilt, expected_rotation",
@@ -1106,3 +1129,130 @@ class TestSaveLoadDetector:
         det = kp.detectors.EBSDDetector()
         with pytest.raises(ValueError, match="Invalid projection/pattern center "):
             det.save(tmp_path / "det_temp.txt", convention="EMsofts")
+
+
+class TestToStereo:
+    def test_to_stereo(self, detector):
+        rot = oqu.Rotation.from_euler(np.deg2rad([10, 20, 30]))
+        patterns = np.random.default_rng(42).random(detector.shape)
+        mp = detector.to_stereo(patterns, rot, size=51)
+
+        assert isinstance(mp, kp.signals.EBSDMasterPattern)
+        assert not mp._lazy
+        assert mp.data.shape == (2, 51, 51)
+        assert mp.data.dtype == np.float64
+        assert mp.projection == "stereographic"
+        assert mp.hemisphere == "both"
+        assert mp.phase.point_group is None
+        assert [ax.name for ax in mp.axes_manager._axes] == [
+            "hemisphere",
+            "height",
+            "width",
+        ]
+        assert mp.axes_manager.signal_shape == (51, 51)
+
+        # Default size
+        mp2 = detector.to_stereo(patterns, rot)
+        assert mp2.data.shape == (2, 1001, 1001)
+
+    def test_to_stereo_orientation_phase(self, detector):
+        pg = kp.data.nickel_ebsd_master_pattern_small().phase.point_group
+        ori = oqu.Orientation.from_euler(np.deg2rad([10, 20, 30]), symmetry=pg)
+        patterns = np.ones(detector.shape)
+        mp1 = detector.to_stereo(patterns, ori, size=51)
+        mp2 = detector.to_stereo(patterns, ori, size=51, symmetrize=True)
+        for mp in [mp1, mp2]:
+            assert mp.phase.point_group.name == pg.name
+        assert np.isfinite(mp2.data).sum() > np.isfinite(mp1.data).sum()
+
+    def test_to_stereo_quaternion(self, detector):
+        rot = oqu.Rotation.from_euler(np.deg2rad([10, 20, 30]))
+        patterns = np.random.default_rng(42).random(detector.shape)
+        mp1 = detector.to_stereo(patterns, rot, size=51)
+        mp2 = detector.to_stereo(patterns, oqu.Quaternion(rot.data * 2), size=51)
+        assert np.allclose(mp1.data, mp2.data, equal_nan=True)
+
+    @pytest.mark.parametrize("nav_shape", [(), (6,), (2, 3)])
+    def test_to_stereo_navigation_shapes(self, detector, nav_shape):
+        n_patterns = int(np.prod(nav_shape))
+        rng = np.random.default_rng(42)
+        rot = oqu.Rotation.random(n_patterns).reshape(*nav_shape)
+        patterns = rng.random(nav_shape + detector.shape)
+        mp = detector.to_stereo(patterns, rot, size=31)
+        assert mp.data.shape == (2, 31, 31)
+
+        # Navigation shape of the patterns does not matter, only that
+        # the orientations are in the same order
+        mp2 = detector.to_stereo(
+            patterns.reshape((n_patterns,) + detector.shape), rot.flatten(), size=31
+        )
+        assert np.allclose(mp.data, mp2.data, equal_nan=True)
+
+    def test_to_stereo_dask(self, detector):
+        rot = oqu.Rotation.from_euler(np.deg2rad([[10, 20, 30], [50, 40, 10]]))
+        patterns = np.random.default_rng(42).random((2,) + detector.shape)
+        mp1 = detector.to_stereo(patterns, rot, size=31)
+        mp2 = detector.to_stereo(da.from_array(patterns, chunks=1), rot, size=31)
+        assert not mp2._lazy
+        assert np.allclose(mp1.data, mp2.data, equal_nan=True)
+
+    @pytest.mark.parametrize("detector", [[(2, 3), (60, 60)]], indirect=["detector"])
+    def test_to_stereo_pattern_specific_pcs(self, detector):
+        detector.pcz = np.linspace(0.4, 0.6, 6).reshape(2, 3)
+        rot = oqu.Rotation.random(6).reshape(2, 3)
+        patterns = np.random.default_rng(42).random((2, 3) + detector.shape)
+        mp = detector.to_stereo(patterns, rot, size=31)
+        assert np.isfinite(mp.data).any()
+
+    def test_to_stereo_exclude_outside_equator(self, detector):
+        rot = oqu.Rotation.from_axes_angles([1, 0, 0], -np.pi / 2)
+        patterns = np.ones(detector.shape)
+        mp1 = detector.to_stereo(patterns, rot, size=51)
+        mp2 = detector.to_stereo(patterns, rot, size=51, exclude_outside_equator=False)
+        assert np.isfinite(mp2.data).sum() > np.isfinite(mp1.data).sum()
+
+    @pytest.mark.parametrize("show_progressbar", [True, False, None])
+    def test_to_stereo_progressbar(self, detector, capsys, show_progressbar):
+        import hyperspy.api as hs
+
+        patterns = np.ones((2,) + detector.shape)
+        rot = oqu.Rotation.identity((2,))
+        _ = detector.to_stereo(
+            patterns, rot, size=11, show_progressbar=show_progressbar
+        )
+        captured = capsys.readouterr()
+        if show_progressbar or (
+            show_progressbar is None and hs.preferences.General.show_progressbar
+        ):
+            assert "2/2" in captured.err
+        else:
+            assert "2/2" not in captured.err
+
+    def test_to_stereo_raises(self, detector):
+        rot = oqu.Rotation.identity()
+        patterns = np.ones(detector.shape)
+
+        with pytest.raises(TypeError, match="Pattern must be a NumPy or Dask array"):
+            _ = detector.to_stereo(patterns.tolist(), rot)
+        with pytest.raises(ValueError, match="must end with the detector shape"):
+            _ = detector.to_stereo(np.ones((60, 50)), rot)
+        with pytest.raises(ValueError, match="must end with the detector shape"):
+            _ = detector.to_stereo(np.ones(60), rot)
+        with pytest.raises(TypeError, match="Orientation must be an orix Orientation"):
+            _ = detector.to_stereo(patterns, rot, symmetrize=True)
+        with pytest.raises(TypeError, match="Orientation must be an orix Orientation"):
+            _ = detector.to_stereo(patterns, rot.data)
+        with pytest.raises(ValueError, match="Number of orientations 2 must match "):
+            _ = detector.to_stereo(patterns, oqu.Rotation.identity((2,)))
+        # One orientation for many patterns is not allowed
+        with pytest.raises(ValueError, match="Number of orientations 1 must match "):
+            _ = detector.to_stereo(np.ones((2,) + detector.shape), rot)
+        with pytest.raises(ValueError, match="Size must be at least 2"):
+            _ = detector.to_stereo(patterns, rot, size=1)
+
+    @pytest.mark.parametrize("detector", [[(2,), (60, 60)]], indirect=["detector"])
+    def test_to_stereo_raises_pcs(self, detector):
+        rot = oqu.Rotation.identity((3,))
+        patterns = np.ones((3,) + detector.shape)
+        with pytest.raises(ValueError, match="Detector must have either one PC or "):
+            _ = detector.to_stereo(patterns, rot)

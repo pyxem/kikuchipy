@@ -2281,6 +2281,30 @@ class EBSDDetector:
         else:
             return self.pc
 
+    def _get_gnomonic_parameters(self) -> np.ndarray:
+        """Return the parameters needed to map gnomonic coordinates to
+        fractional detector pixel coordinates for each PC.
+
+        Parameters
+        ----------
+        detector
+            EBSD detector with one or more PCs.
+
+        Returns
+        -------
+        params
+            Array of shape (n_pcs, 4) with the left gnomonic bound, the
+            top gnomonic bound, and the horizontal and vertical
+            gnomonic-to-pixel scale factors (gnomonic units per pixel).
+        """
+        gn = self.gnomonic_bounds.reshape(-1, 4)  # [x0, x1, y0, y1]
+        params = np.zeros((gn.shape[0], 4), dtype=np.float64)
+        params[:, 0] = gn[:, 0]
+        params[:, 1] = gn[:, 3]
+        params[:, 2] = (gn[:, 1] - gn[:, 0]) / self.ncols
+        params[:, 3] = (gn[:, 3] - gn[:, 2]) / self.nrows
+        return params
+
     @staticmethod
     def _parse_valid_shape_or_raise(value: tuple[int, int]) -> tuple[int, int]:
         if (
