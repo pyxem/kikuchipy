@@ -18,20 +18,74 @@ Unreleased
 
 Added
 -----
+- Optimization of processing parameters of a single pattern against a reference pattern,
+  scored by the normalized cross-correlation:
+  ``pattern.optimize_remove_dynamic_background()``,
+  ``pattern.optimize_adaptive_histogram_equalization()``, and
+  ``pattern.optimize_bandpass_filter()`` optimize one processing step each, while
+  ``pattern.optimize_pattern_processing()`` optimizes any of these steps together, in
+  any order.
+  Parameters are found by Bayesian optimization, which requires the optional dependency
+  ``bayesian-optimization``, or by local optimization with the Nelder-Mead method with
+  restarts.
+  A signal mask can be passed to exclude pixels from the score.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- ``draw.plot_pattern_processing_result()`` for plotting the pattern after each step of
+  a pattern processing optimization, annotated with image quality and normalized
+  cross-correlation.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- ``filters.bandpass_fft_filter()`` for creating a band-pass filter transfer function
+  for use with ``EBSD.fft_filter()``, e.g. with parameters from
+  ``pattern.optimize_bandpass_filter()``.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- ``pattern.get_signal_mask()`` for getting a signal mask of pixels without Kikuchi
+  diffraction in a pattern by intensity thresholding, for use in e.g. refinement or
+  pattern processing optimization.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
 - Project master pattern from the Lambert to the stereographic projection.
   (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
 
 Fixed
 -----
+- ``pattern.remove_dynamic_background()`` no longer fails for patterns with an integer
+  data type, and no longer overwrites patterns with a floating point data type.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Hough indexing, dictionary indexing, and refinement of a single pattern (without
+  navigation axes) no longer create a crystal map with coordinates of 50 points instead
+  of one.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
 
 Changed
 -------
+- Minimum version of NumPy is 1.25 and of Numba is 0.58, since the optional
+  dependency ``bayesian-optimization`` requires NumPy >= 1.25, which Numba supports from
+  version 0.58.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- The normalized cross-correlation metric "ncc" returns a score of zero instead of NaN
+  for flat patterns.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
 
 Removed
 -------
 
 Deprecated
 ----------
+
+
+0.13.1 (2026-09-04)
+===================
+
+Fixed
+-----
+- Energy axis of master patterns read from ebsdsim files written by ebsdsim >= 0.1.6 are
+  now correct.
+  Files written by older versions of ebsdsim still read correctly.
+  (`#820 <https://github.com/pyxem/kikuchipy/pull/820>`_)
+
+Changed
+-------
+- Increased minimal version of ebsdsim >= 0.1.4.
+  (`#820 <https://github.com/pyxem/kikuchipy/pull/820>`_)
 
 
 0.13.0 (2026-06-14)

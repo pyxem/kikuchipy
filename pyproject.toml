@@ -53,11 +53,9 @@ dependencies = [
     "imageio",
     "lazy_loader",
     "matplotlib       >= 3.6",
-    "numba            >= 0.57",
-    "numpy            >= 1.23.0",
-    # TODO: Replace with released version once it's released.
-    # "orix             >= 0.15.0",
-    "orix             == 0.15.0rc1",
+    "numba            >= 0.58",
+    "numpy            >= 1.25.0",
+    "orix             >= 0.15.0",
     "packaging",
     "pyyaml",
     "rosettasciio     >= 0.3.0",
@@ -71,7 +69,8 @@ dependencies = [
 
 [project.optional-dependencies]
 all = [
-    "ebsdsim     >= 0.1.3",
+    "bayesian-optimization >= 3.0",
+    "ebsdsim     >= 0.1.4",
     "ipywidgets",
     "IPython",
     "nlopt",
@@ -82,7 +81,8 @@ all = [
     "pyvista",
 ]
 doc = [
-    "ebsdsim                      >= 0.1.3",
+    "bayesian-optimization        >= 3.0",
+    "ebsdsim                      >= 0.1.4",
     "ipywidgets",
     "IPython",
     "ipympl",

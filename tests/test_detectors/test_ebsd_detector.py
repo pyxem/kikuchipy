@@ -28,14 +28,6 @@ import orix.vector as ove
 import pytest
 
 import kikuchipy as kp
-from kikuchipy._constants import dependency_version
-
-skipif_pyebsdindex_installed = pytest.mark.skipif(
-    dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
-)
-skipif_pyebsdindex_not_installed = pytest.mark.skipif(
-    dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
-)
 
 
 class TestEBSDDetector:
@@ -1015,13 +1007,13 @@ class TestGetIndexer:
         )
         self.det = det
 
-    @skipif_pyebsdindex_installed
+    @pytest.mark.skipif_pyebsdindex_installed
     def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
         with pytest.raises(ImportError, match="requires that 'pyebsdindex'"):
             _ = self.det.get_indexer(pl)
 
-    @skipif_pyebsdindex_not_installed
+    @pytest.mark.skipif_pyebsdindex_not_installed
     def test_get_indexer_invalid_phase_lists(self):
         # Not all phases have space groups
         pl = PhaseList(names=["a", "b"], point_groups=["m-3m", "432"])
@@ -1029,7 +1021,7 @@ class TestGetIndexer:
         with pytest.raises(ValueError, match="Space group for each phase must be set,"):
             _ = self.det.get_indexer(pl)
 
-    @skipif_pyebsdindex_not_installed
+    @pytest.mark.skipif_pyebsdindex_not_installed
     def test_get_indexer(self):
         # fmt: off
         #               -1  2/m  222   -3   -3m   4/m   4/mmm   6/m  6/mmm    m-3  m-3m

@@ -45,7 +45,7 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: "3.10"
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.2 hyperspy==2.2 matplotlib==3.6 numba==0.57 numpy==1.23.0 orix==0.12.1 pooch==1.3.0 pyebsdindex==0.3.9.2 scikit-image==0.21.0
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.2 hyperspy==2.2 matplotlib==3.6 numba==0.58 numpy==1.25.0 orix==0.12.1 pooch==1.3.0 pyebsdindex==0.3.9.2 scikit-image==0.21.0
             LABEL: -oldest
           - os: ubuntu-latest
             python-version: "3.14"
@@ -54,12 +54,22 @@ jobs:
             python-version: "3.14"
             LABEL: -build-install-wheel
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Constrain dependencies to oldest supported versions
+        # All later pip installs must respect these pins instead of
+        # upgrading the pinned packages
+        if: contains(matrix.LABEL, 'oldest')
+        shell: bash
+        run: |
+          echo "${{ matrix.DEPENDENCIES }}" | tr " " "\n" > "$RUNNER_TEMP/constraints.txt"
+          cat "$RUNNER_TEMP/constraints.txt"
+          echo "PIP_CONSTRAINT=$RUNNER_TEMP/constraints.txt" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         shell: bash
@@ -114,7 +124,7 @@ jobs:
 
       - name: Set up headless display necessary for PyVista on Windows
         if: ${{ matrix.os == 'windows-latest' }}
-        uses: pyvista/setup-headless-display-action@v4
+        uses: pyvista/setup-headless-display-action@v5
 
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -137,9 +147,7 @@ jobs:
       - name: Run GPU tests on macOS
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          # TODO: Replace with patched version once it's released
-          pip install "ebsdsim @ git+https://github.com/hakonanes/ebsdsim@fix-1-multiprocessing-start-method-with-script"
-
+          pip install ebsdsim
           pytest ${{ env.PYTEST_ARGS }} -m gpu --gpu
 
       - name: Generate line coverage
@@ -148,6 +156,6 @@ jobs:
 
       - name: Upload coverage reports to Codecov
         if: ${{ github.repository_owner == 'pyxem' }}
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

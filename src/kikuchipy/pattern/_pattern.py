@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,18 +15,25 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
-from typing import Callable
+"""Processing of a single EBSD pattern."""
+
+from typing import Callable, Literal, get_args
 
 from numba import njit
 import numpy as np
 from scipy.fft import fft2, fftshift, ifft2, ifftshift, irfft2, rfft2
 from scipy.ndimage import gaussian_filter
 from skimage.exposure import equalize_adapthist
+from skimage.filters import threshold_minimum
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
+
+REMOVAL_OPERATION = Literal["subtract", "divide"]
+FILTER_DOMAIN = Literal["frequency", "spatial"]
 
 
 def rescale_intensity(
@@ -71,7 +79,7 @@ def rescale_intensity(
         dtype_out = np.dtype(dtype_out)
 
     if percentiles is not None:
-        in_range = np.nanpercentile(pattern, q=percentiles)
+        in_range = tuple(np.nanpercentile(pattern, q=percentiles))
 
     if in_range is None:
         imin, imax = np.nanmin(pattern), np.nanmax(pattern)
@@ -438,7 +446,7 @@ def _remove_static_background_divide(
 def _remove_dynamic_background(
     pattern: np.ndarray,
     filter_func: Callable,
-    operation: str,
+    operation: REMOVAL_OPERATION,
     dtype_out: np.dtype,
     omin: int | float,
     omax: int | float,
@@ -511,8 +519,8 @@ def _remove_background_divide(
 
 def remove_dynamic_background(
     pattern: np.ndarray,
-    operation: str = "subtract",
-    filter_domain: str = "frequency",
+    operation: REMOVAL_OPERATION = "subtract",
+    filter_domain: FILTER_DOMAIN = "frequency",
     std: int | float | None = None,
     truncate: int | float = 4.0,
     dtype_out: (
@@ -567,6 +575,10 @@ def remove_dynamic_background(
     else:
         dtype_out = np.dtype(dtype_out)
 
+    # Copy to avoid overwriting the input pattern, and cast to allow
+    # subtraction of or division by the float background
+    pattern = pattern.astype(np.float32)
+
     if filter_domain == "frequency":
         (
             fft_shape,
@@ -588,7 +600,7 @@ def remove_dynamic_background(
     elif filter_domain == "spatial":
         dynamic_bg = gaussian_filter(input=pattern, sigma=std, truncate=truncate)
     else:
-        filter_domains = ["frequency", "spatial"]
+        filter_domains = get_args(FILTER_DOMAIN)
         raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
     # Remove dynamic background
@@ -602,7 +614,7 @@ def remove_dynamic_background(
 
 
 def _dynamic_background_frequency_space_setup(
-    pattern_shape: list[int] | tuple[int, int],
+    pattern_shape: tuple[int, int],
     std: int | float,
     truncate: int | float,
 ) -> tuple[
@@ -633,7 +645,7 @@ def _dynamic_background_frequency_space_setup(
 
 def get_dynamic_background(
     pattern: np.ndarray,
-    filter_domain: str = "frequency",
+    filter_domain: FILTER_DOMAIN = "frequency",
     std: int | float | None = None,
     truncate: int | float = 4.0,
 ) -> np.ndarray:
@@ -739,6 +751,66 @@ def get_image_quality(
         inertia_max = np.sum(frequency_vectors) / (sy * sx)
 
     return _get_image_quality(pattern, normalize, frequency_vectors, inertia_max)
+
+
+def get_signal_mask(
+    pattern: np.ndarray, threshold: int | float | None = None
+) -> np.ndarray:
+    """Return a signal mask of pixels without Kikuchi diffraction in an
+    EBSD pattern, found by intensity thresholding.
+
+    Pixels with intensities below the threshold, typically the detector
+    corners outside a circular phosphor screen, are masked out.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern, e.g. the mean pattern of a dataset or its static
+        background. An average pattern is less influenced by noise and
+        Kikuchi bands than a single pattern.
+    threshold
+        Intensity threshold. If not given, it is found with the minimum
+        method in :func:`skimage.filters.threshold_minimum`, which
+        assumes a histogram with two maxima. Other thresholding methods
+        in :mod:`skimage.filters` might work better for other patterns,
+        and their threshold can be passed here.
+
+    Returns
+    -------
+    signal_mask
+        Boolean mask of the same shape as *pattern*, where pixels to
+        exclude are True. This follows the convention of signal masks
+        in kikuchipy, e.g. in
+        :meth:`~kikuchipy.signals.EBSD.refine_orientation` and
+        :func:`~kikuchipy.pattern.optimize_pattern_processing`.
+
+    Raises
+    ------
+    ValueError
+        If *pattern* is not 2D.
+    RuntimeError
+        If *threshold* is not given and the minimum method fails to
+        find a threshold.
+
+    See Also
+    --------
+    skimage.filters.threshold_minimum
+    """
+    pattern = np.asarray(pattern)
+    if pattern.ndim != 2:
+        raise ValueError(f"Pattern must be 2D, not of shape {pattern.shape}")
+
+    if threshold is None:
+        try:
+            threshold = threshold_minimum(pattern)
+        except RuntimeError as err:
+            raise RuntimeError(
+                "Could not find a threshold with the minimum method, as the pattern "
+                "intensity histogram does not have two maxima. Pass a threshold, e.g. "
+                "from another thresholding method in skimage.filters."
+            ) from err
+
+    return pattern < threshold
 
 
 def _get_image_quality(

@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -10,11 +10,12 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import os
 
@@ -28,6 +29,7 @@ from scipy.signal.windows import gaussian, general_gaussian
 
 from kikuchipy.filters.window import (
     Window,
+    bandpass_fft_filter,
     distance_to_origin,
     highpass_fft_filter,
     lowpass_fft_filter,
@@ -503,3 +505,43 @@ class TestWindow:
     )
     def test_n_neighbours(self, shape, desired_n_neighbours):
         assert Window(shape=shape).n_neighbours == desired_n_neighbours
+
+
+class TestBandpassFFTFilter:
+    def test_equal_to_product_of_highpass_and_lowpass(self):
+        shape = (60, 50)
+        w1 = Window("highpass", cutoff=3, cutoff_width=2, shape=shape) * Window(
+            "lowpass", cutoff=20, cutoff_width=10, shape=shape
+        )
+        w2 = bandpass_fft_filter(
+            shape,
+            highpass_cutoff=3,
+            lowpass_cutoff=20,
+            highpass_cutoff_width=2,
+            lowpass_cutoff_width=10,
+        )
+        assert w2.shape == shape
+        assert np.allclose(w1, w2)
+
+    def test_band(self):
+        """The lowest and highest frequencies are suppressed, while
+        frequencies in between pass.
+        """
+        w = bandpass_fft_filter((61, 61), highpass_cutoff=3, lowpass_cutoff=15)
+        assert np.all((w >= 0) & (w <= 1))
+        assert w[30, 30] < 0.01  # Center, zero frequency
+        assert w[30, 40] == 1  # Between the cutoffs
+        assert w[0, 0] == 0  # Corner, highest frequencies
+
+    def test_default_cutoff_widths(self):
+        """Cutoff widths default to half of the cutoffs."""
+        shape = (30, 30)
+        w1 = bandpass_fft_filter(shape, highpass_cutoff=4, lowpass_cutoff=10)
+        w2 = bandpass_fft_filter(
+            shape,
+            highpass_cutoff=4,
+            lowpass_cutoff=10,
+            highpass_cutoff_width=2,
+            lowpass_cutoff_width=5,
+        )
+        assert np.allclose(w1, w2)

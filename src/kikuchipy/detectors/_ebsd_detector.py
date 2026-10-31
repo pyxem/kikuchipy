@@ -47,7 +47,6 @@ import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
-from kikuchipy._utils.deprecated import VisibleDeprecationWarning
 from kikuchipy.detectors._convert_detector_coordinates import (
     convert_gnomonic_to_pixel_coords,
     convert_pixel_to_gnomonic_coords,
@@ -312,7 +311,7 @@ class EBSDDetector:
                     "Passing None is deprecated and will give an error in version "
                     "0.14. Pass the default value 'bruker' to avoid this warning."
                 ),
-                category=VisibleDeprecationWarning,
+                category=np.exceptions.VisibleDeprecationWarning,
             )
             convention = "bruker"
         self._set_pc_in_bruker_convention(convention)
@@ -1635,14 +1634,18 @@ class EBSDDetector:
             :meth:`~kikuchipy.signals.EBSD.hough_indexing`.
             ``indexer.PC`` is set equal to :attr:`pc_flattened`.
 
+        See Also
+        --------
+        pyebsdindex.tripletvote.addphase
+
         Notes
         -----
         Requires that PyEBSDIndex is installed, which is an optional
         dependency of kikuchipy. See :ref:`dependencies` for details.
 
-        See Also
-        --------
-        pyebsdindex.tripletvote.addphase
+        If you use Hough indexing in kikuchipy in your work, please cite
+        both kikuchipy :cite:`aanes2026kikuchipy` *and* PyEBSDIndex
+        :cite:`rowenhorst2024fast`.
         """
         self._warn_if_angles_ignored(
             "get_indexer() passes only sample_tilt and tilt to PyEBSDIndex;"

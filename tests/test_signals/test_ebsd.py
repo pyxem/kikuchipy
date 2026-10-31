@@ -23,6 +23,7 @@ import dask.array as da
 import hyperspy.api as hs
 import matplotlib.pyplot as plt
 import numpy as np
+from packaging.version import Version
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -1728,7 +1729,7 @@ class TestDecomposition:
     def test_lazy_decomposition(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
         lazy_signal.change_dtype(np.float32)
-        lazy_signal.decomposition()
+        lazy_signal.decomposition(output_dimension=9)
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
     @pytest.mark.parametrize(
@@ -1758,9 +1759,13 @@ class TestDecomposition:
         assert isinstance(model_signal, kp.signals.EBSD)
         assert np.allclose(model_signal.data.mean(), mean_intensity, atol=1e-3)
 
+    @pytest.mark.skipif(
+        Version(hs.__version__) <= Version("2.4.0"),
+        reason="Requires HyperSpy > 2.4.0",
+    )
     @pytest.mark.parametrize(
         "components, mean_intensity",
-        [(None, 132.1), (3, 122.9), ([0, 1, 3], 116.8)],
+        [(None, 117.7), (3, 119.2), ([0, 1, 3], 110.2)],
     )
     def test_get_decomposition_model_lazy(
         self, dummy_signal, components, mean_intensity
@@ -1773,18 +1778,12 @@ class TestDecomposition:
         # Signal type
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
-        # Turn factors and loadings into dask arrays
-        lazy_signal.learning_results.factors = da.from_array(
-            lazy_signal.learning_results.factors
-        )
-        lazy_signal.learning_results.loadings = da.from_array(
-            lazy_signal.learning_results.loadings
-        )
-
         # Get decomposition model
         model_signal = lazy_signal.get_decomposition_model(
-            components=components, dtype_out=np.float32
+            components=components,
+            dtype_out=np.float32,
         )
+        assert isinstance(model_signal, kp.signals.LazyEBSD)
 
         # Check data shape, signal class and image intensities in model
         # signal after rescaling to 8 bit unsigned integer
@@ -1792,7 +1791,7 @@ class TestDecomposition:
         assert isinstance(model_signal, kp.signals.LazyEBSD)
         model_signal.rescale_intensity(relative=True, dtype_out=np.uint8)
         model_mean = model_signal.data.mean().compute()
-        assert np.allclose(model_mean, mean_intensity, atol=0.1)
+        np.testing.assert_allclose(model_mean, mean_intensity, atol=0.1)
 
     @pytest.mark.parametrize("components, mean_intensity", [(None, 132.1), (3, 122.9)])
     def test_get_decomposition_model_write(

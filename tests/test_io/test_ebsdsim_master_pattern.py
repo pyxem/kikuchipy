@@ -26,12 +26,16 @@ import numpy as np
 
 import kikuchipy as kp
 from kikuchipy.io.plugins.ebsdsim_master_pattern import file_reader
+from kikuchipy.io.plugins.ebsdsim_master_pattern._api import (
+    get_upper_energy_bin_edges_kv,
+)
 
 
 @pytest.mark.gpu
 class TestEbsdsimMasterPatternReader:
-    # The Ni file has halfw=10 (side=21), 2 energy bins ([15, 5] keV),
-    # and hemisphere_dim=1 (centrosymmetric → only northern hemisphere stored).
+    # The Ni file has halfw=10 (side=21), 2 energy bins ([20, 10] keV),
+    # and hemisphere_dim=1 (centrosymmetric -> only northern hemisphere
+    # stored)
 
     def test_default_load(self, ebsdsim_master_pattern_file):
         mp = kp.load(ebsdsim_master_pattern_file)
@@ -60,9 +64,9 @@ class TestEbsdsimMasterPatternReader:
         energy_axis = mp.axes_manager["energy"]
         assert energy_axis.size == 2
         assert energy_axis.units == "keV"
-        # Bins are at 20 and 10 keV; offset is the first bin, scale is
-        # the step
-        np.testing.assert_allclose(energy_axis.axis, [20.0, 10.0], atol=1.0)
+        # Bins are at 20 and 10 keV (20 kV beam, 10 keV bin width);
+        # offset is the first bin voltage, scale is the step
+        np.testing.assert_allclose(energy_axis.axis, [20.0, 10.0], atol=1e-3)
 
     def test_signal_axes(self, ebsdsim_master_pattern_file):
         mp = kp.load(ebsdsim_master_pattern_file)
@@ -109,3 +113,67 @@ class TestEbsdsimMasterPatternReader:
         )
         assert d["projection"] == "lambert"
         assert isinstance(d["phase"], dict)
+
+
+class TestUpperEnergyBinEdges:
+    # ebsdsim < 0.1.6 wrote bin centers to bin_voltages_kv, >= 0.1.6
+    # writes upper bin edges. Neither the format version nor anything
+    # else in the file says which, so the reader infers it from the beam
+    # voltage and the energy bin width.
+
+    meta = {"voltage_kv": 20.0, "energy_binwidth_keV": 1.0}
+
+    def test_upper_edges_pass_through(self):
+        # ebsdsim >= 0.1.6: beam_kv - i * energy_binwidth
+        voltages = np.array([20.0, 19.0, 18.0], dtype=np.float32)
+
+        edges = get_upper_energy_bin_edges_kv(voltages, self.meta)
+
+        np.testing.assert_allclose(edges, [20.0, 19.0, 18.0])
+
+    def test_centers_shifted_to_upper_edges(self):
+        # ebsdsim < 0.1.6: beam_kv - (i + 0.5) * energy_binwidth
+        voltages = np.array([19.5, 18.5, 17.5], dtype=np.float32)
+
+        edges = get_upper_energy_bin_edges_kv(voltages, self.meta)
+
+        np.testing.assert_allclose(edges, [20.0, 19.0, 18.0])
+
+    def test_skipped_bins(self):
+        # Bins below the weight or amplitude threshold are not written,
+        # so the bins present need not start at the beam voltage nor be
+        # contiguous
+        centers = np.array([18.5, 17.5, 15.5], dtype=np.float32)
+        upper_edges = np.array([19.0, 18.0, 16.0], dtype=np.float32)
+
+        np.testing.assert_allclose(
+            get_upper_energy_bin_edges_kv(centers, self.meta), upper_edges
+        )
+        np.testing.assert_allclose(
+            get_upper_energy_bin_edges_kv(upper_edges, self.meta), upper_edges
+        )
+
+    @pytest.mark.parametrize("binwidth", [0.5, 2.0, 10.0])
+    def test_bin_widths(self, binwidth):
+        meta = {"voltage_kv": 20.0, "energy_binwidth_keV": binwidth}
+        i = np.arange(3, dtype=np.float32)
+        upper_edges = np.asarray(20.0 - i * binwidth, dtype=np.float32)
+        centers = np.asarray(upper_edges - binwidth / 2, dtype=np.float32)
+
+        np.testing.assert_allclose(
+            get_upper_energy_bin_edges_kv(centers, meta), upper_edges
+        )
+        np.testing.assert_allclose(
+            get_upper_energy_bin_edges_kv(upper_edges, meta), upper_edges
+        )
+
+    @pytest.mark.parametrize(
+        "meta",
+        [{}, {"voltage_kv": 20.0}, {"voltage_kv": 20.0, "energy_binwidth_keV": 0}],
+    )
+    def test_incomplete_metadata_assumes_upper_edges(self, meta):
+        voltages = np.array([20.0, 19.0], dtype=np.float32)
+
+        np.testing.assert_allclose(
+            get_upper_energy_bin_edges_kv(voltages, meta), [20.0, 19.0]
+        )
