@@ -18,9 +18,9 @@
 #
 
 """
-================================================
-Project patterns from the detector to the sphere
-================================================
+========================================
+Project patterns from detector to sphere
+========================================
 
 This example shows how to project EBSD patterns from the detector onto the sphere, in
 the stereographic projection, using :meth:`~kikuchipy.detectors.EBSDDetector.to_stereo`.
