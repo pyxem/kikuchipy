@@ -81,9 +81,35 @@ MARKERS = [
     "weekly",
 ]
 
+# Markers skipping tests depending on whether an optional dependency is
+# installed, given as {marker: (dependency, skip if installed)}
+SKIPIF_DEPENDENCY_MARKERS = {
+    "skipif_bayesian_optimization_not_installed": ("bayesian-optimization", False),
+    "skipif_ipywidgets_installed": ("ipywidgets", True),
+    "skipif_nlopt_installed": ("nlopt", True),
+    "skipif_nlopt_not_installed": ("nlopt", False),
+    "skipif_pyebsdindex_installed": ("pyebsdindex", True),
+    "skipif_pyebsdindex_not_installed": ("pyebsdindex", False),
+    "skipif_pyvista_installed": ("pyvista", True),
+    "skipif_pyvista_not_installed": ("pyvista", False),
+}
+
+
+def pytest_configure(config):
+    """Register markers skipping tests depending on whether an optional
+    dependency is installed.
+    """
+    for marker, (dependency, skip_if_installed) in SKIPIF_DEPENDENCY_MARKERS.items():
+        if skip_if_installed:
+            description = f"skip test if {dependency} is installed"
+        else:
+            description = f"skip test if {dependency} is not installed"
+        config.addinivalue_line("markers", f"{marker}: {description}")
+
 
 def pytest_runtest_setup(item):
-    """Skip certain tests when flag is missing:
+    """Skip certain tests when flag is missing or depending on whether
+    an optional dependency is installed:
     https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_runtest_setup.
 
     To run tests marked by this marker *only*, say, `gpu`, do
@@ -95,6 +121,14 @@ def pytest_runtest_setup(item):
             marker_str, default=False
         ):
             pytest.skip(f"Needs {marker_str} flag to run")
+    for marker, (dependency, skip_if_installed) in SKIPIF_DEPENDENCY_MARKERS.items():
+        if marker not in item.keywords:
+            continue
+        is_installed = dependency_version[dependency] is not None
+        if skip_if_installed and is_installed:
+            pytest.skip(f"{dependency} is installed")
+        elif not skip_if_installed and not is_installed:
+            pytest.skip(f"{dependency} is not installed")
 
 
 # ----------------------------- PyVista ------------------------------ #
@@ -353,6 +387,53 @@ def get_single_phase_xmap(rotations) -> Generator[Callable, None, None]:
         return CrystalMap(**d)
 
     yield _get_single_phase_xmap
+
+
+@pytest.fixture(scope="module")
+def nickel_pattern_and_reference() -> Generator[
+    tuple[np.ndarray, np.ndarray], None, None
+]:
+    """Experimental nickel pattern of 8-bit integers with the static
+    background removed, and a simulated pattern from the same
+    orientation.
+    """
+    s = kp.data.nickel_ebsd_small()
+    s.remove_static_background()
+    pattern = s.data[1, 1]
+
+    mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+    det = s.detector.deepcopy()
+    det.pc = det.pc[1, 1]
+    rotation = s.xmap.rotations[4]  # Map point (1, 1)
+    sim = mp.get_patterns(
+        rotation,
+        det,
+        energy=20,
+        dtype_out="uint8",
+        compute=True,
+        show_progressbar=False,
+    )
+
+    yield pattern, sim.data.squeeze()
+
+
+@pytest.fixture
+def pattern_processing_result() -> Generator[dict, None, None]:
+    """Minimal pattern processing optimization result with two steps,
+    as returned from :func:`kikuchipy.pattern.optimize_pattern_processing`.
+    """
+    rng = np.random.default_rng(0)
+    patterns = {}
+    for key in ["raw", "remove_dynamic_background", "bandpass_filter"]:
+        patterns[key] = rng.integers(0, 255, (10, 12), dtype=np.uint8)
+
+    yield {
+        "steps": ("remove_dynamic_background", "bandpass_filter"),
+        "patterns": patterns,
+        "image_quality": np.array([0.1, 0.2, 0.3]),
+        "normalized_cross_correlation": np.array([0.4, 0.5, 0.6]),
+        "signal_mask": None,
+    }
 
 
 # ---------------------------- IO fixtures --------------------------- #

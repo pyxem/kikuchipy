@@ -26,6 +26,7 @@ credits = [
     "Ole Natlandsmyr",
     "Thomas G. Woodcock",
     "Tina Bergh",
+    "Claire Griesbach",
     "Eric Prestat",
     "Austin Gerlt",
     "Andreas V. Bugten",

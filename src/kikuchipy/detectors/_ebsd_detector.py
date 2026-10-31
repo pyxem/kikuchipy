@@ -47,7 +47,6 @@ import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
-from kikuchipy._utils.deprecated import VisibleDeprecationWarning
 from kikuchipy.detectors._convert_detector_coordinates import (
     convert_gnomonic_to_pixel_coords,
     convert_pixel_to_gnomonic_coords,
@@ -312,7 +311,7 @@ class EBSDDetector:
                     "Passing None is deprecated and will give an error in version "
                     "0.14. Pass the default value 'bruker' to avoid this warning."
                 ),
-                category=VisibleDeprecationWarning,
+                category=np.exceptions.VisibleDeprecationWarning,
             )
             convention = "bruker"
         self._set_pc_in_bruker_convention(convention)

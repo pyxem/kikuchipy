@@ -17,6 +17,7 @@
 
 from .window import (
     Window,
+    bandpass_fft_filter,
     distance_to_origin,
     highpass_fft_filter,
     lowpass_fft_filter,
@@ -25,6 +26,7 @@ from .window import (
 
 __all__ = [
     "Window",
+    "bandpass_fft_filter",
     "distance_to_origin",
     "highpass_fft_filter",
     "lowpass_fft_filter",

@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -10,11 +10,12 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import dask.array as da
 import numpy as np
@@ -275,6 +276,51 @@ class TestRemoveDynamicBackgroundPattern:
         assert np.sum(window_fft.imag) != 0
         assert offset_before_fft == (3, 3)
         assert offset_after_ifft == (2, 2)
+
+    def test_remove_dynamic_background_integer_pattern(self, dummy_signal):
+        """Patterns with an integer data type are supported, and the
+        data type is kept.
+        """
+        p = dummy_signal.inav[0, 0].data
+        assert p.dtype == np.uint8
+        p2 = remove_dynamic_background(p, std=1)
+        assert p2.dtype == np.uint8
+        assert p2.shape == p.shape
+
+    def test_remove_dynamic_background_does_not_overwrite_input(self, dummy_signal):
+        p = dummy_signal.inav[0, 0].data.astype(np.float32)
+        p_copy = p.copy()
+        for filter_domain in ["frequency", "spatial"]:
+            _ = remove_dynamic_background(p, filter_domain=filter_domain, std=1)
+            assert np.array_equal(p, p_copy)
+
+
+class TestGetSignalMask:
+    def test_get_signal_mask(self):
+        """Dark pixels outside a bright disk are masked out."""
+        rng = np.random.default_rng(0)
+        shape = (60, 60)
+        in_disk = kp.filters.distance_to_origin(shape) < 25
+        pattern = rng.integers(0, 20, shape)
+        pattern[in_disk] = rng.integers(150, 255, int(np.sum(in_disk)))
+        pattern = pattern.astype(np.uint8)
+
+        signal_mask = kp.pattern.get_signal_mask(pattern)
+        assert signal_mask.dtype == bool
+        assert signal_mask.shape == shape
+        # Pixels to exclude are True
+        assert np.array_equal(signal_mask, ~in_disk)
+
+    def test_get_signal_mask_threshold(self):
+        pattern = np.arange(10).reshape((2, 5))
+        signal_mask = kp.pattern.get_signal_mask(pattern, threshold=3)
+        assert np.array_equal(signal_mask, pattern < 3)
+
+    def test_get_signal_mask_raises(self):
+        with pytest.raises(ValueError, match=r"Pattern must be 2D, not of shape \(1"):
+            _ = kp.pattern.get_signal_mask(np.ones((1, 10, 10)))
+        with pytest.raises(RuntimeError, match="Could not find a threshold"):
+            _ = kp.pattern.get_signal_mask(np.full((10, 10), 7.0))
 
 
 class TestGetDynamicBackgroundPattern:

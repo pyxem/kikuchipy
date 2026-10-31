@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,10 +15,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import dask
 import dask.array as da
-from numba import njit
+import numba as nb
 import numpy as np
 
 from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
@@ -197,7 +199,9 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             return _zero_mean_normalize_patterns_dask(patterns)
 
 
-@njit("float64(float32[:], float32[:], float32)", cache=True, nogil=True, fastmath=True)
+@nb.njit(
+    "float64(float32[:], float32[:], float32)", cache=True, nogil=True, fastmath=True
+)
 def _ncc_single_patterns_1d_float32_exp_centered(
     exp: np.ndarray, sim: np.ndarray, exp_squared_norm: float
 ) -> float:
@@ -225,11 +229,69 @@ def _ncc_single_patterns_1d_float32_exp_centered(
     )
 
 
+def _ncc_single_patterns_2d_ref_normalized(
+    pattern: np.ndarray,
+    reference_normalized: np.ndarray,
+    signal_mask: np.ndarray | None = None,
+) -> float:
+    """Return the normalized cross-correlation (NCC) coefficient
+    between a 2D pattern and a reference pattern.
+
+    Parameters
+    ----------
+    pattern
+        2D pattern.
+    reference_normalized
+        1D reference pattern returned from
+        :func:`_zero_mean_normalize_pattern_numpy` with the same
+        *signal_mask*.
+    signal_mask
+        Boolean mask of the same shape as *pattern*, where only pixels
+        equal to False are used. If not given, all pixels are used.
+
+    Returns
+    -------
+    ncc
+        NCC coefficient. It is zero if either pattern is flat.
+    """
+    pattern_normalized = _zero_mean_normalize_pattern_numpy(pattern, signal_mask)
+    return float(np.dot(pattern_normalized, reference_normalized))
+
+
+def _zero_mean_normalize_pattern_numpy(
+    pattern: np.ndarray, signal_mask: np.ndarray | None = None
+) -> np.ndarray:
+    """Return a copy of the pixels in a pattern not masked out,
+    flattened, as 64-bit floats with zero mean and unit norm.
+
+    Parameters
+    ----------
+    pattern
+        Pattern of any shape.
+    signal_mask
+        Boolean mask of the same shape as *pattern*, where only pixels
+        equal to False are kept. If not given, all pixels are kept.
+
+    Returns
+    -------
+    pattern_normalized
+        1D normalized pattern. A flat pattern is returned as zeros.
+    """
+    pattern = np.asarray(pattern)
+    if signal_mask is None:
+        pattern = pattern.astype(np.float64).reshape((1, -1))
+    else:
+        pattern = pattern[~signal_mask].astype(np.float64).reshape((1, -1))
+    return _zero_mean_normalize_patterns_numpy(pattern)[0]
+
+
 def _zero_mean_normalize_patterns_numpy(patterns: np.ndarray) -> np.ndarray:
     patterns_mean = np.mean(patterns, axis=1, keepdims=True)
     patterns -= patterns_mean
     patterns_norm = np.sqrt(np.sum(np.square(patterns), axis=1, keepdims=True))
-    patterns /= patterns_norm
+    # Flat patterns are zero after centering, so leave them as zeros
+    # instead of dividing by zero
+    patterns /= np.where(patterns_norm == 0, 1, patterns_norm)
     return patterns
 
 
@@ -237,5 +299,7 @@ def _zero_mean_normalize_patterns_dask(patterns: da.Array) -> da.Array:
     patterns_mean = da.mean(patterns, axis=1, keepdims=True)
     patterns -= patterns_mean
     patterns_norm = da.sqrt(da.sum(da.square(patterns), axis=1, keepdims=True))
-    patterns /= patterns_norm
+    # Flat patterns are zero after centering, so leave them as zeros
+    # instead of dividing by zero
+    patterns /= da.where(patterns_norm == 0, 1, patterns_norm)
     return patterns

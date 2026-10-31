@@ -29,10 +29,11 @@ from typing import TYPE_CHECKING
 import dask.array as da
 from diffsims.crystallography import ReciprocalLatticeVector
 import numpy as np
-from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
+from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
 
 from kikuchipy._constants import dependency_version, verify_dependency_or_raise
+from kikuchipy.signals.util._crystal_map import _create_coordinate_arrays
 
 if TYPE_CHECKING:  # pragma: no cover
     if dependency_version["pyebsdindex"] is not None:
@@ -92,7 +93,7 @@ def xmap_from_hough_indexing_data(
     ):
         raise ValueError("`nav_shape` cannot be a tuple of more than two integers")
 
-    coords, _ = create_coordinate_arrays(navigation_shape, step_sizes)
+    coords, _ = _create_coordinate_arrays(navigation_shape, step_sizes)
 
     phase_list_id = phase_list.ids
     if data_index != -1 and data_index not in phase_list_id:

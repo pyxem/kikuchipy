@@ -297,9 +297,7 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(
-        dependency_version["pyvista"] is None, reason="PyVista is not installed"
-    )
+    @pytest.mark.skipif_pyvista_not_installed
     def test_plot_spherical(self, skipif_no_vtk_support):
         """Spherical plot with PyVista."""
         import pyvista as pv
@@ -336,9 +334,7 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(
-        dependency_version["pyvista"] is not None, reason="PyVista is installed"
-    )
+    @pytest.mark.skipif_pyvista_installed
     def test_spherical_pyvista_raises(self):
         """Appropriate error message is raised when PyVista is
         unavailable.

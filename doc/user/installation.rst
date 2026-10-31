@@ -125,6 +125,8 @@ This is a list of core package dependencies:
 
 Some functionality requires optional dependencies:
 
+* `bayesian-optimization <https://bayesian-optimization.github.io/BayesianOptimization>`__:
+  Bayesian optimization of pattern processing parameters.
 * `ebsdsim <https://github.com/ZacharyVarley/ebsdsim>`__: Dynamical EBSD simulations and
   reading of simulations produced by `ebsdsim`.
   Currently unavailable from conda-forge.
