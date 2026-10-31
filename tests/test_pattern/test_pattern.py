@@ -582,6 +582,22 @@ class TestNormalizeIntensityPattern:
         p2 = normalize_intensity(p, dtype_out=np.float64)
         assert p2.dtype == np.float64
 
+    def test_normalize_intensity_pattern_nan(self, dummy_signal):
+        """NaN values are ignored and kept as NaN."""
+        p = dummy_signal.inav[0, 0].data.astype(np.float64)
+        p_nan = p.copy()
+        p_nan[0] = np.nan
+        is_valid = np.isfinite(p_nan)
+
+        p2 = normalize_intensity(p_nan)
+        assert np.isnan(p2[~is_valid]).all()
+        assert np.isclose(np.mean(p2[is_valid]), 0)
+        assert np.isclose(np.std(p2[is_valid]), 1)
+
+        # Same as normalizing only the valid values
+        p3 = normalize_intensity(p[is_valid])
+        assert np.allclose(p2[is_valid], p3)
+
 
 class TestDownsample:
     def test_downsample_numba(self):

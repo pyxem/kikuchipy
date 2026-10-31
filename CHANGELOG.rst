@@ -57,6 +57,9 @@ Fixed
 
 Changed
 -------
+- ``normalize_intensity()`` of all signals and ``pattern.normalize_intensity()`` ignore
+  NaN values when calculating the mean and standard deviation.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
 - Minimum version of NumPy is 1.25 and of Numba is 0.58, since the optional
   dependency ``bayesian-optimization`` requires NumPy >= 1.25, which Numba supports from
   version 0.58.
