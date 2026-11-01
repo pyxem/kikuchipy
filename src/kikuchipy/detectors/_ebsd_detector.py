@@ -42,7 +42,6 @@ import warnings
 import dask.array as da
 from diffsims.crystallography import ReciprocalLatticeVector
 import hyperspy.api as hs
-import numba as nb
 import numpy as np
 import orix.crystal_map as ocm
 import orix.quaternion as oqu
@@ -54,6 +53,10 @@ from kikuchipy.detectors._convert_detector_coordinates import (
     convert_gnomonic_to_pixel_coords,
     convert_pixel_to_gnomonic_coords,
     parse_coordinate_format,
+)
+from kikuchipy.detectors._detector_angles import (
+    _detector_euler_from_angles,
+    _sample_to_detector_matrix,
 )
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
@@ -93,64 +96,6 @@ PC_CONVENTIONS_ALIASES: dict[PC_CONVENTIONS_SINGLE, list[PC_CONVENTIONS]] = {
     "oxford": ["oxford", "aztec"],
     "emsoft": ["emsoft", "emsoft4", "emsoft5"],
 }
-
-
-@nb.njit(
-    "float64[:, :](float64, float64, float64, float64)",
-    cache=True,
-    fastmath=True,
-    nogil=True,
-)
-def _sample_to_detector_matrix(
-    sigma: float, theta: float, omega: float, gamma: float
-) -> np.ndarray:
-    """Return the passive sample-to-detector rotation matrix.
-
-    Rows of the returned matrix are the detector basis vectors
-    (X_d, Y_d, Z_d) expressed in sample-frame coordinates, so that
-    ``M @ v_sample = v_det`` for column vectors.
-    """
-    # Rows are detector (X_d, Y_d, Z_d) in sample coordinates
-    basis = np.array(
-        [
-            [0, 1, 0],
-            [0, 0, 1],
-            [1, 0, 0],
-        ],
-        dtype=np.float64,
-    )
-
-    # Sample tilt, detector tilt, azimuthal, twist
-    angles = np.array((-sigma, theta, -omega, -gamma), dtype=np.float64)
-
-    for i, angle in zip([0, 0, 1, 2], angles):
-        ux = basis[i, 0]
-        uy = basis[i, 1]
-        uz = basis[i, 2]
-        norm = np.sqrt(ux * ux + uy * uy + uz * uz)
-        ux /= norm
-        uy /= norm
-        uz /= norm
-
-        c = np.cos(angle)
-        s = np.sin(angle)
-        one_minus_c = 1.0 - c
-
-        for j in range(3):
-            vx = basis[j, 0]
-            vy = basis[j, 1]
-            vz = basis[j, 2]
-
-            dot = ux * vx + uy * vy + uz * vz
-            cx = uy * vz - uz * vy
-            cy = uz * vx - ux * vz
-            cz = ux * vy - uy * vx
-
-            basis[j, 0] = vx * c + cx * s + ux * dot * one_minus_c
-            basis[j, 1] = vy * c + cy * s + uy * dot * one_minus_c
-            basis[j, 2] = vz * c + cz * s + uz * dot * one_minus_c
-
-    return basis
 
 
 class EBSDDetector:
@@ -219,6 +164,13 @@ class EBSDDetector:
     towards the sample. Pattern width and height in pixels are here
     given as :math:`N_x` and :math:`N_y`, respectively (possibly
     binned). PCs are stored and used internally in Bruker's convention.
+
+    The detector orientation is given by the *tilt*, *azimuthal*, and
+    *twist* angles, applied as intrinsic rotations in this order: tilt
+    :math:`\theta` about the detector horizontal :math:`X_d`, azimuthal
+    :math:`\omega` about the tilted detector vertical :math:`Y_d`, and
+    twist :math:`\gamma` about the resulting detector normal
+    :math:`Z_d`.
 
     The Bruker PC coordinates :math:`(x_B^*, y_B^*, z_B^*)` are defined
     in fractions of :math:`N_x`, :math:`N_y`, and :math:`N_y`,
@@ -359,6 +311,9 @@ class EBSDDetector:
         :math:`0^{\circ}`, the tilt axis is the microscope X,
         :math:`X_m`, and thus coincident with the sample tilt axis.
 
+        The tilt is applied before the :attr:`azimuthal` and
+        :attr:`twist` angles.
+
         Parameters
         ----------
         value : float
@@ -386,6 +341,9 @@ class EBSDDetector:
         If the :attr:`tilt` angle is :math:`0^{\circ}`, the tilt axis
         coincides with the microscope Z, :math:`Z_m`.
 
+        The azimuthal angle is applied after the :attr:`tilt`, about the
+        tilted :math:`Y_d`, and before the :attr:`twist`.
+
         Parameters
         ----------
         value : float
@@ -411,6 +369,9 @@ class EBSDDetector:
         counter-clockwise about the projection center (assuming all
         other defaults).
 
+        The twist is applied after the :attr:`tilt` and
+        :attr:`azimuthal` angles.
+
         Parameters
         ----------
         value : float
@@ -429,14 +390,20 @@ class EBSDDetector:
 
     @property
     def euler(self) -> np.ndarray:
-        r"""Return the detector Euler angles in the Bunge convention
-        (ZXZ) in degrees.
+        r"""Return the Euler angles of the detector orientation relative
+        to the microscope in the Bunge convention (ZXZ) in degrees.
 
-        The Euler angles are given by the :attr:`azimuthal`,
-        :attr:`tilt`, and the :attr:`twist`,
-        :math:`(-\omega, 90^{\circ} + \theta, -\gamma)`.
+        The orientation is the one used in :attr:`sample_to_detector`,
+        and is independent of the :attr:`sample_tilt`. When either the
+        :attr:`tilt` :math:`\theta` or the :attr:`azimuthal`
+        :math:`\omega` is :math:`0^{\circ}`, the Euler angles are
+        :math:`(-\omega, 90^{\circ} + \theta, -\gamma)`, where
+        :math:`\gamma` is the :attr:`twist`.
+
+        The first and third angles are in the range
+        :math:`(-180^{\circ}, 180^{\circ}]`.
         """
-        return np.array([-self.azimuthal, 90.0 + self.tilt, -self.twist], dtype=float)
+        return _detector_euler_from_angles(self.tilt, self.azimuthal, self.twist)
 
     # ----------------- Projection center properties ----------------- #
 

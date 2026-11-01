@@ -32,7 +32,48 @@ from packaging.version import InvalidVersion
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.detectors._detector_angles import (
+    _DEFAULT_DETECTOR_MATRIX,
+    _detector_angles_from_euler,
+    _sample_to_detector_matrix,
+)
 from kikuchipy.detectors._ebsd_detector import get_gnomonic_bounds
+from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
+
+
+def _direction_cosines_v011(
+    pc: tuple[float, float, float],
+    shape: tuple[int, int],
+    tilt: float,
+    azimuthal: float,
+    sample_tilt: float,
+) -> np.ndarray:
+    """Return direction cosines of all detector pixels as calculated in
+    kikuchipy 0.11.5 (derived from EMsoft), before the interpretation of
+    the azimuthal angle changed in 0.12.0.
+    """
+    pcx, pcy, pcz = pc
+    nrows, ncols = shape
+    xpc = ncols * (0.5 - pcx)
+    ypc = nrows * (0.5 - pcy)
+    zpc = nrows * pcz
+    det_x = xpc + (1 - ncols) * 0.5 + np.arange(ncols)
+    det_y = ypc - (1 - nrows) * 0.5 - np.arange(nrows - 1, -1, -1)
+    alpha = np.pi / 2 - np.deg2rad(sample_tilt) + np.deg2rad(tilt)
+    ca, sa = np.cos(alpha), np.sin(alpha)
+    cw, sw = np.cos(np.deg2rad(azimuthal)), np.sin(np.deg2rad(azimuthal))
+    Ls = -sw * det_x + zpc * cw
+    Lc = cw * det_x + zpc * sw
+    rows, cols = np.divmod(np.arange(nrows * ncols), ncols)
+    r = np.stack(
+        [
+            det_y[rows] * ca + sa * Ls[cols],
+            Lc[cols],
+            -sa * det_y[rows] + ca * Ls[cols],
+        ],
+        axis=1,
+    )
+    return r / np.linalg.norm(r, axis=1, keepdims=True)
 
 
 class TestEBSDDetector:
@@ -1220,9 +1261,121 @@ class TestSaveLoadDetector:
             det.save(tmp_path / "det_temp.txt", convention="EMsofts")
 
 
+class TestAzimuthalSignChange:
+    @pytest.mark.parametrize(
+        "sample_tilt, tilt, azimuthal, pc",
+        [
+            (70, 0, 5, (0.5, 0.5, 0.5)),
+            (70, 10, 5, (0.4, 0.3, 0.6)),
+            (40, -15, -12, (0.6, 0.2, 0.7)),
+            (80, 15, 3.7, (0.3, 0.45, 0.4)),
+        ],
+    )
+    def test_negated_azimuthal_matches_v011(self, sample_tilt, tilt, azimuthal, pc):
+        """The detector geometry with azimuthal angle +w in kikuchipy
+        < 0.12.0 is exactly the geometry with -w in >= 0.12.0.
+        """
+        shape = (40, 50)
+        dc_v011 = _direction_cosines_v011(pc, shape, tilt, azimuthal, sample_tilt)
+
+        max_angles = []
+        for sign in [-1, 1]:
+            det = kp.detectors.EBSDDetector(
+                shape,
+                pc=pc,
+                sample_tilt=sample_tilt,
+                tilt=tilt,
+                azimuthal=sign * azimuthal,
+            )
+            dc = _get_direction_cosines_from_detector(det)
+            cos_angles = np.clip(np.sum(dc_v011 * dc, axis=1), -1, 1)
+            max_angles.append(np.rad2deg(np.arccos(cos_angles)).max())
+
+        assert max_angles[0] < 1e-4  # Approximately the same angles
+        assert max_angles[1] > 1  # Opposite angles
+
+
+def _detector_matrix_from_projection(
+    sample_tilt: float, tilt: float, azimuthal: float, twist: float
+) -> np.ndarray:
+    """Return the passive microscope-to-detector matrix used in the
+    projection from the sample to the detector.
+    """
+    sigma, theta, omega, gamma = np.deg2rad([sample_tilt, tilt, azimuthal, twist])
+    m = _sample_to_detector_matrix(sigma, theta, omega, gamma)
+    m0 = _sample_to_detector_matrix(sigma, 0.0, 0.0, 0.0)
+    return m @ m0.T @ _DEFAULT_DETECTOR_MATRIX
+
+
+class TestDetectorEuler:
+    def test_euler_matches_projection(self):
+        rng = np.random.default_rng(42)
+        for _ in range(100):
+            sample_tilt = rng.uniform(0, 90)
+            tilt, azimuthal, twist = rng.uniform(-30, 30, 3)
+            det = kp.detectors.EBSDDetector(
+                sample_tilt=sample_tilt, tilt=tilt, azimuthal=azimuthal, twist=twist
+            )
+            g = oqu.Rotation.from_euler(det.euler, degrees=True).to_matrix().squeeze()
+            g_proj = _detector_matrix_from_projection(
+                sample_tilt, tilt, azimuthal, twist
+            )
+            assert np.allclose(g, g_proj, atol=1e-10)
+
+    @pytest.mark.xfail(
+        reason=(
+            "orix 0.15.0 sets quaternion components below ~1.6e-5 to zero when "
+            "converting from a rotation matrix"
+        ),
+        strict=True,
+    )
+    def test_euler_matches_projection_small_quaternion_component(self):
+        det = kp.detectors.EBSDDetector(tilt=-4.107, azimuthal=-0.861, twist=-0.927)
+        g = oqu.Rotation.from_euler(det.euler, degrees=True).to_matrix().squeeze()
+        g_proj = _detector_matrix_from_projection(70, -4.107, -0.861, -0.927)
+        assert np.allclose(g, g_proj, atol=1e-10)
+
+    @pytest.mark.parametrize(
+        "tilt, azimuthal, twist",
+        [
+            (0, 0, 0),
+            (0, 5, 0),
+            (0, -12.3, 4.5),
+            (10, 0, 0),
+            (-7.5, 0, -2),
+            (0, 0, 170),
+        ],
+    )
+    def test_euler_tilt_or_azimuthal_zero(self, tilt, azimuthal, twist):
+        """Euler angles are as before 0.14.0 when the tilt or azimuthal
+        angle is zero.
+        """
+        det = kp.detectors.EBSDDetector(tilt=tilt, azimuthal=azimuthal, twist=twist)
+        assert np.allclose(det.euler, [-azimuthal, 90 + tilt, -twist], atol=1e-10)
+
+    def test_euler_tilt_and_azimuthal(self):
+        det = kp.detectors.EBSDDetector(tilt=10, azimuthal=5)
+        assert np.allclose(det.euler, [-5.0767, 99.9616, -0.8804], atol=1e-4)
+
+    def test_euler_independent_of_sample_tilt(self):
+        det = kp.detectors.EBSDDetector(tilt=10, azimuthal=5, twist=-2)
+        euler1 = det.euler
+        det.sample_tilt = 40
+        assert np.allclose(det.euler, euler1, atol=1e-10)
+
+    def test_detector_angles_from_euler(self):
+        rng = np.random.default_rng(42)
+        for _ in range(100):
+            angles = rng.uniform(-30, 30, 3)
+            det = kp.detectors.EBSDDetector(
+                tilt=angles[0], azimuthal=angles[1], twist=angles[2]
+            )
+            assert np.allclose(_detector_angles_from_euler(det.euler), angles)
+
+
 class TestToStereo:
     def test_to_stereo(self, detector):
-        rot = oqu.Rotation.from_euler(np.deg2rad([10, 20, 30]))
+        rot = oqu.Rotation.from_euler([10, 20, 30], degrees=True)
         patterns = np.random.default_rng(42).random(detector.shape)
         mp = detector.to_stereo(patterns, rot, size=51)
 
@@ -1246,7 +1399,7 @@ class TestToStereo:
 
     def test_to_stereo_orientation_phase(self, detector):
         pg = kp.data.nickel_ebsd_master_pattern_small().phase.point_group
-        ori = oqu.Orientation.from_euler(np.deg2rad([10, 20, 30]), symmetry=pg)
+        ori = oqu.Orientation.from_euler([10, 20, 30], degrees=True, symmetry=pg)
         patterns = np.ones(detector.shape)
         mp1 = detector.to_stereo(patterns, ori, size=51)
         mp2 = detector.to_stereo(patterns, ori, size=51, symmetrize=True)
@@ -1255,7 +1408,7 @@ class TestToStereo:
         assert np.isfinite(mp2.data).sum() > np.isfinite(mp1.data).sum()
 
     def test_to_stereo_quaternion(self, detector):
-        rot = oqu.Rotation.from_euler(np.deg2rad([10, 20, 30]))
+        rot = oqu.Rotation.from_euler([10, 20, 30], degrees=True)
         patterns = np.random.default_rng(42).random(detector.shape)
         mp1 = detector.to_stereo(patterns, rot, size=51)
         mp2 = detector.to_stereo(patterns, oqu.Quaternion(rot.data * 2), size=51)
@@ -1278,7 +1431,7 @@ class TestToStereo:
         assert np.allclose(mp.data, mp2.data, equal_nan=True)
 
     def test_to_stereo_dask(self, detector):
-        rot = oqu.Rotation.from_euler(np.deg2rad([[10, 20, 30], [50, 40, 10]]))
+        rot = oqu.Rotation.from_euler([[10, 20, 30], [50, 40, 10]], degrees=True)
         patterns = np.random.default_rng(42).random((2,) + detector.shape)
         mp1 = detector.to_stereo(patterns, rot, size=31)
         mp2 = detector.to_stereo(da.from_array(patterns, chunks=1), rot, size=31)
