@@ -175,7 +175,7 @@ class BrukerH5EBSDReader(H5EBSDReader):
             shape=(sy, sx),
             px_size=px_size,
             tilt=header_dset.get("CameraTilt", 0.0),
-            sample_tilt=header_dset.get("Sample Tilt", 0.0),
+            sample_tilt=header_dset.get("SampleTilt", 70.0),
             pc=pc,
         )
 
