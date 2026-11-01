@@ -74,7 +74,7 @@ def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
     # Fail if not working as expected
     version = Version(header.pop(VERSION_KEY))
 
-    missing_keys = keys - set(header.keys())
+    missing_keys = keys - set(header.keys()) - {VERSION_KEY}
     for k in missing_keys:
         _logger.debug(
             f"Detector parameter {k!r} missing from file {str(fname)}, using default"
