@@ -17,6 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -27,6 +28,7 @@ import numpy as np
 from orix import __version__ as orix_version
 from orix.crystal_map import CrystalMap
 from orix.io.plugins.orix_hdf5 import crystalmap2dict, dict2crystalmap
+from packaging.version import Version
 from rsciio.hspy._api import overwrite_dataset
 
 from kikuchipy import __version__ as kikuchipy_version
@@ -37,6 +39,8 @@ from kikuchipy.signals.util._crystal_map import _xmap_is_compatible_with_signal
 
 if TYPE_CHECKING:  # pragma: no cover
     from kikuchipy.signals.ebsd import EBSD, LazyEBSD
+
+_logger = logging.getLogger(__name__)
 
 
 class KikuchipyH5EBSDReader(H5EBSDReader):
@@ -157,12 +161,21 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
                     pc = np.array((0.5, 0.5, 0.5))
         pc = pc.squeeze()
 
+        # Sign of azimuthal angle was changed in v0.12.0
+        azimuthal = header.get("azimuth_angle", 0.0)
+        if Version(self.version) < Version("0.12.0"):
+            azimuthal = -azimuthal
+            _logger.debug(
+                f"Inverted azimuthal angle read from file {self.filename} written with "
+                f"kikuchipy {self.version} < 0.12.0"
+            )
+
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,
             binning=header.get("binning", 1),
             tilt=header.get("elevation_angle", 0.0),
-            azimuthal=header.get("azimuth_angle", 0.0),
+            azimuthal=azimuthal,
             twist=header.get("twist_angle", 0.0),
             sample_tilt=header.get("sample_tilt", 70.0),
             pc=pc,

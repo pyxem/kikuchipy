@@ -63,9 +63,10 @@ Fixed
 - Loading an EBSD detector that was saved with ``EBSDDetector.save()`` with kikuchipy <
   0.12.0 now works.
   (`#830 <https://github.com/pyxem/kikuchipy/pull/830>`_)
-- Loading an EBSD detector that was saved with ``EBSDDetector.save()`` with kikuchipy
-  < 0.12.0 now correctly negates the azimuthal angle, as the interpretation of the angle
-  changed in 0.12.0.
+- Loading an EBSD detector that was saved with ``EBSDDetector.save()``, or an EBSD
+  signal that was saved in the kikuchipy h5ebsd format, with kikuchipy < 0.12.0 now
+  correctly negates the azimuthal angle, as the interpretation of the angle changed in
+  0.12.0.
   (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
 
 Changed
