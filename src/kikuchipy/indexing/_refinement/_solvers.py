@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Callable
 from numba import njit
 import numpy as np
 
-from kikuchipy._utils._gnonomic_bounds import get_gnomonic_bounds
+from kikuchipy.detectors._ebsd_detector import get_gnomonic_bounds
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.indexing._refinement._objective_functions import (
     _refine_orientation_objective_function,

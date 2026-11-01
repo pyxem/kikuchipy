@@ -18,6 +18,12 @@ Unreleased
 
 Added
 -----
+- ``EBSDDetector.to_stereo()`` for projecting one or more patterns from the detector
+  onto the sphere, returned as a master pattern in the stereographic projection with
+  both hemispheres.
+  Intensities from multiple patterns, and optionally from all symmetrically equivalent
+  orientations, are averaged.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
 - Optimization of processing parameters of a single pattern against a reference pattern,
   scored by the normalized cross-correlation:
   ``pattern.optimize_remove_dynamic_background()``,
@@ -42,6 +48,8 @@ Added
   diffraction in a pattern by intensity thresholding, for use in e.g. refinement or
   pattern processing optimization.
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Project master pattern from the Lambert to the stereographic projection.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
 
 Fixed
 -----
@@ -55,6 +63,9 @@ Fixed
 
 Changed
 -------
+- ``normalize_intensity()`` of all signals and ``pattern.normalize_intensity()`` ignore
+  NaN values when calculating the mean and standard deviation.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
 - Minimum version of NumPy is 1.25 and of Numba is 0.58, since the optional
   dependency ``bayesian-optimization`` requires NumPy >= 1.25, which Numba supports from
   version 0.58.

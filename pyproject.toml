@@ -55,7 +55,7 @@ dependencies = [
     "matplotlib       >= 3.6",
     "numba            >= 0.58",
     "numpy            >= 1.25.0",
-    "orix             >= 0.12.1",
+    "orix             >= 0.15.0",
     "packaging",
     "pyyaml",
     "rosettasciio     >= 0.3.0",

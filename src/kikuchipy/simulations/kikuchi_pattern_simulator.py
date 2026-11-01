@@ -67,10 +67,10 @@ import matplotlib.figure as mfigure
 import matplotlib.pyplot as plt
 import numba as nb
 import numpy as np
-from orix import projections
-from orix.crystal_map import Phase
-from orix.quaternion import Rotation
-from orix.vector import Vector3d
+import orix.crystal_map as ocm
+import orix.projections as opr
+import orix.quaternion as oqu
+import orix.vector as ove
 from tqdm import tqdm
 
 from kikuchipy._constants import verify_dependency_or_raise
@@ -111,7 +111,7 @@ class KikuchiPatternSimulator:
         return self._reflectors
 
     @property
-    def phase(self) -> Phase:
+    def phase(self) -> ocm.Phase:
         """Return the phase with unit cell and symmetry."""
         return self._reflectors.phase
 
@@ -180,7 +180,7 @@ class KikuchiPatternSimulator:
                     "None"
                 )
 
-        xyz_reflector = Vector3d(self.reflectors).unit.data
+        xyz_reflector = ove.Vector3d(self.reflectors).unit.data
         theta_reflector = self.reflectors.theta
         arr = np.linspace(-1, 1, size)
         X, Y = np.meshgrid(arr, arr)
@@ -190,7 +190,7 @@ class KikuchiPatternSimulator:
         patterns = np.empty((n_poles, size * size), dtype=np.float64)
 
         for i in tqdm(range(n_poles), ncols=80):
-            stereo2sphere = projections.InverseStereographicProjection(poles[i])
+            stereo2sphere = opr.InverseStereographicProjection(poles[i])
             v_hemi = stereo2sphere.xy2vector(X.ravel(), Y.ravel())
             xyz_hemi = v_hemi.data
             patterns[i] = get_pattern(
@@ -215,7 +215,7 @@ class KikuchiPatternSimulator:
         )
 
     def on_detector(
-        self, detector: EBSDDetector, rotations: Rotation
+        self, detector: EBSDDetector, rotations: oqu.Rotation
     ) -> GeometricalKikuchiPatternSimulation:
         """Project Kikuchi lines and zone axes onto a detector, one per
         crystal orientation.
@@ -357,14 +357,14 @@ class KikuchiPatternSimulator:
 
         lines = KikuchiPatternLine(
             hkl=ref2,
-            hkl_detector=Vector3d(hkl_d),
+            hkl_detector=ove.Vector3d(hkl_d),
             in_pattern=hkl_in_pattern,
             max_r_gnomonic=max_r_gnomonic,
         )
 
         zone_axes = KikuchiPatternZoneAxis(
             uvw=uvw_miller,
-            uvw_detector=Vector3d(uvw_d),
+            uvw_detector=ove.Vector3d(uvw_d),
             in_pattern=uvw_in_pattern,
             max_r_gnomonic=max_r_gnomonic,
         )
@@ -509,7 +509,7 @@ class KikuchiPatternSimulator:
                 else:
                     ref.draw_circle(figure=figure, **kwargs)
             else:  # bands
-                v = Vector3d(ref)
+                v = ove.Vector3d(ref)
                 theta = ref.theta
                 if figure is None:
                     figure = v.draw_circle(
@@ -568,7 +568,7 @@ def _plot_spherical(
     scaling_title: str,
     intensity: np.ndarray,
 ) -> None:
-    v = Vector3d(ref).unit
+    v = ove.Vector3d(ref).unit
 
     steps = 101
     if mode == "lines":
@@ -636,8 +636,8 @@ def _plot_spherical(
             figure.set_viewup((0, 1, 0))
         else:
             # Assume that the existing plot has a unit sphere
-            v = Vector3d(circles)
-            circles = Vector3d.from_polar(v.azimuth, v.polar, radial=1.01).data
+            v = ove.Vector3d(circles)
+            circles = ove.Vector3d.from_polar(v.azimuth, v.polar, radial=1.01).data
 
         if mode == "lines":
             circles_shape = circles.shape[:-1]

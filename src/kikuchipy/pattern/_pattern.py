@@ -194,6 +194,9 @@ def normalize_intensity(
     Data type should always be changed to floating point, e.g.
     ``float32`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
+
+    NaN values are ignored when calculating the mean and standard
+    deviation, and are kept as NaN in the normalized pattern.
     """
     normalized_pattern = _normalize_intensity(pattern, num_std, divide_by_square_root)
 
@@ -203,14 +206,18 @@ def normalize_intensity(
     return normalized_pattern
 
 
-@njit(cache=True, fastmath=True, nogil=True)
+# All fast-math flags except "nnan", since NaN values must be detected.
+# See Numba's documentation of 'fastmath' for details.
+@njit(
+    cache=True,
+    fastmath={"ninf", "nsz", "arcp", "contract", "afn", "reassoc"},
+    nogil=True,
+)
 def _normalize_intensity(
-    pattern: np.ndarray,
-    num_std: int = 1,
-    divide_by_square_root: bool = False,
+    pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
 ) -> np.ndarray:
-    pattern_mean = np.mean(pattern)
-    pattern_std = np.std(pattern)
+    pattern_mean = np.nanmean(pattern)
+    pattern_std = np.nanstd(pattern)
     pattern = pattern - pattern_mean
     if divide_by_square_root:
         return pattern / (num_std * pattern_std * np.sqrt(pattern.size))

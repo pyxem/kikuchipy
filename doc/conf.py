@@ -310,6 +310,13 @@ autodoc_typehints_format = "short"
 autodoc_default_options = {
     "show-inheritance": True,
 }
+# Autodoc gives up resolving a function signature when one name in it is
+# only imported under TYPE_CHECKING. List such names here.
+autodoc_type_aliases = {
+    "EBSDMasterPattern": "kikuchipy.signals.EBSDMasterPattern",
+    "EBSDIndexer": "pyebsdindex.ebsd_index.EBSDIndexer",
+}
+
 
 # numpydoc
 # --------

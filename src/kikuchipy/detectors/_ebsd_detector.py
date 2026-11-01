@@ -39,7 +39,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, overload
 import warnings
 
+import dask.array as da
 from diffsims.crystallography import ReciprocalLatticeVector
+import hyperspy.api as hs
 import numba as nb
 import numpy as np
 import orix.crystal_map as ocm
@@ -47,6 +49,7 @@ import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
+from kikuchipy._kikuchi_sphere._detector_to_stereo import _detector_to_stereo
 from kikuchipy.detectors._convert_detector_coordinates import (
     convert_gnomonic_to_pixel_coords,
     convert_pixel_to_gnomonic_coords,
@@ -62,6 +65,8 @@ PROJECTION_CENTER_PLOT_MODES = Literal["map", "scatter", "3d"]
 if TYPE_CHECKING:  # pragma: no cover
     import matplotlib.axes as maxes
     import matplotlib.figure as mfigure
+
+    from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
@@ -733,7 +738,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return -self.aspect_ratio * (self.pcx / self.pcz)
+        return self.gnomonic_bounds[..., 0]
 
     @property
     def x_max(self) -> np.ndarray | float:
@@ -742,7 +747,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return self.aspect_ratio * (1 - self.pcx) / self.pcz
+        return self.gnomonic_bounds[..., 1]
 
     @property
     def x_range(self) -> np.ndarray:
@@ -751,7 +756,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return np.dstack((self.x_min, self.x_max)).reshape(self.navigation_shape + (2,))
+        return self.gnomonic_bounds[..., :2]
 
     @property
     def y_min(self) -> np.ndarray | float:
@@ -760,7 +765,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return -(1 - self.pcy) / self.pcz
+        return self.gnomonic_bounds[..., 2]
 
     @property
     def y_max(self) -> np.ndarray | float:
@@ -769,7 +774,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return self.pcy / self.pcz
+        return self.gnomonic_bounds[..., 3]
 
     @property
     def y_range(self) -> np.ndarray:
@@ -778,7 +783,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
+        return self.gnomonic_bounds[..., 2:]
 
     @property
     def x_scale(self) -> np.ndarray:
@@ -814,7 +819,7 @@ class EBSDDetector:
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
-        return np.concatenate((self.x_range, self.y_range), axis=-1)
+        return get_gnomonic_bounds(self.nrows, self.ncols, self.pcx, self.pcy, self.pcz)
 
     @property
     def r_max(self) -> np.ndarray:
@@ -981,6 +986,157 @@ class EBSDDetector:
             pos,
         )
         return coords_out
+
+    def to_stereo(
+        self,
+        pattern: np.ndarray | da.Array,
+        orientation: oqu.Orientation | oqu.Rotation | oqu.Quaternion,
+        size: int = 1_001,
+        symmetrize: bool = False,
+        exclude_outside_equator: bool = True,
+        show_progressbar: bool | None = None,
+    ) -> EBSDMasterPattern:
+        """Return one or more patterns on this detector projected onto
+        the sphere, as a master pattern in the stereographic projection.
+
+        The intensity in each pixel is the mean over all patterns (and
+        symmetrically equivalent orientations, if *symmetrize* is True)
+        which contribute to that pixel.
+
+        Parameters
+        ----------
+        pattern
+            One or more patterns of any navigation shape, with the
+            detector :attr:`shape` as the last two dimensions. If a Dask
+            array, chunks are computed one at a time.
+        orientation
+            Orientation(s) of the crystal for each pattern, transforming
+            vectors from the sample to the crystal. Must be of the same
+            size as the number of patterns. Must be an orientation with
+            a valid symmetry if *symmetrize* is True.
+        size
+            Side length of the square stereographic grid. Minimum of 2.
+            Default is 1001.
+        symmetrize
+            Whether to project each pattern also for all proper
+            symmetrically equivalent orientations. Default is False.
+        exclude_outside_equator
+            Whether to set intensities outside the equator to NaN.
+            Default is True. If False, these pixels get intensities from
+            the opposite hemisphere.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
+        Returns
+        -------
+        master_pattern
+            Master pattern in the stereographic projection with both
+            hemispheres, of shape (2, *size*, *size*) and 64-bit floating
+            point data type. Pixels without contributions are NaN. If
+            *orientation* is an orientation, the phase's point group is
+            set to its symmetry.
+
+        Raises
+        ------
+        TypeError
+            If *pattern* is not a NumPy or Dask array, or if
+            *orientation* is not an orientation when *symmetrize* is
+            True.
+        ValueError
+            If the pattern shape does not match the detector shape, if
+            the number of orientations or PCs does not match the number
+            of patterns, or if *size* is less than 2.
+
+        See Also
+        --------
+        kikuchipy.signals.EBSDMasterPattern.get_patterns
+        """
+        # Avoid circular import
+        from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
+
+        # Validate input pattern(s)
+        if not isinstance(pattern, (np.ndarray, da.Array)):
+            raise TypeError(
+                f"Pattern must be a NumPy or Dask array, not {type(pattern)}"
+            )
+        if pattern.ndim < 2 or pattern.shape[-2:] != self.shape:
+            raise ValueError(
+                f"Pattern shape {pattern.shape} must end with the detector shape "
+                f"{self.shape}"
+            )
+        patterns = pattern.reshape((-1,) + self.shape)
+        n_patterns = patterns.shape[0]
+
+        if self.navigation_size not in (1, n_patterns):
+            raise ValueError(
+                f"Detector must have either one PC or as many PCs as there are patterns"
+                f" {n_patterns}, but has {self.navigation_size}"
+            )
+
+        # Validate input orientation(s)
+        if symmetrize and not isinstance(orientation, oqu.Orientation):
+            raise TypeError(
+                "Orientation must be an orix Orientation when symmetrize=True"
+            )
+        if not isinstance(orientation, oqu.Quaternion):
+            raise TypeError(
+                "Orientation must be an orix Orientation, Rotation, or Quaternion, not "
+                f"{type(orientation)}"
+            )
+        if orientation.size != n_patterns:
+            raise ValueError(
+                f"Number of orientations {orientation.size} must match the number of "
+                f"patterns {n_patterns}"
+            )
+        if isinstance(orientation, oqu.Orientation):
+            rot_s2c = orientation.flatten()  # Crystal <- sample
+            phase = ocm.Phase(point_group=orientation.symmetry)
+        else:
+            rot_s2c = oqu.Rotation(orientation).flatten()
+            phase = ocm.Phase()
+
+        if size < 2:
+            raise ValueError(f"Size must be at least 2, not {size}")
+
+        if show_progressbar is None:
+            show_progressbar = hs.preferences.General.show_progressbar
+
+        sphere = _detector_to_stereo(
+            detector=self,
+            pattern=patterns,
+            mat_s2c=rot_s2c,
+            size=size,
+            symmetrize=symmetrize,
+            exclude_outside_equator=exclude_outside_equator,
+            show_progressbar=show_progressbar,
+        )
+
+        names = ["hemisphere", "height", "width"]
+        units = ["", "px", "px"]
+        offsets = [0, -size // 2, -size // 2]
+        axes = []
+        for i in range(3):
+            axis = {
+                "size": sphere.shape[i],
+                "index_in_array": i,
+                "name": names[i],
+                "scale": 1,
+                "offset": offsets[i],
+                "units": units[i],
+            }
+            axes.append(axis)
+
+        master_pattern = EBSDMasterPattern(
+            sphere,
+            axes=axes,
+            phase=phase,
+            projection="stereographic",
+            hemisphere="both",
+        )
+
+        return master_pattern
 
     def crop(self, extent: tuple[int, int, int, int] | list[int]) -> Self:
         """Return a new detector with its :attr:`shape` cropped and
@@ -2281,6 +2437,30 @@ class EBSDDetector:
         else:
             return self.pc
 
+    def _get_gnomonic_parameters(self) -> np.ndarray:
+        """Return the parameters needed to map gnomonic coordinates to
+        fractional detector pixel coordinates for each PC.
+
+        Parameters
+        ----------
+        detector
+            EBSD detector with one or more PCs.
+
+        Returns
+        -------
+        params
+            Array of shape (n_pcs, 4) with the left gnomonic bound, the
+            top gnomonic bound, and the horizontal and vertical
+            gnomonic-to-pixel scale factors (gnomonic units per pixel).
+        """
+        gn = self.gnomonic_bounds.reshape(-1, 4)  # [x0, x1, y0, y1]
+        params = np.zeros((gn.shape[0], 4), dtype=np.float64)
+        params[:, 0] = gn[:, 0]
+        params[:, 1] = gn[:, 3]
+        params[:, 2] = (gn[:, 1] - gn[:, 0]) / self.ncols
+        params[:, 3] = (gn[:, 3] - gn[:, 2]) / self.nrows
+        return params
+
     @staticmethod
     def _parse_valid_shape_or_raise(value: tuple[int, int]) -> tuple[int, int]:
         if (
@@ -2404,3 +2584,47 @@ class EBSDDetector:
         raise TypeError(
             "Sample position must be None, an integer, or a tuple with length 1 or 2"
         )
+
+
+def get_gnomonic_bounds(
+    nrows: int,
+    ncols: int,
+    pcx: float | np.ndarray,
+    pcy: float | np.ndarray,
+    pcz: float | np.ndarray,
+) -> np.ndarray:
+    """Return the gnomonic bounds for one or more projection centers
+    (PCs).
+
+    The calculation of gnomonic coordinates is based on the
+    supplementary material to :cite:`britton2016tutorial`.
+
+    Parameters
+    ----------
+    nrows
+        Number of rows on the EBSD pattern.
+    ncols
+        Number of columns on the EBSD pattern.
+    pcx
+        The x-coordinate(s) of the pattern centre.
+    pcy
+        The y-coordinate(s) of the pattern centre, of the same shape as
+        *pcx*.
+    pcz
+        The z-coordinate(s) of the pattern centre, of the same shape as
+        *pcx*.
+
+    Returns
+    -------
+    gnomonic_bounds
+        Array of the gnomonic bounds [x_min, x_max, y_min, y_max] in the
+        last axis, of shape (4,) for a single PC or the shape of *pcx*
+        + (4,) otherwise.
+    """
+    aspect_ratio = ncols / nrows
+    x_min = -aspect_ratio * (pcx / pcz)
+    x_max = aspect_ratio * (1 - pcx) / pcz
+    y_min = -(1 - pcy) / pcz
+    y_max = pcy / pcz
+    gnomonic_bounds = np.stack([x_min, x_max, y_min, y_max], axis=-1)
+    return gnomonic_bounds
