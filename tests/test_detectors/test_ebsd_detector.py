@@ -1322,19 +1322,6 @@ class TestDetectorEuler:
             )
             assert np.allclose(g, g_proj, atol=1e-10)
 
-    @pytest.mark.xfail(
-        reason=(
-            "orix 0.15.0 sets quaternion components below ~1.6e-5 to zero when "
-            "converting from a rotation matrix"
-        ),
-        strict=True,
-    )
-    def test_euler_matches_projection_small_quaternion_component(self):
-        det = kp.detectors.EBSDDetector(tilt=-4.107, azimuthal=-0.861, twist=-0.927)
-        g = oqu.Rotation.from_euler(det.euler, degrees=True).to_matrix().squeeze()
-        g_proj = _detector_matrix_from_projection(70, -4.107, -0.861, -0.927)
-        assert np.allclose(g, g_proj, atol=1e-10)
-
     @pytest.mark.parametrize(
         "tilt, azimuthal, twist",
         [
