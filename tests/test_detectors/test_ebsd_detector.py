@@ -19,6 +19,7 @@
 
 from copy import deepcopy
 import logging
+import re
 
 import dask.array as da
 import matplotlib.collections as mcollections
@@ -27,6 +28,7 @@ import numpy as np
 from orix.crystal_map import PhaseList
 import orix.quaternion as oqu
 import orix.vector as ove
+from packaging.version import InvalidVersion
 import pytest
 
 import kikuchipy as kp
@@ -1167,6 +1169,50 @@ class TestSaveLoadDetector:
 
         assert det1.shape == det0.shape
         assert det1.tilt == 0
+
+    @pytest.mark.parametrize(
+        "version, azimuthal_sign",
+        [("0.11.2", -1), ("0.12.0", 1), ("0.14.dev1", 1)],
+    )
+    def test_load_detector_azimuthal_sign(
+        self, tmp_path, caplog, version, azimuthal_sign
+    ):
+        """The sign of the azimuthal angle changed in v0.12.0."""
+        det0 = kp.detectors.EBSDDetector(
+            shape=(10, 20), pc=(0.4, 0.3, 0.6), azimuthal=1.87
+        )
+        fname = tmp_path / "det_temp.txt"
+        det0.save(fname)
+
+        text = re.sub(
+            r"kikuchipy version: .*", f"kikuchipy version: {version}", fname.read_text()
+        )
+        fname.write_text(text)
+
+        with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
+            det1 = kp.detectors.EBSDDetector.load(fname)
+        assert np.isclose(det1.azimuthal, azimuthal_sign * det0.azimuthal)
+        assert ("Inverted azimuthal angle" in caplog.text) == (azimuthal_sign == -1)
+
+    @pytest.mark.parametrize(
+        "version_line, error, match",
+        [
+            ("", KeyError, "kikuchipy version"),
+            ("# kikuchipy version: a.b\n", InvalidVersion, "Invalid version: 'a.b'"),
+        ],
+    )
+    def test_load_detector_no_valid_version_raises(
+        self, tmp_path, version_line, error, match
+    ):
+        det = kp.detectors.EBSDDetector(shape=(10, 20), pc=(0.4, 0.3, 0.6))
+        fname = tmp_path / "det_temp.txt"
+        det.save(fname)
+
+        text = re.sub(r"# kikuchipy version: .*\n", version_line, fname.read_text())
+        fname.write_text(text)
+
+        with pytest.raises(error, match=match):
+            _ = kp.detectors.EBSDDetector.load(fname)
 
     def test_save_detector_raises(self, tmp_path):
         det = kp.detectors.EBSDDetector()

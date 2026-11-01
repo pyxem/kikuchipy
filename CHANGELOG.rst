@@ -60,8 +60,13 @@ Fixed
   navigation axes) no longer create a crystal map with coordinates of 50 points instead
   of one.
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
-- Reading a file saved ``EBSDDetector.save()`` with kikuchipy < 0.12.0 now works.
+- Loading an EBSD detector that was saved with ``EBSDDetector.save()`` with kikuchipy <
+  0.12.0 now works.
   (`#830 <https://github.com/pyxem/kikuchipy/pull/830>`_)
+- Loading an EBSD detector that was saved with ``EBSDDetector.save()`` with kikuchipy
+  < 0.12.0 now correctly negates the azimuthal angle, as the interpretation of the angle
+  changed in 0.12.0.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
 
 Changed
 -------
@@ -181,6 +186,9 @@ Changed
   (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 - Detector coordinate parameter "detector" to "pixel" in ``EBSDDetector.plot()``.
   (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
+- Changed interpretation of detector azimuthal angle: it is the angle about the detector
+  vertical.
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 
 Fixed
 -----
