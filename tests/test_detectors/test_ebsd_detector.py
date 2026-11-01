@@ -18,6 +18,7 @@
 #
 
 from copy import deepcopy
+import logging
 
 import dask.array as da
 import matplotlib.collections as mcollections
@@ -1124,6 +1125,48 @@ class TestSaveLoadDetector:
         assert det2._binning == det1._binning
         assert np.isclose(det2.azimuthal, det1.azimuthal)
         assert np.isclose(det2.twist, det1.twist)
+
+    def test_load_detector_without_twist(self, tmp_path, caplog):
+        """Files written with kikuchipy < 0.12.0 have no twist angle."""
+        det0 = kp.detectors.EBSDDetector(
+            shape=(10, 20), pc=(0.4, 0.3, 0.6), tilt=3, twist=1.2
+        )
+        fname = tmp_path / "det_temp.txt"
+        det0.save(fname)
+
+        # Remove twist line from header, as in files written with
+        # kikuchipy < 0.12.0
+        lines = fname.read_text().splitlines(keepends=True)
+        lines_old = []
+        for line in lines:
+            if "twist" not in line:
+                lines_old.append(line)
+        assert len(lines_old) == len(lines) - 1
+        fname.write_text("".join(lines_old))
+
+        with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
+            det1 = kp.detectors.EBSDDetector.load(fname)
+        assert "Detector parameter 'twist' missing from file" in caplog.text
+
+        assert det1.shape == det0.shape
+        assert np.allclose(det1.pc, det0.pc)
+        assert np.isclose(det1.tilt, det0.tilt)
+        assert det1.twist == 0
+
+    def test_load_detector_invalid_value(self, tmp_path, caplog):
+        det0 = kp.detectors.EBSDDetector(shape=(10, 20), pc=(0.4, 0.3, 0.6), tilt=3)
+        fname = tmp_path / "det_temp.txt"
+        det0.save(fname)
+
+        text = fname.read_text().replace("tilt: 3.0 deg", "tilt: a deg")
+        fname.write_text(text)
+
+        with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
+            det1 = kp.detectors.EBSDDetector.load(fname)
+        assert "Cannot cast detector parameter 'tilt': a to a float" in caplog.text
+
+        assert det1.shape == det0.shape
+        assert det1.tilt == 0
 
     def test_save_detector_raises(self, tmp_path):
         det = kp.detectors.EBSDDetector()
