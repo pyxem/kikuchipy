@@ -60,8 +60,28 @@ Fixed
   navigation axes) no longer create a crystal map with coordinates of 50 points instead
   of one.
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
-- Reading a file saved ``EBSDDetector.save()`` with kikuchipy < 0.12.0 now works.
+- Loading an EBSD detector that was saved with ``EBSDDetector.save()`` with kikuchipy <
+  0.12.0 now works.
   (`#830 <https://github.com/pyxem/kikuchipy/pull/830>`_)
+- Loading an EBSD detector that was saved with ``EBSDDetector.save()``, or an EBSD
+  signal that was saved in the kikuchipy h5ebsd format, with kikuchipy < 0.12.0 now
+  correctly negates the azimuthal angle, as the interpretation of the angle changed in
+  0.12.0.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- ``EBSDDetector.euler`` now matches the detector-sample geometry used for projection
+  when both the detector tilt and azimuthal angles are non-zero.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- The detector tilt, azimuthal, and twist angles are now all derived from the detector
+  orientation in Oxford Instruments h5ebsd (H5OINA) files, so that the detector-sample
+  geometry matches the one in the file.
+  Previously, only the detector tilt was read, and only approximately.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- The sample tilt is now read from Bruker h5ebsd files.
+  Previously, it was always set to 0 degrees.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- The detector azimuthal angle read from EDAX h5ebsd files is now negated, so that the
+  detector-sample geometry is the same as with kikuchipy < 0.12.0.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
 
 Changed
 -------
@@ -75,6 +95,10 @@ Changed
 - The normalized cross-correlation metric "ncc" returns a score of zero instead of NaN
   for flat patterns.
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Loading an EBSD detector with ``EBSDDetector.load()`` raises an error if the file does
+  not contain a valid kikuchipy version, and so does loading a kikuchipy h5ebsd file
+  with an invalid version.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
 
 Removed
 -------
@@ -181,6 +205,13 @@ Changed
   (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 - Detector coordinate parameter "detector" to "pixel" in ``EBSDDetector.plot()``.
   (`#793 <https://github.com/pyxem/kikuchipy/pull/793>`_)
+- Changed interpretation of detector azimuthal angle: it is the angle about the detector
+  vertical.
+  The order of rotations is the same as before, but the sign is opposite: a positive
+  angle now means features on the detector appear to move toward the right.
+  Readers of files with a detector azimuthal angle were not adapted to this change until
+  0.14.0.
+  (`#792 <https://github.com/pyxem/kikuchipy/pull/792>`_)
 
 Fixed
 -----

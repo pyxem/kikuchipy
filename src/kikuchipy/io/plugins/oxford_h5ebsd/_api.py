@@ -21,12 +21,14 @@ import logging
 from pathlib import Path
 import re
 from typing import Any
+import warnings
 
 import h5py
 import numpy as np
 from orix.crystal_map import CrystalMap
 from packaging.version import Version
 
+from kikuchipy.detectors._detector_angles import _detector_angles_from_euler
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
@@ -167,11 +169,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
             "convention": "oxford",
         }
 
-        detector_tilt_euler = header_group.get("Detector Orientation Euler")
-        try:
-            detector_kw["tilt"] = np.rad2deg(detector_tilt_euler[1]) - 90
-        except (IndexError, TypeError):  # pragma: no cover
-            _logger.debug("Could not read detector tilt")
+        detector_kw.update(get_detector_angles(header_group))
 
         binning = get_binning(header_group, version=self.version)
         if binning is not None:
@@ -180,6 +178,34 @@ class OxfordH5EBSDReader(H5EBSDReader):
         detector = EBSDDetector(**detector_kw)
 
         return detector
+
+
+def get_detector_angles(header_group: dict[str, Any]) -> dict[str, float]:
+    """Get the detector tilt, azimuthal, and twist angles in degrees
+    from the detector orientation Euler angles.
+
+    Returns an empty dictionary if the detector orientation is not
+    available. If the sample tilt axis is not 0, only the detector
+    tilt is returned.
+    """
+    detector_euler = header_group.get("Detector Orientation Euler")
+    if detector_euler is None or np.size(detector_euler) != 3:  # pragma: no cover
+        _logger.debug("Could not read detector orientation")
+        return {}
+
+    detector_euler = np.rad2deg(np.asarray(detector_euler, dtype=np.float64))
+    tilt_axis = header_group.get("Tilt Axis", 0.0)
+    if not np.allclose(tilt_axis, 0):
+        warnings.warn(
+            f"Sample tilt axis {np.rad2deg(tilt_axis).squeeze():.1f} deg is not 0 deg, "
+            "so only the detector tilt is read from the detector orientation, while the"
+            " azimuthal and twist angles are set to 0 deg"
+        )
+        return {"tilt": detector_euler[1] - 90}
+
+    tilt, azimuthal, twist = _detector_angles_from_euler(detector_euler)
+
+    return {"tilt": tilt, "azimuthal": azimuthal, "twist": twist}
 
 
 def get_binning(header_group: dict[str, Any], version: str) -> int | None:
@@ -303,6 +329,14 @@ def file_reader(
     KeyError
         If *processed* is False and unprocessed patterns are not
         available.
+
+    Notes
+    -----
+    The detector tilt, azimuthal, and twist angles are derived from the
+    "Detector Orientation Euler" angles in the file. These are effective
+    values compensated by Oxford Instruments' calibration, not absolute
+    values. If the sample "Tilt Axis" in the file is not 0, only the
+    detector tilt is read.
     """
     reader = OxfordH5EBSDReader(filename, processed, **kwargs)
     return reader.read(scan_group_names, lazy)

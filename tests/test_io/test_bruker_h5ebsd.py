@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import h5py
 import pytest
@@ -47,3 +49,13 @@ class TestBrukerH5EBSD:
 
         with pytest.raises(ValueError, match="Only a rectangular region of"):
             kp.load(bruker_h5ebsd_nonrectangular_roi_file)
+
+    def test_load_detector(self, bruker_h5ebsd_file):
+        with h5py.File(bruker_h5ebsd_file, mode="r+") as f:
+            header = f["Scan 0/EBSD/Header"]
+            header["SampleTilt"][()] = 65.5
+            header["CameraTilt"][()] = 4.2
+
+        det = kp.load(bruker_h5ebsd_file).detector
+        assert det.sample_tilt == 65.5
+        assert det.tilt == 4.2
