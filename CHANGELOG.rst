@@ -60,6 +60,8 @@ Fixed
   navigation axes) no longer create a crystal map with coordinates of 50 points instead
   of one.
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Reading a file saved ``EBSDDetector.save()`` with kikuchipy < 0.12.0 now works.
+  (`#830 <https://github.com/pyxem/kikuchipy/pull/830>`_)
 
 Changed
 -------
