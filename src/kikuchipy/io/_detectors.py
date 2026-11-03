@@ -26,11 +26,15 @@ import re
 from typing import Any
 
 import numpy as np
+from packaging.version import Version
 
 from kikuchipy import __version__
 from kikuchipy.detectors._ebsd_detector import PC_CONVENTIONS, EBSDDetector
 
 _logger = logging.getLogger(__name__)
+
+
+VERSION_KEY = "kikuchipy version"
 
 
 def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
@@ -49,6 +53,7 @@ def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
         "sample_tilt",
         "convention",
         "navigation_shape",
+        VERSION_KEY,
     }
 
     # Parse header
@@ -66,7 +71,10 @@ def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
             else:
                 break
 
-    missing_keys = keys - set(header.keys())
+    # Fail if not working as expected
+    version = Version(header.pop(VERSION_KEY))
+
+    missing_keys = keys - set(header.keys()) - {VERSION_KEY}
     for k in missing_keys:
         _logger.debug(
             f"Detector parameter {k!r} missing from file {str(fname)}, using default"
@@ -101,6 +109,14 @@ def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
                 f"Cannot cast detector parameter {k!r}: {v} to a float, using default"
             )
 
+    # Sign of azimuthal angle was changed in v0.12.0
+    if version < Version("0.12.0") and "azimuthal" in detector_kw:
+        detector_kw["azimuthal"] = -detector_kw["azimuthal"]
+        _logger.debug(
+            f"Inverted azimuthal angle read from file {str(fname)} written with "
+            f"kikuchipy {version} < 0.12.0"
+        )
+
     return detector_kw
 
 
@@ -131,7 +147,7 @@ def write_ebsd_detector_to_file(
             f"  sample_tilt: {detector.sample_tilt} deg\n"
             f"  convention: {convention}\n"
             f"  navigation_shape: {detector.navigation_shape}\n\n"
-            f"kikuchipy version: {__version__}\n"
+            f"{VERSION_KEY}: {__version__}\n"
             f"Time: {time_now}\n\n"
             "Column names: PCx, PCy, PCz"
         ),

@@ -28,9 +28,9 @@ import matplotlib.figure as mfigure
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-import numba as nb
 import numpy as np
 
+from kikuchipy.detectors._detector_angles import _microscope_to_gnomonic_matrix
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
 
 # Repeated in detector module: keep in sync!
@@ -315,19 +315,6 @@ def update_detector_sample_geometry_side_view(
     )
 
 
-@nb.njit(
-    "float64[:](float64[:], float64[:], float64)", cache=True, fastmath=True, nogil=True
-)
-def rotate_about_axis(vector: np.ndarray, axis: np.ndarray, angle: float) -> np.ndarray:
-    """Rotate *vector* about *axis* by *angle* (radians)."""
-    axis = axis / np.linalg.norm(axis)
-    return (
-        vector * np.cos(angle)
-        + np.cross(axis, vector) * np.sin(angle)
-        + axis * np.dot(axis, vector) * (1 - np.cos(angle))
-    )
-
-
 def plot_detector_sample_geometry_top_view(
     detector: EBSDDetector,
     ax: maxes.Axes | None = None,
@@ -358,23 +345,13 @@ def plot_detector_sample_geometry_top_view(
 
     beam = np.zeros(2, dtype=np.float64)
 
-    # Detector local basis in microscope coordinates at zero detector
-    # tilt and zero azimuthal: X_d (width) points west, Y_d (height)
-    # points down in side view, and Z_d is the detector normal.
-    x_d = np.ascontiguousarray([-1.0, 0.0, 0.0], dtype=np.float64)
-    y_d = np.ascontiguousarray([0.0, 0.0, 1.0], dtype=np.float64)
-    z_d = np.ascontiguousarray([0.0, 1.0, 0.0], dtype=np.float64)
-
-    # Apply intrinsic rotations: detector tilt about X_d followed by
-    # azimuthal tilt about Y_d.
-    y_d = rotate_about_axis(y_d, x_d, -theta)
-    z_d = rotate_about_axis(z_d, x_d, -theta)
-    x_d = rotate_about_axis(x_d, y_d, -azimuthal)
-    z_d = rotate_about_axis(z_d, y_d, -azimuthal)
-
-    width_dir_3d = x_d
-    height_dir_3d = y_d
-    det_normal_3d = z_d
+    # Detector width (X_d), height (Y_d), and normal pointing from the
+    # sample to the detector (Z_g) in the figure frame, which is the
+    # microscope frame with all axes negated. The twist is not shown.
+    g = _microscope_to_gnomonic_matrix(theta, azimuthal, 0.0)
+    width_dir_3d = -g[0]
+    height_dir_3d = g[1]
+    det_normal_3d = -g[2]
 
     pc_pos_3d = L * det_normal_3d
     pc_pos = pc_pos_3d[:2]

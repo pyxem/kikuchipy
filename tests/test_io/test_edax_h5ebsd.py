@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,10 +15,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import shutil
 
 import h5py
+import numpy as np
 import pytest
 
 import kikuchipy as kp
@@ -47,6 +50,25 @@ class TestEDAXH5EBSD:
             grid[()] = "HexGrid".encode()
         with pytest.raises(IOError, match="Only square grids are"):
             _ = kp.load(tmp_file)
+
+    @pytest.mark.parametrize("azimuthal, desired", [(0, 0), (2.5, -2.5), (-1, 1)])
+    def test_load_detector(self, edax_h5ebsd_path, tmp_path, azimuthal, desired):
+        """Azimuthal angle is negated to give the same geometry as with
+        kikuchipy < 0.12.0.
+        """
+        file = edax_h5ebsd_path / "patterns.h5"
+        tmp_file = tmp_path / file.name
+        shutil.copy(file, tmp_file)
+        with h5py.File(tmp_file, mode="r+") as f:
+            header = f["Scan 1/EBSD/Header"]
+            header["Camera Azimuthal Angle"][()] = azimuthal
+            header["Camera Elevation Angle"][()] = 4.2
+
+        det = kp.load(tmp_file).detector
+        assert np.isclose(det.azimuthal, desired)
+        assert np.copysign(1, det.azimuthal) == np.copysign(1, desired)  # Not -0.0
+        assert np.isclose(det.tilt, 4.2)
+        assert np.isclose(det.sample_tilt, 75.7)
 
     def test_save_error(self, edax_h5ebsd_path):
         file = edax_h5ebsd_path / "patterns.h5"

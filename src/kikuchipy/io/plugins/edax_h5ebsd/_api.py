@@ -121,11 +121,16 @@ class EDAXH5EBSDReader(H5EBSDReader):
         scan_dict["xmap"] = xmap
 
         # --- Detector
+        # Negate to get the same geometry as with kikuchipy < 0.12.0,
+        # where the interpretation of the azimuthal angle changed
+        azimuthal = -hd.get("Camera Azimuthal Angle", 0.0)
+        if azimuthal == 0:  # Avoid -0.0
+            azimuthal = 0.0
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,
             tilt=hd.get("Camera Elevation Angle", 0.0),
-            azimuthal=hd.get("Camera Azimuthal Angle", 0.0),
+            azimuthal=azimuthal,
             sample_tilt=hd.get("Sample Tilt", 70.0),
             pc=(
                 hd.get("Pattern Center Calibration", {}).get("x-star", 0.5),
@@ -172,6 +177,13 @@ def file_reader(
         "metadata", "original_metadata", "detector", and "xmap". This
         dictionary can be passed as keyword arguments to create an
         :class:`~kikuchipy.signals.EBSD` signal.
+
+    Notes
+    -----
+    The detector azimuthal angle is the negative of the "Camera
+    Azimuthal Angle" in the file. This gives the same detector-sample
+    geometry as with kikuchipy < 0.12.0. Whether this geometry is
+    correct has not been verified.
     """
     reader = EDAXH5EBSDReader(filename, **kwargs)
     return reader.read(scan_group_names, lazy)

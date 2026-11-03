@@ -163,6 +163,24 @@ for i, (stilt, tilt) in enumerate(zip(sample_tilts, detector_tilts)):
     det4.plot_top_view(ax=ax2)
 
 # %%
+# Changing azimuthal angle
+# ========================
+#
+# Vary the azimuthal angle :math:`\omega` (detector tilt about the detector vertical
+# :math:`Y_d`, pointing down) from :math:`-20^{\circ} \rightarrow 20^{\circ}`.
+# Changes in this angle are only visible in the top view.
+
+det_az = kp.detectors.EBSDDetector(shape)
+
+fig = plt.figure(figsize=(9, 3), layout="constrained")
+for i, azimuthal in enumerate([-20, 0, 20]):
+    det_az.azimuthal = azimuthal
+
+    ax = fig.add_subplot(1, 3, i + 1)
+    ax.set_title(f"Top view\n$\\omega = {det_az.azimuthal:.1f}$\N{DEGREE SIGN}")
+    det_az.plot_top_view(ax=ax)
+
+# %%
 # Changing projection center
 # ==========================
 #
