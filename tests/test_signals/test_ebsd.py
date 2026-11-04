@@ -1540,7 +1540,6 @@ class TestAverageNeighbourPatternsEBSD:
         d = dummy_signal.data
         if lazy:
             d = d.compute()
-        print(d)
 
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
         assert np.allclose(dummy_signal.data, answer)
@@ -1692,6 +1691,440 @@ class TestAverageNeighbourPatternsEBSD:
 
         s3 = dummy_signal.as_lazy()
         s4 = s3.average_neighbour_patterns(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
+
+
+class TestAverageNonLocalNeighbourPatternsEBSD:
+    @pytest.mark.parametrize(
+        "window, window_shape, sigma, lamda, lazy, answer, kwargs",
+        [
+            (
+                "circular",
+                (3, 3),
+                np.ones((3, 3)),
+                1,
+                False,
+                np.array(
+                    [
+                        182,
+                        218,
+                        182,
+                        255,
+                        218,
+                        182,
+                        218,
+                        36,
+                        0,
+                        255,
+                        198,
+                        226,
+                        198,
+                        0,
+                        226,
+                        226,
+                        198,
+                        169,
+                        0,
+                        84,
+                        84,
+                        141,
+                        56,
+                        255,
+                        84,
+                        84,
+                        255,
+                        254,
+                        0,
+                        218,
+                        182,
+                        109,
+                        254,
+                        255,
+                        35,
+                        35,
+                        113,
+                        0,
+                        255,
+                        0,
+                        28,
+                        0,
+                        56,
+                        56,
+                        141,
+                        255,
+                        191,
+                        0,
+                        127,
+                        223,
+                        223,
+                        223,
+                        191,
+                        0,
+                        170,
+                        42,
+                        255,
+                        127,
+                        169,
+                        0,
+                        42,
+                        42,
+                        0,
+                        141,
+                        255,
+                        226,
+                        113,
+                        170,
+                        0,
+                        56,
+                        255,
+                        56,
+                        255,
+                        72,
+                        36,
+                        145,
+                        109,
+                        145,
+                        0,
+                        109,
+                        254,
+                    ]
+                ),
+                None,
+            ),
+            (
+                "rectangular",
+                (2, 3),
+                None,
+                None,
+                False,
+                np.array(
+                    [
+                        182,
+                        218,
+                        182,
+                        255,
+                        218,
+                        182,
+                        218,
+                        36,
+                        0,
+                        255,
+                        198,
+                        226,
+                        198,
+                        0,
+                        226,
+                        226,
+                        198,
+                        170,
+                        0,
+                        85,
+                        85,
+                        141,
+                        56,
+                        255,
+                        85,
+                        85,
+                        255,
+                        233,
+                        106,
+                        212,
+                        233,
+                        170,
+                        233,
+                        255,
+                        21,
+                        0,
+                        113,
+                        0,
+                        255,
+                        0,
+                        28,
+                        0,
+                        56,
+                        56,
+                        141,
+                        255,
+                        191,
+                        0,
+                        127,
+                        223,
+                        223,
+                        223,
+                        191,
+                        0,
+                        170,
+                        42,
+                        255,
+                        127,
+                        170,
+                        0,
+                        42,
+                        42,
+                        0,
+                        141,
+                        255,
+                        226,
+                        113,
+                        170,
+                        0,
+                        56,
+                        255,
+                        56,
+                        255,
+                        72,
+                        36,
+                        145,
+                        109,
+                        145,
+                        0,
+                        109,
+                        255,
+                    ]
+                ),
+                None,
+            ),
+            (
+                "gaussian",
+                (3, 3),
+                None,
+                1,
+                True,
+                np.array(
+                    [
+                        230,
+                        155,
+                        213,
+                        252,
+                        176,
+                        227,
+                        255,
+                        30,
+                        0,
+                        251,
+                        148,
+                        214,
+                        203,
+                        0,
+                        254,
+                        240,
+                        132,
+                        113,
+                        0,
+                        81,
+                        83,
+                        138,
+                        39,
+                        255,
+                        83,
+                        81,
+                        250,
+                        242,
+                        107,
+                        216,
+                        227,
+                        115,
+                        234,
+                        255,
+                        27,
+                        0,
+                        121,
+                        2,
+                        254,
+                        19,
+                        47,
+                        0,
+                        51,
+                        49,
+                        116,
+                        255,
+                        178,
+                        0,
+                        125,
+                        196,
+                        217,
+                        204,
+                        181,
+                        14,
+                        164,
+                        37,
+                        255,
+                        114,
+                        154,
+                        0,
+                        43,
+                        43,
+                        14,
+                        141,
+                        254,
+                        226,
+                        113,
+                        170,
+                        0,
+                        56,
+                        255,
+                        56,
+                        255,
+                        70,
+                        24,
+                        139,
+                        108,
+                        144,
+                        0,
+                        106,
+                        241,
+                    ]
+                ),
+                {"std": 0.3},  # standard deviation
+            ),
+        ],
+    )
+    def test_average_non_local_neighbour_patterns(
+        self,
+        dummy_signal,
+        window,
+        window_shape,
+        sigma,
+        lamda,
+        lazy,
+        answer,
+        kwargs,
+    ):
+        """Test averaging with different windows and parameters."""
+        if lazy:
+            dummy_signal = dummy_signal.as_lazy()
+
+        if kwargs is None:
+            dummy_signal.average_non_local_neighbour_patterns(
+                window=window,
+                window_shape=window_shape,
+                sigma=sigma,
+                lamda=lamda,
+                show_progressbar=True,
+            )
+
+        else:
+            dummy_signal.average_non_local_neighbour_patterns(
+                window=window,
+                window_shape=window_shape,
+                sigma=sigma,
+                lamda=lamda,
+                **kwargs,
+            )
+
+        d = dummy_signal.data
+        if lazy:
+            d = d.compute()
+
+        answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
+        assert np.allclose(dummy_signal.data, answer, rtol=1)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_no_averaging(self, dummy_signal):
+        answer = dummy_signal.data.copy()
+        with pytest.warns(UserWarning, match="A window of shape .* was "):
+            dummy_signal.average_non_local_neighbour_patterns(
+                window="rectangular", window_shape=(1, 1)
+            )
+        assert np.allclose(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_one_nav_dim(self, dummy_signal):
+        dummy_signal_1d = dummy_signal.inav[:, 0]
+        dummy_signal_1d.average_non_local_neighbour_patterns(window_shape=(3,))
+        # fmt: off
+        answer = np.array(
+            [
+                217, 220, 201, 255, 113, 201, 236,  49,   0, 186, 189, 192, 233,
+                  0, 255, 215,  74,  89,   0,  75,  81, 133,   4, 255,  81,  75,
+                243
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal_1d.axes_manager.shape)
+        # fmt: on
+        assert np.allclose(dummy_signal_1d.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_window_1d(self, dummy_signal):
+        dummy_signal.average_non_local_neighbour_patterns(window_shape=(3,))
+        # fmt: off
+        # One pattern per line
+        answer = np.array(
+            [226, 155, 212, 254, 198, 226, 254,  28,   0, 255, 198, 226, 198,
+               0, 226, 226, 198, 170,   0,  84,  84, 141,  56, 254,  84,  84,
+             254, 233, 106, 212, 233, 170, 233, 255,  21,   0, 113,   0, 255,
+               0,  27,   0,  56,  56, 141, 254, 185,   0, 127, 217, 220, 212,
+             187,  10, 170,  42, 255, 127, 169,   0,  42,  42,   0, 141, 254,
+             226, 113, 169,   0,  56, 255,  56, 254,  71,  29, 142, 108, 145,
+               0, 107, 246],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        assert np.allclose(dummy_signal.data, answer, rtol=1)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_pass_window(self, dummy_signal):
+        w = kp.filters.Window()
+        dummy_signal.average_non_local_neighbour_patterns(w)
+        # fmt: off
+        # One pattern per line
+        answer = np.array(
+            [217, 173, 205, 255, 194, 215, 246,  31,   0, 255, 202, 230, 207,
+               0, 236, 231, 192, 169,   0,  83,  84, 140,  49, 255,  84,  83,
+             253, 240,  56, 212, 212, 141, 240, 254,  14,   0, 113,   0, 255,
+               0,  27,   0,  57,  56, 141, 255, 188,   0, 127, 220, 221, 217,
+             189,   5, 170,  42, 255, 127, 169,   0,  42,  42,   0, 141, 254,
+             226, 113, 169,   0,  56, 255,  56, 255,  72,  31, 143, 109, 145,
+               0, 108, 249
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        assert np.allclose(dummy_signal.data, answer, rtol=1)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_lazy(self):
+        chunks = ((3, 3, 4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3, 4), (75,), (6,), (6,))
+        s = kp.signals.LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
+        s.average_non_local_neighbour_patterns()
+        s.compute()
+
+    def test_average_non_local_neighbour_patterns_inplace(self, dummy_signal):
+        # Current signal is unaffected
+        s2 = dummy_signal.deepcopy()
+        s3 = s2.average_non_local_neighbour_patterns(inplace=False)
+        assert np.allclose(dummy_signal.data, s2.data)
+
+        # Custom properties carry over
+        assert isinstance(s3, kp.signals.EBSD)
+        assert np.allclose(s3.static_background, dummy_signal.static_background)
+        assert np.allclose(s3.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s3.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        s2.average_non_local_neighbour_patterns()
+        assert np.allclose(s3.data, s2.data)
+
+        # Operating on lazy signal returns lazy signal
+        s4 = dummy_signal.as_lazy()
+        s5 = s4.average_non_local_neighbour_patterns(inplace=False)
+        assert isinstance(s5, kp.signals.LazyEBSD)
+        s5.compute()
+        assert np.allclose(s5.data, s2.data)
+
+    def test_lazy_output(self, dummy_signal):
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.average_non_local_neighbour_patterns(lazy_output=True)
+
+        s2 = dummy_signal.average_non_local_neighbour_patterns(
+            inplace=False, lazy_output=True
+        )
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.average_non_local_neighbour_patterns(inplace=False, lazy_output=False)
         assert isinstance(s4, kp.signals.EBSD)
 
 
