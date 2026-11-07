@@ -17,6 +17,12 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""Base signal class for Kikuchi master patterns of specific diffraction
+modailities to subclass.
+
+This class has functionality applicable to all subclasses.
+"""
+
 import logging
 from typing import TYPE_CHECKING, Any
 from warnings import warn
@@ -53,7 +59,7 @@ _logger = logging.getLogger(__name__)
 
 
 class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
-    """General class for Kikuchi master patterns.
+    """Base class for Kikuchi master patterns.
 
     Not meant to be used directly, see derived classes like
     :class:`~kikuchipy.signals.EBSDMasterPattern`.
