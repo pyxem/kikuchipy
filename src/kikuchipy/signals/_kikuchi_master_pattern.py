@@ -179,7 +179,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         if show_progressbar or (
             show_progressbar is None and hs.preferences.General.show_progressbar
         ):
-            n_iterations = min(self.axes_manager.navigation_size, 1)
+            n_iterations = max(self.axes_manager.navigation_size, 1)
             iterable = tqdm(iterable, total=n_iterations)
 
         for idx in iterable:
