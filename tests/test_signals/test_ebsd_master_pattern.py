@@ -584,15 +584,16 @@ class TestAsLambert:
         assert mp_lp.hemisphere == mp_sp.hemisphere
         assert mp_lp.phase.point_group == mp_sp.phase.point_group
 
-        # Warns and raises
+        # Raises
         mp_lp_ref = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
-        with pytest.warns(UserWarning, match="Already in the Lambert projection, "):
-            mp_lp_ref2 = mp_lp_ref.as_lambert()
-            assert not np.may_share_memory(mp_lp_ref.data, mp_lp_ref2.data)
+        with pytest.raises(
+            ValueError, match="Master pattern already in the Lambert projection"
+        ):
+            mp_lp_ref.as_lambert()
 
         mp_sp_lazy = mp_sp.as_lazy()
         with pytest.raises(NotImplementedError, match="Only implemented for non-lazy "):
-            _ = mp_sp_lazy.as_lambert()
+            mp_sp_lazy.as_lambert()
 
         # Quite similar to EMsoft's Lambert master pattern
         ncc = kp.indexing.NormalizedCrossCorrelationMetric(1, 1)
@@ -652,15 +653,16 @@ class TestAsStereo:
         assert mp_sp.hemisphere == mp_lp.hemisphere
         assert mp_sp.phase.point_group == mp_lp.phase.point_group
 
-        # Warns and raises
+        # Raises
         mp_sp_ref = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-        with pytest.warns(UserWarning, match="Already in the stereographic projection"):
-            mp_sp_ref2 = mp_sp_ref.as_stereo()
-            assert not np.may_share_memory(mp_sp_ref.data, mp_sp_ref2.data)
+        with pytest.raises(
+            ValueError, match="Master pattern already in the stereographic projection"
+        ):
+            mp_sp_ref.as_stereo()
 
         mp_lp_lazy = mp_lp.as_lazy()
         with pytest.raises(NotImplementedError, match="Not implemented for lazy "):
-            _ = mp_lp_lazy.as_stereo()
+            mp_lp_lazy.as_stereo()
 
         # Quite similar to EMsoft's stereographic master pattern
         ncc = kp.indexing.NormalizedCrossCorrelationMetric(1, 1)

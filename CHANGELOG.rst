@@ -75,6 +75,9 @@ Changed
 - The normalized cross-correlation metric "ncc" returns a score of zero instead of NaN
   for flat patterns.
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Trying to project a master pattern in the Lambert projection with ``as_lambert()`` now
+  raises a ``ValueError`` instead of just warning.
+  (`#835 <https://github.com/pyxem/kikuchipy/pull/835>`_)
 
 Removed
 -------

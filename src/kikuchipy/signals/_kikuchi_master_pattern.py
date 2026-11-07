@@ -154,13 +154,17 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
         Returns
         -------
-        lambert_master_pattern
+        master_pattern
             Master pattern in the Lambert projection with the same data
-            shape but in 32-bit floating point data dtype.
+            shape, but in 32-bit floating point data dtype.
+
+        Raises
+        ------
+        ValueError
+            If :attr:`projection` is "lambert".
         """
         if self.projection == "lambert":
-            warn("Already in the Lambert projection, returning a deepcopy", UserWarning)
-            return self.deepcopy()
+            raise ValueError("Master pattern already in the Lambert projection")
 
         if self._lazy is True:
             raise NotImplementedError("Only implemented for non-lazy signals")
@@ -187,7 +191,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             lam = lam.reshape(sig_shape)
             data_out[idx] = lam
 
-        new = self.__class__(
+        master_pattern = self.__class__(
             data_out,
             axes=list(self.axes_manager.as_dictionary().values()),
             phase=self.phase.deepcopy(),
@@ -195,7 +199,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             hemisphere=self.hemisphere,
         )
 
-        return new
+        return master_pattern
 
     def as_stereo(
         self,
@@ -232,14 +236,11 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         ValueError
             If *exclude_outside_equator* is False, only one hemisphere
             is present, and the phase's point group does not have
-            inversion symmetry.
+            inversion symmetry. Or if :attr:`projection` is
+            "stereographic".
         """
         if self.projection == "stereographic":
-            warn(
-                "Already in the stereographic projection, returning a deepcopy",
-                UserWarning,
-            )
-            return self.deepcopy()
+            raise ValueError("Master pattern already in the stereographic projection")
 
         if self._lazy is True:
             raise NotImplementedError("Not implemented for lazy signals")
