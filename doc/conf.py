@@ -22,11 +22,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 from datetime import datetime
-import importlib
 import inspect
 import os
 from os.path import dirname, relpath
-import pkgutil
 import re
 import sys
 import warnings
@@ -321,9 +319,9 @@ autodoc_type_aliases = {
 
 
 def _get_kikuchipy_inherited_members() -> dict[str, list[str]]:
-    """Return the public members each public class inherits from a
-    kikuchipy base class, keyed by the class' full name in each public
-    module it is available from.
+    """Return the public members each public class in kikuchipy's
+    modules (kikuchipy.signals etc.) inherits from a kikuchipy base
+    class, keyed by the class' full name.
 
     The class template lists these members together with the members
     defined in the class itself, while leaving out members inherited
@@ -332,24 +330,13 @@ def _get_kikuchipy_inherited_members() -> dict[str, list[str]]:
     """
     from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
 
-    module_names = ["kikuchipy"]
-    for info in pkgutil.walk_packages(kp.__path__, prefix="kikuchipy."):
-        is_public = True
-        for part in info.name.split("."):
-            if part.startswith("_"):
-                is_public = False
-        if is_public:
-            module_names.append(info.name)
-
     inherited = {}
-    for module_name in module_names:
-        module = importlib.import_module(module_name)
+    for module_name in dir(kp):
+        module = getattr(kp, module_name)
+        if not inspect.ismodule(module):
+            continue
         for name in dir(module):
-            try:
-                obj = getattr(module, name)
-            except ImportError:
-                # Names listed in a lazy-loader stub without a module
-                continue
+            obj = getattr(module, name)
             if (
                 not inspect.isclass(obj)
                 or not obj.__module__.startswith("kikuchipy")
@@ -367,7 +354,7 @@ def _get_kikuchipy_inherited_members() -> dict[str, list[str]]:
                             members.append(member)
                         break
             if members:
-                inherited[f"{module_name}.{name}"] = members
+                inherited[f"{module.__name__}.{name}"] = members
 
     return inherited
 
