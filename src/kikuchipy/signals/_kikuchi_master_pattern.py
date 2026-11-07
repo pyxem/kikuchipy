@@ -486,5 +486,15 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         if self.hemisphere == "both":
             master_upper, master_lower = master_patterns
         else:
+            # TODO: The missing hemisphere of a centrosymmetric phase is
+            # the given one rotated 180 degrees, since I(x, y, -z) =
+            # I(-x, -y, z), not a copy. A copy is only correct if the
+            # point group also has a 2-fold axis along z, and is wrong
+            # for e.g. -1, -3, and -3m. Use
+            # np.ascontiguousarray(master_patterns[..., ::-1, ::-1]) for
+            # the missing hemisphere (contiguous to avoid recompiling
+            # Numba functions). This also fixes a "lower" master pattern
+            # being returned as the upper one. Affects get_patterns(),
+            # refinement, plot_spherical(), and the detector plotter.
             master_upper = master_lower = master_patterns
         return master_upper, master_lower
