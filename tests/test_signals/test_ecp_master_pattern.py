@@ -70,7 +70,9 @@ class TestECPMasterPattern:
         )
         mp_upper, mp_lower = mp._get_master_pattern_arrays_from_energy()
         assert np.allclose(mp_upper, data[1])
-        assert np.allclose(mp_lower, data[1])
+        # Assumed centrosymmetric: lower hemisphere is the upper one
+        # rotated 180 degrees about the z axis
+        assert np.allclose(mp_lower, data[1, ::-1, ::-1])
 
     @pytest.mark.skipif_pyvista_not_installed
     def test_plot_spherical(

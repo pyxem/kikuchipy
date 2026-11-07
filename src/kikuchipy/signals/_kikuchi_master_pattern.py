@@ -406,6 +406,15 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             Upper hemisphere of the master pattern.
         master_lower
             Lower hemisphere of master pattern.
+
+        Notes
+        -----
+        If only one hemisphere is present, the phase is assumed to be
+        centrosymmetric, and the other hemisphere is the present one
+        rotated 180 degrees about the z axis. This is because the
+        intensity of a vector (x, y, -z) on the lower hemisphere equals
+        the intensity of (-x, -y, z) on the upper hemisphere, and both
+        hemispheres are projected with the same (x, y) coordinates.
         """
         if self._has_multiple_energies:
             if energy is None:
@@ -414,8 +423,20 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             master_patterns = self.inav[idx].data
         else:  # Assume a single energy
             master_patterns = self.data
+
         if self.hemisphere == "both":
             master_upper, master_lower = master_patterns
         else:
-            master_upper = master_lower = master_patterns
+            master_opposite = master_patterns[..., ::-1, ::-1]
+            if isinstance(master_opposite, np.ndarray):
+                # Avoid recompiling Numba functions for a non-contiguous
+                # array
+                master_opposite = np.ascontiguousarray(master_opposite)
+            if self.hemisphere == "lower":
+                master_upper = master_opposite
+                master_lower = master_patterns
+            else:
+                master_upper = master_patterns
+                master_lower = master_opposite
+
         return master_upper, master_lower
