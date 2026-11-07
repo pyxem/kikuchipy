@@ -49,7 +49,7 @@ import orix.quaternion as oqu
 from typing_extensions import Self, get_args
 
 from kikuchipy._constants import dependency_version
-from kikuchipy._kikuchi_sphere._detector_to_stereo import _detector_to_stereo
+from kikuchipy._kikuchi_sphere._gnomonic_to_stereo import _project_gnomonic_to_stereo
 from kikuchipy.detectors._convert_detector_coordinates import (
     convert_gnomonic_to_pixel_coords,
     convert_pixel_to_gnomonic_coords,
@@ -1103,7 +1103,7 @@ class EBSDDetector:
         if show_progressbar is None:
             show_progressbar = hs.preferences.General.show_progressbar
 
-        sphere = _detector_to_stereo(
+        sphere = _project_gnomonic_to_stereo(
             detector=self,
             pattern=patterns,
             mat_s2c=rot_s2c,
