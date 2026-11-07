@@ -24,7 +24,7 @@ This class has functionality applicable to all subclasses.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import hyperspy.api as hs
@@ -151,6 +151,13 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         :cite:`callahan2013dynamical`.
 
         Only implemented for non-lazy signals.
+
+        Parameters
+        ----------
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         Returns
         -------
@@ -416,7 +423,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
     # ----- Inherited methods from KikuchipySignal2D overwritten ----- #
 
-    def deepcopy(self) -> Any:
+    def deepcopy(self) -> Self:
         """Return a deep copy using :func:`copy.deepcopy`.
 
         Returns

@@ -22,9 +22,11 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 from datetime import datetime
+import importlib
 import inspect
 import os
 from os.path import dirname, relpath
+import pkgutil
 import re
 import sys
 import warnings
@@ -315,6 +317,64 @@ autodoc_default_options = {
 autodoc_type_aliases = {
     "EBSDMasterPattern": "kikuchipy.signals.EBSDMasterPattern",
     "EBSDIndexer": "pyebsdindex.ebsd_index.EBSDIndexer",
+}
+
+
+def _get_kikuchipy_inherited_members() -> dict[str, list[str]]:
+    """Return the public members each public class inherits from a
+    kikuchipy base class, keyed by the class' full name in each public
+    module it is available from.
+
+    The class template lists these members together with the members
+    defined in the class itself, while leaving out members inherited
+    from other packages, like HyperSpy. Lazy signal classes are left
+    out, as their non-lazy counterparts document the inherited members.
+    """
+    from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
+
+    module_names = ["kikuchipy"]
+    for info in pkgutil.walk_packages(kp.__path__, prefix="kikuchipy."):
+        is_public = True
+        for part in info.name.split("."):
+            if part.startswith("_"):
+                is_public = False
+        if is_public:
+            module_names.append(info.name)
+
+    inherited = {}
+    for module_name in module_names:
+        module = importlib.import_module(module_name)
+        for name in dir(module):
+            try:
+                obj = getattr(module, name)
+            except ImportError:
+                # Names listed in a lazy-loader stub without a module
+                continue
+            if (
+                not inspect.isclass(obj)
+                or not obj.__module__.startswith("kikuchipy")
+                or issubclass(obj, LazyKikuchipySignal2D)
+            ):
+                continue
+            members = []
+            for member in dir(obj):
+                if member.startswith("_") or member in obj.__dict__:
+                    continue
+                # The first class in the MRO defining the member
+                for base in obj.__mro__[1:]:
+                    if member in base.__dict__:
+                        if base.__module__.startswith("kikuchipy"):
+                            members.append(member)
+                        break
+            if members:
+                inherited[f"{module_name}.{name}"] = members
+
+    return inherited
+
+
+# Used in custom class template
+autosummary_context = {
+    "kikuchipy_inherited_members": _get_kikuchipy_inherited_members()
 }
 
 
