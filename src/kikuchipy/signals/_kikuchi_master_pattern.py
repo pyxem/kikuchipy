@@ -197,17 +197,42 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
         return new
 
-    def as_stereo(self, show_progressbar: bool | None = None) -> Self:
+    def as_stereo(
+        self,
+        *,
+        exclude_outside_equator: bool = True,
+        show_progressbar: bool | None = None,
+    ) -> Self:
         """Return a new master pattern in the stereographic projection
         :cite:`callahan2013dynamical`.
 
         Only implemented for non-lazy signals.
 
+        Parameters
+        ----------
+        exclude_outside_equator
+            Whether to set intensities outside the equator to zero.
+            Default is True. If False, these pixels get intensities from
+            the opposite hemisphere. If only one hemisphere is present,
+            it is used as the opposite hemisphere as well, which
+            requires the phase's point group to have inversion symmetry.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
         Returns
         -------
-        stereo_master_pattern
+        master_pattern
             Master pattern in the stereographic projection with the same
             data shape but in 32-bit floating point data dtype.
+
+        Raises
+        ------
+        ValueError
+            If *exclude_outside_equator* is False, only one hemisphere
+            is present, and the phase's point group does not have
+            inversion symmetry.
         """
         if self.projection == "stereographic":
             warn(
@@ -217,31 +242,69 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             return self.deepcopy()
 
         if self._lazy is True:
-            raise NotImplementedError("Only implemented for non-lazy signals")
+            raise NotImplementedError("Not implemented for lazy signals")
+
+        if not exclude_outside_equator and self.hemisphere != "both":
+            pg = self.phase.point_group
+            if pg is None or not pg.contains_inversion:
+                raise ValueError(
+                    "Both hemispheres must be present in the master pattern to include "
+                    "intensities outside the equator if the phase's point group does "
+                    "not have inversion symmetry"
+                )
+
+        if show_progressbar is None:
+            show_progressbar = hs.preferences.General.show_progressbar
 
         sig_shape = self._signal_shape_rc
-        n = sig_shape[0]
+        side_length = sig_shape[0]
 
         # Precompute once: for each stereographic output pixel, the
         # fractional row/column in the Lambert input image
-        row_frac, col_frac = _stereo_to_lambert_coords(n)
+        row_frac, col_frac, outside_equator = _stereo_to_lambert_coords(
+            side_length, exclude_outside_equator=exclude_outside_equator
+        )
 
-        nav_shape = self.axes_manager.navigation_shape
+        # Index of the hemisphere axis in the data array, if present
+        hemisphere_axis = None
+        if self.hemisphere == "both":
+            try:
+                hemisphere_axis = self.axes_manager["hemisphere"].index_in_array
+            except ValueError:
+                # Readers and simulators put the hemispheres first (last
+                # navigation axis in HyperSpy)
+                warn("No navigation axis named 'hemisphere', assuming last axis")
+                hemisphere_axis = 0
+
+        nav_shape = self._navigation_shape_rc
         data_out = np.zeros(self.data.shape, dtype=np.float32)
 
-        iterable = np.ndindex(nav_shape[::-1])
-        if show_progressbar or (
-            show_progressbar is None and hs.preferences.General.show_progressbar
-        ):
-            n_iterations = min(self.axes_manager.navigation_size, 1)
+        iterable = np.ndindex(nav_shape)
+        if show_progressbar:
+            n_iterations = max(self.axes_manager.navigation_size, 1)
             iterable = tqdm(iterable, total=n_iterations)
 
         for idx in iterable:
-            sp = _project_lambert_to_stereo(self.data[idx], row_frac, col_frac)
+            if exclude_outside_equator:
+                pattern_opposite = None
+            elif hemisphere_axis is None:
+                pattern_opposite = self.data[idx][::-1, ::-1]
+            else:
+                idx_opposite = list(idx)
+                idx_opposite[hemisphere_axis] = 1 - idx[hemisphere_axis]
+                pattern_opposite = self.data[tuple(idx_opposite)]
+
+            sp = _project_lambert_to_stereo(
+                self.data[idx],
+                row_frac,
+                col_frac,
+                outside_equator=outside_equator,
+                pattern_lambert_opposite=pattern_opposite,
+            )
             sp = sp.reshape(sig_shape)
             data_out[idx] = sp
 
-        new = self.__class__(
+        master_pattern = self.__class__(
             data_out,
             axes=list(self.axes_manager.as_dictionary().values()),
             phase=self.phase.deepcopy(),
@@ -249,7 +312,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             hemisphere=self.hemisphere,
         )
 
-        return new
+        return master_pattern
 
     def plot_spherical(
         self,

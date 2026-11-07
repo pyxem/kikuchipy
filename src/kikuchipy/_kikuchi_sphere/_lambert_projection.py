@@ -181,19 +181,25 @@ def _lambert_to_stereo_coords(n: int) -> tuple[np.ndarray, np.ndarray]:
     return row_frac, col_frac
 
 
-def _stereo_to_lambert_coords(n: int) -> tuple[np.ndarray, np.ndarray]:
+def _stereo_to_lambert_coords(
+    size: int, exclude_outside_equator: bool = True
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Precompute fractional Lambert pixel coordinates for each point on
-    an (n, n) stereographic grid.
+    a (*size*, *size*) stereographic grid.
 
     For each output stereographic pixel at grid position (i, j), the
     corresponding source location in the Lambert image is returned as a
-    fractional (row, column) index.  These coordinates are independent of
-    the pattern data and need only be computed once per signal shape.
+    fractional (row, column) index.  These coordinates are independent
+    of the pattern data and need only be computed once per signal shape.
 
     Parameters
     ----------
-    n
+    size
         Side length of the square stereographic output grid.
+    exclude_outside_equator
+        Whether to set the coordinates of pixels outside the equator to
+        NaN. If False, these pixels get coordinates into the Lambert
+        image of the opposite hemisphere. Default is True.
 
     Returns
     -------
@@ -203,20 +209,40 @@ def _stereo_to_lambert_coords(n: int) -> tuple[np.ndarray, np.ndarray]:
     col_frac
         1D float64 array of length n*n with fractional column indices
         into the Lambert image, in row-major (C) order.
+    outside_equator
+        1D boolean array of length n*n marking pixels outside the
+        equator, in row-major (C) order.
+
+    Notes
+    -----
+    A pixel outside the equator maps to a vector (x, y, z) on the
+    opposite hemisphere. The Lambert image of that hemisphere holds the
+    intensity of this vector at the Lambert coordinates of
+    (x, y, -z), which is the convention used when projecting patterns
+    from a master pattern with both hemispheres.
     """
-    arr = np.linspace(-1.0, 1.0, n, dtype=np.float64)
+    arr = np.linspace(-1.0, 1.0, size, dtype=np.float64)
     x_stereo, y_stereo = np.meshgrid(arr, arr)
+    x_stereo = x_stereo.ravel()
+    y_stereo = y_stereo.ravel()
+    outside_equator = x_stereo**2 + y_stereo**2 > 1.0
+
     inv_sp = opr.InverseStereographicProjection()
-    v = inv_sp.xy2vector(x_stereo.ravel(), y_stereo.ravel())
+    v = inv_sp.xy2vector(x_stereo, y_stereo)
     xy_lambert = _sphere_to_lambert(
         np.ascontiguousarray(v.x, dtype=np.float64),
         np.ascontiguousarray(v.y, dtype=np.float64),
-        np.ascontiguousarray(v.z, dtype=np.float64),
+        np.ascontiguousarray(np.abs(v.z), dtype=np.float64),
     )
-    scale = (n - 1) / 2.0
+    scale = (size - 1) / 2.0
     col_frac = np.ascontiguousarray((xy_lambert[:, 0] + 1.0) * scale)
     row_frac = np.ascontiguousarray((xy_lambert[:, 1] + 1.0) * scale)
-    return row_frac, col_frac
+
+    if exclude_outside_equator:
+        col_frac[outside_equator] = np.nan
+        row_frac[outside_equator] = np.nan
+
+    return row_frac, col_frac, outside_equator
 
 
 def _project_stereo_to_lambert(
@@ -265,7 +291,11 @@ def _project_stereo_to_lambert(
 
 
 def _project_lambert_to_stereo(
-    pattern_lambert: np.ndarray, row_frac: np.ndarray, col_frac: np.ndarray
+    pattern_lambert: np.ndarray,
+    row_frac: np.ndarray,
+    col_frac: np.ndarray,
+    outside_equator: np.ndarray | None = None,
+    pattern_lambert_opposite: np.ndarray | None = None,
 ) -> np.ndarray:
     """Project a single master pattern from the Lambert to the
     stereographic projection using bilinear interpolation.
@@ -282,17 +312,43 @@ def _project_lambert_to_stereo(
     col_frac
         Precomputed fractional column indices into *pattern_lambert*
         for each stereographic output pixel.
+    outside_equator
+        Boolean mask of stereographic output pixels outside the
+        equator, as returned by :func:`_stereo_to_lambert_coords`. Must
+        be given if *pattern_lambert_opposite* is given.
+    pattern_lambert_opposite
+        2D array containing the master pattern of the opposite
+        hemisphere in the Lambert projection. If given, intensities of
+        pixels outside the equator are interpolated from this pattern.
 
     Returns
     -------
     out
         1D float64 array (n*n,) with interpolated intensities in the
-        stereographic projection, in row-major order. Pixels outside
-        the equatorial circle are set to 0.
+        stereographic projection, in row-major order. Pixels without
+        intensities are set to 0.
     """
     img = np.ascontiguousarray(pattern_lambert, dtype=np.float64)
-    out = _bilinear_interpolate_nan_skip(
-        image=img, row_frac=row_frac, col_frac=col_frac
-    )
+
+    if pattern_lambert_opposite is None:
+        out = _bilinear_interpolate_nan_skip(
+            image=img, row_frac=row_frac, col_frac=col_frac
+        )
+    else:
+        img_opposite = np.ascontiguousarray(pattern_lambert_opposite, dtype=np.float64)
+        inside_equator = ~outside_equator
+        out = np.full(row_frac.size, np.nan)
+        out[inside_equator] = _bilinear_interpolate_nan_skip(
+            image=img,
+            row_frac=row_frac[inside_equator],
+            col_frac=col_frac[inside_equator],
+        )
+        out[outside_equator] = _bilinear_interpolate_nan_skip(
+            image=img_opposite,
+            row_frac=row_frac[outside_equator],
+            col_frac=col_frac[outside_equator],
+        )
+
     out[np.isnan(out)] = 0.0
+
     return out
