@@ -24,7 +24,7 @@ import inspect
 from typing import Any, Callable
 import warnings
 
-from kikuchipy._constants import VisibleDeprecationWarning
+import numpy as np
 
 
 class deprecated:
@@ -86,12 +86,14 @@ class deprecated:
         @functools.wraps(func)
         def wrapped(*args, **kwargs) -> Callable:
             warnings.simplefilter(
-                action="always", category=VisibleDeprecationWarning, append=True
+                action="always",
+                category=np.exceptions.VisibleDeprecationWarning,
+                append=True,
             )
             func_code = func.__code__
             warnings.warn_explicit(
                 message=msg,
-                category=VisibleDeprecationWarning,
+                category=np.exceptions.VisibleDeprecationWarning,
                 filename=func_code.co_filename,
                 lineno=func_code.co_firstlineno + 1,
             )
@@ -144,12 +146,12 @@ class deprecated_argument:
                     msg += f"Use `{self.alternative}` instead. "
                 msg += f"See the documentation of `{func.__name__}()` for more details."
                 warnings.simplefilter(
-                    action="always", category=VisibleDeprecationWarning
+                    action="always", category=np.exceptions.VisibleDeprecationWarning
                 )
                 func_code = func.__code__
                 warnings.warn_explicit(
                     message=msg,
-                    category=VisibleDeprecationWarning,
+                    category=np.exceptions.VisibleDeprecationWarning,
                     filename=func_code.co_filename,
                     lineno=func_code.co_firstlineno + 1,
                 )

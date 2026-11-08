@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Vector-related tools useful across modules."""
 
@@ -44,7 +46,7 @@ def poles_from_hemisphere(hemisphere: ValidHemispheres) -> list[int]:
             return [-1, 1]
 
 
-def parse_hemisphere(hemisphere: ValidHemispheres) -> str:
+def parse_hemisphere(hemisphere: ValidHemispheres) -> ValidHemispheres:
     hemi = hemisphere.lower()
     if hemi not in ["upper", "lower", "both"]:
         raise UnknownHemisphereError(hemisphere)
@@ -52,7 +54,7 @@ def parse_hemisphere(hemisphere: ValidHemispheres) -> str:
         return hemi
 
 
-def parse_projection(projection: ValidProjections) -> str:
+def parse_projection(projection: ValidProjections) -> ValidProjections:
     proj = projection.lower()
     if proj not in ["stereographic", "lambert"]:
         raise UnknownProjectionError(projection)

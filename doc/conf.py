@@ -73,6 +73,10 @@ extensions = [
 # Create links to references within kikuchipy's documentation to these
 # packages
 intersphinx_mapping = {
+    "bayesian-optimization": (
+        "https://bayesian-optimization.github.io/BayesianOptimization/3.4.0/",
+        None,
+    ),
     "black": ("https://black.readthedocs.io/en/stable", None),
     "conda": ("https://docs.conda.io/projects/conda/en/latest", None),
     "coverage": ("https://coverage.readthedocs.io/en/latest", None),
@@ -128,6 +132,22 @@ exclude_patterns = [
     "examples/*/*.py",
 ]
 
+# Version switcher
+# ----------------
+# https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
+# All versions read the list of versions from the latest docs, so that
+# the list only has to be updated in one place. Development builds
+# (latest, PRs and local builds) read the list from their own source,
+# so that changes to the list are visible before they are merged.
+# Only the latest patch of each minor version is listed, so versions
+# are matched on MAJOR.MINOR.
+if "dev" in release or os.environ.get("READTHEDOCS_VERSION") == "latest":
+    switcher_version_match = "dev"
+    switcher_json_url = "_static/switcher.json"
+else:
+    switcher_version_match = ".".join(release.split(".")[:2])
+    switcher_json_url = "https://kikuchipy.org/en/latest/_static/switcher.json"
+
 # HTML theming: pydata-sphinx-theme
 # https://pydata-sphinx-theme.readthedocs.io
 html_theme = "pydata_sphinx_theme"
@@ -145,8 +165,14 @@ html_theme_options = {
         "alt_text": "kikuchipy",
         "image_dark": "_static/logo/plasma_banner_dark.png",
     },
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "navigation_with_keys": True,
     "show_toc_level": 2,
+    "show_version_warning_banner": True,
+    "switcher": {
+        "json_url": switcher_json_url,
+        "version_match": switcher_version_match,
+    },
     "use_edit_page_button": True,
 }
 html_context = {
@@ -306,6 +332,60 @@ autodoc_typehints_format = "short"
 autodoc_default_options = {
     "show-inheritance": True,
 }
+# Autodoc gives up resolving a function signature when one name in it is
+# only imported under TYPE_CHECKING. List such names here.
+autodoc_type_aliases = {
+    "EBSDMasterPattern": "kikuchipy.signals.EBSDMasterPattern",
+    "EBSDIndexer": "pyebsdindex.ebsd_index.EBSDIndexer",
+}
+
+
+def _get_kikuchipy_inherited_members() -> dict[str, list[str]]:
+    """Return the public members each public class in kikuchipy's
+    modules (kikuchipy.signals etc.) inherits from a kikuchipy base
+    class, keyed by the class' full name.
+
+    The class template lists these members together with the members
+    defined in the class itself, while leaving out members inherited
+    from other packages, like HyperSpy. Lazy signal classes are left
+    out, as their non-lazy counterparts document the inherited members.
+    """
+    from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
+
+    inherited = {}
+    for module_name in dir(kp):
+        module = getattr(kp, module_name)
+        if not inspect.ismodule(module):
+            continue
+        for name in dir(module):
+            obj = getattr(module, name)
+            if (
+                not inspect.isclass(obj)
+                or not obj.__module__.startswith("kikuchipy")
+                or issubclass(obj, LazyKikuchipySignal2D)
+            ):
+                continue
+            members = []
+            for member in dir(obj):
+                if member.startswith("_") or member in obj.__dict__:
+                    continue
+                # The first class in the MRO defining the member
+                for base in obj.__mro__[1:]:
+                    if member in base.__dict__:
+                        if base.__module__.startswith("kikuchipy"):
+                            members.append(member)
+                        break
+            if members:
+                inherited[f"{module.__name__}.{name}"] = members
+
+    return inherited
+
+
+# Used in custom class template
+autosummary_context = {
+    "kikuchipy_inherited_members": _get_kikuchipy_inherited_members()
+}
+
 
 # numpydoc
 # --------

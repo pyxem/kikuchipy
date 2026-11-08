@@ -18,9 +18,11 @@
 from ._ebsd_detector_plotter import EBSDDetectorPlotter
 from ._navigators import get_rgb_navigator
 from ._plot_pattern_positions_in_map import plot_pattern_positions_in_map
+from ._plot_pattern_processing_result import plot_pattern_processing_result
 
 __all__ = [
     "EBSDDetectorPlotter",
     "get_rgb_navigator",
     "plot_pattern_positions_in_map",
+    "plot_pattern_processing_result",
 ]

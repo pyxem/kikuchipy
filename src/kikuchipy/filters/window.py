@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -10,11 +10,12 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from __future__ import annotations
 
@@ -581,3 +582,59 @@ def highpass_fft_filter(
     window[r < (cutoff - (2 * cutoff_width))] = 0
     window[r > cutoff] = 1
     return window
+
+
+def bandpass_fft_filter(
+    shape: tuple[int, int],
+    highpass_cutoff: int | float,
+    lowpass_cutoff: int | float,
+    highpass_cutoff_width: int | float | None = None,
+    lowpass_cutoff_width: int | float | None = None,
+) -> np.ndarray:
+    r"""Return a frequency domain band-pass filter transfer function in
+    2D.
+
+    The band-pass filter is the product of a high-pass filter from
+    :func:`highpass_fft_filter` and a low-pass filter from
+    :func:`lowpass_fft_filter`. The high-pass filter removes large
+    intensity variations across the detector, while the low-pass filter
+    removes noise.
+
+    Parameters
+    ----------
+    shape
+        Shape of function.
+    highpass_cutoff
+        Cut-off frequency of the high-pass filter.
+    lowpass_cutoff
+        Cut-off frequency of the low-pass filter.
+    highpass_cutoff_width
+        Width of cut-off region of the high-pass filter. If not given
+        (default), it is set to half of the high-pass cut-off frequency.
+    lowpass_cutoff_width
+        Width of cut-off region of the low-pass filter. If not given
+        (default), it is set to half of the low-pass cut-off frequency.
+
+    Returns
+    -------
+    window
+        2D transfer function.
+
+    See Also
+    --------
+    kikuchipy.pattern.optimize_bandpass_filter
+
+    Notes
+    -----
+    The parameters have the same names as the parameters returned from
+    :func:`~kikuchipy.pattern.optimize_bandpass_filter`, so that the
+    optimized filter can be applied to all patterns with
+    :meth:`~kikuchipy.signals.EBSD.fft_filter`.
+    """
+    w_high = highpass_fft_filter(
+        shape=shape, cutoff=highpass_cutoff, cutoff_width=highpass_cutoff_width
+    )
+    w_low = lowpass_fft_filter(
+        shape=shape, cutoff=lowpass_cutoff, cutoff_width=lowpass_cutoff_width
+    )
+    return w_high * w_low

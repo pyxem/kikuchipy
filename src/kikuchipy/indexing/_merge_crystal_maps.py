@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,15 +15,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from math import copysign
 import warnings
 
 import numpy as np
-from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
+from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
 
-from kikuchipy.signals.util._crystal_map import _equal_phase
+from kikuchipy.signals.util._crystal_map import (
+    _create_coordinate_arrays,
+    _equal_phase,
+)
 
 
 def merge_crystal_maps(
@@ -340,7 +345,7 @@ def merge_crystal_maps(
         props[f"merged_{simulation_indices_prop}"] = merged_simulated_indices
 
     step_sizes = (crystal_maps[0].dx, crystal_maps[0].dy)
-    coords, _ = create_coordinate_arrays(
+    coords, _ = _create_coordinate_arrays(
         map_shape, step_sizes=step_sizes[: len(map_shape)]
     )
 

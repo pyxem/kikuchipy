@@ -16,11 +16,18 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 ====
 
 - H W. Ånes, P. Crout, L. A. Lervik, O. Natlandsmyr, T. Bergh, J. Hjelen,
-  A. T. J. van Helvoort and K. Marthinsen, "kikuchipy: an open-source toolbox for
+  A. T. J. van Helvoort, and K. Marthinsen, "kikuchipy: an open-source toolbox for
   analysis of EBSD patterns," arXiv preprint (2026).
   https://doi.org/10.48550/arXiv.2605.25722.
+- C. Griesbach and D. M. Kochmann, "Global DIC-based sample-detector geometry refinement
+  for accurate EBSD indexing," arXiv preprint (2026).
+  https://doi.org/10.48550/arXiv.2604.25869.
+- C. Griesbach, T. Scharsach, M. Trassin, and D. M. Kochmann, "Ferroelectric
+  polarization mapping through pseudosymmetry-sensitive EBSD reindexing,"
+  *Ultramicroscopy* **315** (2026).
+  https://doi.org/10.1016/j.actamat.2026.122386.
 - L. Kokosza, J. Pawlak, M. Marciszko-Wiąckowska, G. Cios, P. Jabłoński, A. Naumov,
-  M. Przybylski and Z. Mitura, "The growth and structural characterization of a
+  M. Przybylski, and Z. Mitura, "The growth and structural characterization of a
   La0.67Sr0.33MnO3/BaTiO3 superstructure (superlattice)," *Foundations of
   Crystallography* **82** (2026).
   https://doi.org/10.1107/S205327332600313X.
@@ -29,16 +36,16 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 2024
 ====
 
-- Z. Xu, H. W. Ånes, S. Gorelick, X. Fang and P. Miller, "OpenECCI-A Streamlined
+- Z. Xu, H. W. Ånes, S. Gorelick, X. Fang, and P. Miller, "OpenECCI-A Streamlined
   Open-Source Workflow for Electron Channelling Contrast Imaging of Crystal Defects,"
   *In BIO Web of Conferences* **129** (2024).
   https://doi.org/10.1051/bioconf/202412907004.
-- Z. Mitura, G. Szwachta, L. Kokosza and M. Przybylski, "Identification of Kikuchi lines
+- Z. Mitura, G. Szwachta, L. Kokosza, and M. Przybylski, "Identification of Kikuchi lines
   in electron diffraction patterns collected in small-angle geometry," *Foundations of
   Crystallography* **80** (2024).
   https://doi.org/10.1107/S2053273323009385.
 - A. Celotto, L. Sandnes, Ø. Grong, J. A. Sørhaug, G. Stefani, D. Wan, P. E. Vullum, R.
-  Holmestad and F. Berto, "Cold butt welding of dissimilar aluminum alloys:
+  Holmestad, and F. Berto, "Cold butt welding of dissimilar aluminum alloys:
   Characterization and interface bonding conditions," *Materials Science and
   Engineering: A* **897** (2024).
   https://doi.org/10.1016/j.msea.2024.146279.
@@ -48,20 +55,20 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 ====
 
 - A. V. Bugten, L. Michels, R. B. Brurok, C. Hartung, E. Ott, L. Vines, Y. Li,
-  L. Arnberg and M. Di Sabatino, "The Role of Boron in Low Copper Spheroidal Graphite
+  L. Arnberg, and M. Di Sabatino, "The Role of Boron in Low Copper Spheroidal Graphite
   Irons," *Metallurgical and Materials Transactions A* **54** (2023).
   https://doi.org/10.1007/s11661-023-07014-y.
 - O. W. Sandvik, A. M. Müller, H. W. Ånes, M. Zahn, J. He, M. Fiebig, T. Lottermoser,
-  Th. Rojac, D. Meier and J. Schultheiß, "Pressure Control of Nonferroelastic
+  Th. Rojac, D. Meier, and J. Schultheiß, "Pressure Control of Nonferroelastic
   Ferroelectric Domains in ErMnO3," *Nano Letters* (2023).
   https://doi.org/10.1021/acs.nanolett.3c01638
   (`arXiv <https://doi.org/10.48550/arXiv.2304.08423>`__).
-- H. W. Ånes, A. T. J. van Helvoort and K. Marthinsen, "Orientation dependent pinning
+- H. W. Ånes, A. T. J. van Helvoort, and K. Marthinsen, "Orientation dependent pinning
   of (sub)grains by dispersoids during recovery and recrystallization in an Al-Mn
   alloy," *Acta Materialia* **248** (2023).
   https://doi.org/10.1016/j.actamat.2023.118761
   (`arXiv <https://doi.org/10.48550/arxiv.2212.03527>`__).
-- T. Bergh, H. W. Ånes, R. Aune, S. Wenner, R. Holmestad, X. Ren and P. E. Vullum,
+- T. Bergh, H. W. Ånes, R. Aune, S. Wenner, R. Holmestad, X. Ren, and P. E. Vullum,
   "Intermetallic Phase Layers in Cold Metal Transfer Aluminium-Steel Welds with an
   Al-Si-Mn Filler Alloy," *Materials Transactions* **64(2)** (2023).
   https://doi.org/10.2320/matertrans.MT-LA2022046.
@@ -74,12 +81,12 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
   Properties of Wire Arc Additive Manufacturing of Inconel 625," *Metals* **12(11)**
   (2022).
   https://doi.org/10.3390/met12111867
-- H. W. Ånes, A. T. J. van Helvoort and K. Marthinsen, "Correlated subgrain and
+- H. W. Ånes, A. T. J. van Helvoort, and K. Marthinsen, "Correlated subgrain and
   particle analysis of a recovered Al-Mn alloy by directly combining EBSD and
   backscatter electron imaging," *Materials Characterization* **193** (2022).
   https://doi.org/10.1016/j.matchar.2022.112228
   (`arXiv <https://doi.org/10.48550/arXiv.2205.05514>`__).
-- J. Schultheiß, F. Xue, E. Roede, H. W. Ånes, F. H. Danmo, S. M. Selbach, L.-Q. Chen
+- J. Schultheiß, F. Xue, E. Roede, H. W. Ånes, F. H. Danmo, S. M. Selbach, L.-Q. Chen,
   and D. Meier, "Confinement-driven inverse domain scaling in polycrystalline ErMnO3,"
   *Advanced Materials*, **34** (2022).
   https://doi.org/10.1002/adma.202203449
@@ -89,7 +96,7 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 2021
 ====
 
-- O. M. Akselsen, R. Bjørge, H. W. Ånes, X. Ren and B. Nyhus, "Effect of Sigma Phase in
+- O. M. Akselsen, R. Bjørge, H. W. Ånes, X. Ren, and B. Nyhus, "Effect of Sigma Phase in
   Wire Arc Additive Manufacturing of Superduplex Stainless Steel," *Metals* **11(12)**
   (2021).
   https://doi.org/10.3390/met11122045.
@@ -98,11 +105,11 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 2020
 ====
 
-- B. E. Sørensen, J. Hjelen, H. W. Ånes and T. Breivik, "Recent features in EBSD,
+- B. E. Sørensen, J. Hjelen, H. W. Ånes, and T. Breivik, "Recent features in EBSD,
   including new trapezoidal correction for multi-mapping," In *IOP Conference Series:
   Materials Science and Engineering*, volume **891** IOP Publishing (2020).
   https://doi.org/10.1088/1757-899X/891/1/012021.
-- H. W. Ånes, J. Hjelen, B. E. Sørensen, A. T. J. van Helvoort and K. Marthinsen,
+- H. W. Ånes, J. Hjelen, B. E. Sørensen, A. T. J. van Helvoort, and K. Marthinsen,
   "Processing and indexing of electron backscatter patterns using open-source software,"
   In *IOP Conference Series: Materials Science and Engineering*, volume **891** IOP
   Publishing (2020).

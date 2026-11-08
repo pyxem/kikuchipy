@@ -17,20 +17,31 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from copy import deepcopy
+"""Base signal class for Kikuchi master patterns of specific diffraction
+modailities to subclass.
+
+This class has functionality applicable to all subclasses.
+"""
+
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import hyperspy.api as hs
 import numpy as np
-from orix.crystal_map import Phase
-from orix.projections import InverseStereographicProjection, StereographicProjection
-from orix.vector import Vector3d
-from scipy.interpolate import interpn
+import orix.crystal_map as ocm
+import orix.projections as opr
+import orix.vector as ove
 from tqdm import tqdm
+from typing_extensions import Self
 
 from kikuchipy._constants import verify_dependency_or_raise
+from kikuchipy._kikuchi_sphere._lambert_projection import (
+    _lambert_to_stereo_coords,
+    _project_lambert_to_stereo,
+    _project_stereo_to_lambert,
+    _stereo_to_lambert_coords,
+)
 from kikuchipy._utils.vector import (
     ValidHemispheres,
     ValidProjections,
@@ -38,7 +49,6 @@ from kikuchipy._utils.vector import (
     parse_projection,
 )
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D
-from kikuchipy.signals.util._master_pattern import _lambert2vector
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -49,7 +59,7 @@ _logger = logging.getLogger(__name__)
 
 
 class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
-    """General class for Kikuchi master patterns.
+    """Base class for Kikuchi master patterns.
 
     Not meant to be used directly, see derived classes like
     :class:`~kikuchipy.signals.EBSDMasterPattern`.
@@ -75,16 +85,14 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._hemisphere = kwargs.get("hemisphere")
-        self._phase = kwargs.get("phase", Phase())
-        self._projection = kwargs.get("projection")
+        self._hemisphere: ValidHemispheres | None = kwargs.get("hemisphere")
+        self._phase = kwargs.get("phase", ocm.Phase())
+        self._projection: ValidProjections | None = kwargs.get("projection")
+
+    # -------------------------- Properties -------------------------- #
 
     @property
-    def _has_multiple_energies(self) -> bool:
-        return "energy" in [i.name for i in self.axes_manager.navigation_axes]
-
-    @property
-    def hemisphere(self) -> str:
+    def hemisphere(self) -> ValidHemispheres | None:
         """Return or set which hemisphere(s) the signal contains.
 
         Options are "upper", "lower", or "both".
@@ -101,7 +109,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         self._hemisphere = parse_hemisphere(value)
 
     @property
-    def phase(self) -> Phase:
+    def phase(self) -> ocm.Phase:
         """Return or set the phase describing the crystal structure used
         in the master pattern simulation.
 
@@ -113,11 +121,11 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         return self._phase
 
     @phase.setter
-    def phase(self, value: Phase) -> None:
+    def phase(self, value: ocm.Phase) -> None:
         self._phase = value
 
     @property
-    def projection(self) -> str:
+    def projection(self) -> ValidProjections | None:
         """Return or set which projection the pattern is in.
 
         Parameters
@@ -132,85 +140,187 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
     def projection(self, value: ValidProjections) -> None:
         self._projection = parse_projection(value)
 
-    def as_lambert(self, show_progressbar: bool | None = None) -> Any:
+    @property
+    def _has_multiple_energies(self) -> bool:
+        return "energy" in [i.name for i in self.axes_manager.navigation_axes]
+
+    # --------------------------- Methods ---------------------------- #
+
+    def as_lambert(self, *, show_progressbar: bool | None = None) -> Self:
         """Return a new master pattern in the Lambert projection
         :cite:`callahan2013dynamical`.
 
         Only implemented for non-lazy signals.
 
+        Parameters
+        ----------
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
         Returns
         -------
-        lambert_master_pattern
+        master_pattern
             Master pattern in the Lambert projection with the same data
-            shape but in 32-bit floating point data dtype.
+            shape, but in 32-bit floating point data dtype.
 
-        Examples
-        --------
-        >>> import hyperspy.api as hs
-        >>> import kikuchipy as kp
-        >>> mp_sp = kp.data.nickel_ebsd_master_pattern_small()
-        >>> mp_sp.projection
-        'stereographic'
-        >>> mp_lp = mp_sp.as_lambert()
-        >>> mp_lp.projection
-        'lambert'
-        >>> _ = hs.plot.plot_images([mp_sp, mp_lp], per_row=2)
+        Raises
+        ------
+        ValueError
+            If :attr:`projection` is "lambert".
         """
         if self.projection == "lambert":
-            warn("Already in the Lambert projection, returning a deepcopy", UserWarning)
-            return self.deepcopy()
+            raise ValueError("Master pattern already in the Lambert projection")
 
         if self._lazy is True:
             raise NotImplementedError("Only implemented for non-lazy signals")
 
-        # Set up square arrays
         sig_shape = self._signal_shape_rc
-        arr = np.linspace(-1, 1, sig_shape[0], dtype=np.float64)
-        x_lambert, y_lambert = np.meshgrid(arr, arr)
-        x_lambert_flat = x_lambert.ravel()
-        y_lambert_flat = y_lambert.ravel()
+        n = sig_shape[0]
 
-        # Get unit vectors per array coordinate, and then the
-        # corresponding (X, Y) coordinate in the stereographic
-        # projection
-        xyz_upper = _lambert2vector(x_lambert_flat, y_lambert_flat)
-        v = Vector3d(xyz_upper)
-        sp = StereographicProjection()
-        x_stereo, y_stereo = sp.vector2xy(v)
-        x_stereo += 1
-        y_stereo += 1
-
-        # Keyword arguments for interpolation
-        kwargs = {
-            "points": (arr + 1, arr + 1),
-            "xi": (y_stereo, x_stereo),
-            "method": "splinef2d",
-        }
+        # Precompute once: for each Lambert output pixel, the fractional
+        # row/column in the stereographic input image
+        row_frac, col_frac = _lambert_to_stereo_coords(n)
 
         nav_shape = self.axes_manager.navigation_shape
         data_out = np.zeros(self.data.shape, dtype=np.float32)
-
-        n_iterations = self.axes_manager.navigation_size
-        if n_iterations == 0:
-            n_iterations = 1
 
         iterable = np.ndindex(nav_shape[::-1])
         if show_progressbar or (
             show_progressbar is None and hs.preferences.General.show_progressbar
         ):
+            n_iterations = max(self.axes_manager.navigation_size, 1)
             iterable = tqdm(iterable, total=n_iterations)
 
         for idx in iterable:
-            data_i = interpn(values=self.data[idx], **kwargs)
-            data_out[idx] = data_i.reshape(sig_shape)
+            lam = _project_stereo_to_lambert(self.data[idx], row_frac, col_frac)
+            lam = lam.reshape(sig_shape)
+            data_out[idx] = lam
 
-        return self.__class__(
+        master_pattern = self.__class__(
             data_out,
             axes=list(self.axes_manager.as_dictionary().values()),
             phase=self.phase.deepcopy(),
             projection="lambert",
-            hemisphere=deepcopy(self.hemisphere),
+            hemisphere=self.hemisphere,
         )
+
+        return master_pattern
+
+    def as_stereo(
+        self,
+        *,
+        exclude_outside_equator: bool = True,
+        show_progressbar: bool | None = None,
+    ) -> Self:
+        """Return a new master pattern in the stereographic projection
+        :cite:`callahan2013dynamical`.
+
+        Only implemented for non-lazy signals.
+
+        Parameters
+        ----------
+        exclude_outside_equator
+            Whether to set intensities outside the equator to zero.
+            Default is True. If False, these pixels get intensities from
+            the opposite hemisphere. If only one hemisphere is present,
+            it is used as the opposite hemisphere as well, which
+            requires the phase's point group to have inversion symmetry.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
+        Returns
+        -------
+        master_pattern
+            Master pattern in the stereographic projection with the same
+            data shape but in 32-bit floating point data dtype.
+
+        Raises
+        ------
+        ValueError
+            If *exclude_outside_equator* is False, only one hemisphere
+            is present, and the phase's point group does not have
+            inversion symmetry. Or if :attr:`projection` is
+            "stereographic".
+        """
+        if self.projection == "stereographic":
+            raise ValueError("Master pattern already in the stereographic projection")
+
+        if self._lazy is True:
+            raise NotImplementedError("Not implemented for lazy signals")
+
+        if not exclude_outside_equator and self.hemisphere != "both":
+            pg = self.phase.point_group
+            if pg is None or not pg.contains_inversion:
+                raise ValueError(
+                    "Both hemispheres must be present in the master pattern to include "
+                    "intensities outside the equator if the phase's point group does "
+                    "not have inversion symmetry"
+                )
+
+        if show_progressbar is None:
+            show_progressbar = hs.preferences.General.show_progressbar
+
+        sig_shape = self._signal_shape_rc
+        side_length = sig_shape[0]
+
+        # Precompute once: for each stereographic output pixel, the
+        # fractional row/column in the Lambert input image
+        row_frac, col_frac, outside_equator = _stereo_to_lambert_coords(
+            side_length, exclude_outside_equator=exclude_outside_equator
+        )
+
+        # Index of the hemisphere axis in the data array, if present
+        hemisphere_axis = None
+        if self.hemisphere == "both":
+            try:
+                hemisphere_axis = self.axes_manager["hemisphere"].index_in_array
+            except ValueError:
+                # Readers and simulators put the hemispheres first (last
+                # navigation axis in HyperSpy)
+                warn("No navigation axis named 'hemisphere', assuming last axis")
+                hemisphere_axis = 0
+
+        nav_shape = self._navigation_shape_rc
+        data_out = np.zeros(self.data.shape, dtype=np.float32)
+
+        iterable = np.ndindex(nav_shape)
+        if show_progressbar:
+            n_iterations = max(self.axes_manager.navigation_size, 1)
+            iterable = tqdm(iterable, total=n_iterations)
+
+        for idx in iterable:
+            if exclude_outside_equator:
+                pattern_opposite = None
+            elif hemisphere_axis is None:
+                pattern_opposite = self.data[idx][::-1, ::-1]
+            else:
+                idx_opposite = list(idx)
+                idx_opposite[hemisphere_axis] = 1 - idx[hemisphere_axis]
+                pattern_opposite = self.data[tuple(idx_opposite)]
+
+            sp = _project_lambert_to_stereo(
+                self.data[idx],
+                row_frac,
+                col_frac,
+                outside_equator=outside_equator,
+                pattern_lambert_opposite=pattern_opposite,
+            )
+            sp = sp.reshape(sig_shape)
+            data_out[idx] = sp
+
+        master_pattern = self.__class__(
+            data_out,
+            axes=list(self.axes_manager.as_dictionary().values()),
+            phase=self.phase.deepcopy(),
+            projection="stereographic",
+            hemisphere=self.hemisphere,
+        )
+
+        return master_pattern
 
     def plot_spherical(
         self,
@@ -286,11 +396,11 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         x, y = np.meshgrid(np.linspace(-1, 1, size), np.linspace(-1, 1, size))
         x = x[keep]
         y = y[keep]
-        stereo2sphere = InverseStereographicProjection()
+        stereo2sphere = opr.InverseStereographicProjection()
         v1 = stereo2sphere.xy2vector(x.ravel(), y.ravel())
         stereo2sphere.pole = 1
         v2 = stereo2sphere.xy2vector(x.ravel(), y.ravel())
-        v3 = Vector3d.stack((v1, v2)).flatten()
+        v3 = ove.Vector3d.stack((v1, v2)).flatten()
 
         grid = pv.StructuredGrid(v3.x, v3.y, v3.z)
         grid.point_data["Intensity"] = data
@@ -311,6 +421,49 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
                 show_kwargs = {}
             pl.show(**show_kwargs)
 
+    # ----- Inherited methods from KikuchipySignal2D overwritten ----- #
+
+    def deepcopy(self) -> Self:
+        """Return a deep copy using :func:`copy.deepcopy`.
+
+        Returns
+        -------
+        s_new
+            Identical signal without shared memory.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> mp = kp.data.nickel_ebsd_master_pattern_small()
+        >>> mp2 = mp.deepcopy()
+        >>> np.may_share_memory(mp.data, mp2.data)
+        False
+        """
+        return super().deepcopy()
+
+    # --------- Inherited methods from Signal2D overwritten ---------- #
+
+    @insert_doc_disclaimer(
+        cls=hs.signals.Signal2D, meth=hs.signals.Signal2D.set_signal_type
+    )
+    def set_signal_type(self, signal_type: str = "") -> None:
+        if "master" in signal_type.lower():
+            attrs = self._get_custom_attributes()
+            super().set_signal_type(signal_type)
+            self._set_custom_attributes(attrs)
+        else:
+            attrs = self._custom_attributes
+            super().set_signal_type(signal_type)
+            _logger.debug("Delete custom attributes when setting signal type")
+            for name in attrs:
+                try:
+                    self.__delattr__("_" + name)
+                except AttributeError:  # pragma: no cover
+                    pass
+
+    # ------------------------ Private methods ----------------------- #
+
     def _get_master_pattern_arrays_from_energy(
         self, energy: int | float | None = None
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -330,6 +483,15 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             Upper hemisphere of the master pattern.
         master_lower
             Lower hemisphere of master pattern.
+
+        Notes
+        -----
+        If only one hemisphere is present, the phase is assumed to be
+        centrosymmetric, and the other hemisphere is the present one
+        rotated 180 degrees about the z axis. This is because the
+        intensity of a vector (x, y, -z) on the lower hemisphere equals
+        the intensity of (-x, -y, z) on the upper hemisphere, and both
+        hemispheres are projected with the same (x, y) coordinates.
         """
         if self._has_multiple_energies:
             if energy is None:
@@ -338,49 +500,20 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             master_patterns = self.inav[idx].data
         else:  # Assume a single energy
             master_patterns = self.data
+
         if self.hemisphere == "both":
             master_upper, master_lower = master_patterns
         else:
-            master_upper = master_lower = master_patterns
+            master_opposite = master_patterns[..., ::-1, ::-1]
+            if isinstance(master_opposite, np.ndarray):
+                # Avoid recompiling Numba functions for a non-contiguous
+                # array
+                master_opposite = np.ascontiguousarray(master_opposite)
+            if self.hemisphere == "lower":
+                master_upper = master_opposite
+                master_lower = master_patterns
+            else:
+                master_upper = master_patterns
+                master_lower = master_opposite
+
         return master_upper, master_lower
-
-    # --- Inherited methods from KikuchipySignal2D overwritten
-
-    def deepcopy(self) -> Any:
-        """Return a deep copy using :func:`copy.deepcopy`.
-
-        Returns
-        -------
-        s_new
-            Identical signal without shared memory.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import kikuchipy as kp
-        >>> mp = kp.data.nickel_ebsd_master_pattern_small()
-        >>> mp2 = mp.deepcopy()
-        >>> np.may_share_memory(mp.data, mp2.data)
-        False
-        """
-        return super().deepcopy()
-
-    # --- Inherited methods from Signal2D overwritten
-
-    @insert_doc_disclaimer(
-        cls=hs.signals.Signal2D, meth=hs.signals.Signal2D.set_signal_type
-    )
-    def set_signal_type(self, signal_type: str = "") -> None:
-        if "master" in signal_type.lower():
-            attrs = self._get_custom_attributes()
-            super().set_signal_type(signal_type)
-            self._set_custom_attributes(attrs)
-        else:
-            attrs = self._custom_attributes
-            super().set_signal_type(signal_type)
-            _logger.debug("Delete custom attributes when setting signal type")
-            for name in attrs:
-                try:
-                    self.__delattr__("_" + name)
-                except AttributeError:  # pragma: no cover
-                    pass

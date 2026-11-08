@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,10 +15,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import dask.array as da
 import numpy as np
-from orix.crystal_map import CrystalMap
+import orix.crystal_map as ocm
 import pytest
 
 import kikuchipy as kp
@@ -30,12 +32,12 @@ class TestDictionaryIndexing:
         """
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
+        s_dict.xmap = ocm.CrystalMap.empty((9,))
         dummy_signal2 = dummy_signal.deepcopy()
         s_dict2 = s_dict.deepcopy()
         xmap = dummy_signal2.dictionary_indexing(s_dict2, metric="ndp", rechunk=True)
 
-        assert isinstance(xmap, CrystalMap)
+        assert isinstance(xmap, ocm.CrystalMap)
         assert np.allclose(xmap.scores[:, 0], 1)
 
         # Data is not affected by indexing method
@@ -48,7 +50,7 @@ class TestDictionaryIndexing:
         """
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
+        s_dict.xmap = ocm.CrystalMap.empty((9,))
         signal_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
         xmap = dummy_signal.dictionary_indexing(
             s_dict,
@@ -65,13 +67,31 @@ class TestDictionaryIndexing:
                 s_dict, signal_mask=da.from_array(signal_mask)
             )
 
+    def test_dictionary_indexing_single_pattern(self, dummy_signal):
+        """Indexing a single pattern without navigation axes gives a
+        crystal map of a single point.
+        """
+        s = dummy_signal.inav[0, 0]
+        assert s.axes_manager.navigation_dimension == 0
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = ocm.CrystalMap.empty((9,))
+
+        xmap = s.dictionary_indexing(s_dict, keep_n=2)
+        assert xmap.size == 1
+        assert xmap.shape == ()
+        assert xmap.scores.shape == (1, 2)
+        # The pattern is in the dictionary
+        assert np.isclose(xmap.scores[0, 0], 1)
+        assert xmap.simulation_indices[0, 0] == 0
+
     def test_dictionary_indexing_n_per_iteration_from_lazy(self, dummy_signal):
         """Getting number of iterations from Dask array chunk works, and
         NDP rechunking of experimental patterns works.
         """
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
+        s_dict.xmap = ocm.CrystalMap.empty((9,))
         s_dict_lazy = s_dict.as_lazy()
         s_dict_lazy.xmap = s_dict.xmap
         signal_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
@@ -90,7 +110,7 @@ class TestDictionaryIndexing:
     def test_dictionary_indexing_invalid_metric(self, dummy_signal):
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
+        s_dict.xmap = ocm.CrystalMap.empty((9,))
         with pytest.raises(ValueError, match="'invalid' must be either of "):
             _ = dummy_signal.dictionary_indexing(s_dict, metric="invalid")
 
@@ -98,7 +118,7 @@ class TestDictionaryIndexing:
         s_dict_data = dummy_signal.data[:, :, :2, :2].reshape((-1, 2, 2))
         s_dict = kp.signals.EBSD(s_dict_data)
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
+        s_dict.xmap = ocm.CrystalMap.empty((9,))
         with pytest.raises(ValueError):
             _ = dummy_signal.dictionary_indexing(s_dict)
 
@@ -112,7 +132,7 @@ class TestDictionaryIndexing:
             _ = dummy_signal.dictionary_indexing(s_dict)
 
         # Dictionary not 1 navigation dimension
-        s_dict.xmap = CrystalMap.empty((3, 3))
+        s_dict.xmap = ocm.CrystalMap.empty((3, 3))
         with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
             _ = dummy_signal.dictionary_indexing(s_dict)
 
@@ -138,7 +158,7 @@ class TestDictionaryIndexing:
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
         dict_size = s_dict.axes_manager.navigation_size
-        s_dict.xmap = CrystalMap.empty((dict_size,))
+        s_dict.xmap = ocm.CrystalMap.empty((dict_size,))
         xmap = s.dictionary_indexing(s_dict)
         assert xmap.shape == nav_shape
         assert np.allclose(xmap.scores[:, 0], np.ones(nav_shape).ravel())
@@ -148,7 +168,7 @@ class TestDictionaryIndexing:
         s = dummy_signal
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((s_dict.axes_manager.navigation_size,))
+        s_dict.xmap = ocm.CrystalMap.empty((s_dict.axes_manager.navigation_size,))
 
         nav_mask1 = np.ones(8, dtype=bool)
         with pytest.raises(ValueError, match=r"The navigation mask shape \(8,\) and "):
@@ -169,7 +189,7 @@ class TestDictionaryIndexing:
         nav_size = int(np.prod(nav_shape))
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(nav_size, 3, 3))
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((nav_size,))
+        s_dict.xmap = ocm.CrystalMap.empty((nav_size,))
 
         nav_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
         xmap1 = s.dictionary_indexing(s_dict, keep_n=1, navigation_mask=nav_mask)

@@ -24,7 +24,7 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList
 import pytest
 
 import kikuchipy as kp
-from kikuchipy._constants import dependency_version, pyopencl_context_available
+from kikuchipy._constants import pyopencl_context_available
 from kikuchipy.indexing._hough_indexing import (
     _get_info_message,
     _indexer_is_compatible_with_kikuchipy,
@@ -32,9 +32,7 @@ from kikuchipy.indexing._hough_indexing import (
 )
 
 
-@pytest.mark.skipif(
-    dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
-)
+@pytest.mark.skipif_pyebsdindex_not_installed
 class TestHoughIndexing:
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()
@@ -85,6 +83,25 @@ class TestHoughIndexing:
         assert xmap.phases.names == phase_list.names
         angles = xmap.orientations.angle_with(xmap_ref.orientations, degrees=True)
         assert np.all(angles < 1)
+
+    def test_hough_indexing_single_pattern(self):
+        """Indexing a single pattern without navigation axes gives a
+        crystal map of a single point.
+        """
+        s = self.signal.inav[1, 1]
+        assert s.axes_manager.navigation_dimension == 0
+        det = s.detector.deepcopy()
+        det.pc = det.pc_average
+        phase_list = self.signal.xmap.phases
+        indexer = det.get_indexer(phase_list)
+
+        xmap = s.hough_indexing(phase_list, indexer, verbose=0)
+        assert xmap.size == 1
+        assert xmap.shape == ()
+        angle = xmap.orientations.angle_with(
+            self.signal.xmap[1, 1].orientations, degrees=True
+        )
+        assert angle[0] < 1
 
     def test_hough_indexing_lazy(self):
         s = self.signal.as_lazy()
@@ -291,9 +308,7 @@ class TestHoughIndexing:
             _ = _phase_lists_are_compatible(phase_list4, indexer, True)
 
 
-@pytest.mark.skipif(
-    dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
-)
+@pytest.mark.skipif_pyebsdindex_not_installed
 class TestPCOptimization:
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()
@@ -367,9 +382,7 @@ class TestPCOptimization:
                 _ = s.hough_indexing_optimize_pc(det.pc_average, self.indexer)
 
 
-@pytest.mark.skipif(
-    dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
-)
+@pytest.mark.skipif_pyebsdindex_installed
 class TestHoughIndexingNoPyEBSDIndex:
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()

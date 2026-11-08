@@ -21,12 +21,11 @@ import dask
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
 import numpy as np
-from orix.crystal_map import Phase
-from orix.quaternion import Rotation
+import orix.crystal_map as ocm
+import orix.quaternion as oqu
 import pytest
 
 import kikuchipy as kp
-from kikuchipy._constants import dependency_version
 from kikuchipy.indexing._refinement._solvers import _prepare_pattern
 from kikuchipy.signals.util._crystal_map import _equal_phase
 
@@ -46,7 +45,7 @@ class EBSDRefineTestSetup:
         ],
         projection="lambert",
         hemisphere="both",
-        phase=Phase("a", 225),
+        phase=ocm.Phase("a", 225),
     )
 
 
@@ -118,7 +117,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
                 xmap=xmap, signal_mask=np.zeros((10, 20)), **refine_kwargs
             )
 
-        xmap.phases.add(Phase(name="b", point_group="m-3m"))
+        xmap.phases.add(ocm.Phase(name="b", point_group="m-3m"))
         xmap._phase_id[0] = 1
         with pytest.raises(ValueError, match="Points in data in crystal map must have"):
             _ = s.refine_orientation(xmap=xmap, **refine_kwargs)
@@ -212,9 +211,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         )
         assert dask_arr.chunksize == chunksize
 
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is not None, reason="NLopt is installed"
-    )
+    @pytest.mark.skipif_nlopt_installed
     def test_refine_raises_nlopt_import_error(
         self, dummy_signal, get_single_phase_xmap
     ):
@@ -236,9 +233,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
                 method="LN_NELDERMEAD",
             )
 
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is None, reason="NLopt is not installed"
-    )
+    @pytest.mark.skipif_nlopt_not_installed
     def test_refine_raises_initial_step_nlopt(
         self, dummy_signal, get_single_phase_xmap
     ):
@@ -262,6 +257,40 @@ class TestEBSDRefine(EBSDRefineTestSetup):
                 method="LN_NELDERMEAD",
                 initial_step=[1, 1, 1],
             )
+
+    def test_refine_single_pattern(self):
+        """Refining a single pattern without navigation axes, with a
+        signal mask, gives results for a single point.
+        """
+        s = self.nickel_ebsd_small.inav[0, 0]
+        assert s.axes_manager.navigation_dimension == 0
+        xmap = ocm.CrystalMap(
+            oqu.Rotation.identity(), phase_list=ocm.PhaseList(self.mp.phase)
+        )
+        det = s.detector.deepcopy()
+        det.pc = det.pc_average
+        signal_mask = np.zeros(s.axes_manager.signal_shape[::-1], dtype=bool)
+        signal_mask[:5] = True
+        kwargs = dict(
+            detector=det,
+            master_pattern=self.mp,
+            energy=20,
+            signal_mask=signal_mask,
+            method_kwargs=dict(options=dict(maxfev=10)),
+        )
+
+        xmap_ref1 = s.refine_orientation(xmap, **kwargs)
+        assert xmap_ref1.size == 1
+        assert xmap_ref1.shape == ()
+
+        scores, det_ref2, n_evaluations = s.refine_projection_center(xmap, **kwargs)
+        assert scores.shape == (1,)
+        assert det_ref2.pc.shape == (1, 3)
+        assert n_evaluations.shape == (1,)
+
+        xmap_ref3, det_ref3 = s.refine_orientation_projection_center(xmap, **kwargs)
+        assert xmap_ref3.size == 1
+        assert det_ref3.pc.shape == (1, 3)
 
     def test_refine_single_point(self, dummy_signal, get_single_phase_xmap):
         am = dummy_signal.axes_manager
@@ -301,26 +330,34 @@ class TestEBSDRefine(EBSDRefineTestSetup):
             )
 
     def test_equal_phase(self):
-        assert _equal_phase(Phase(), Phase()) == (True, None)
+        assert _equal_phase(ocm.Phase(), ocm.Phase()) == (True, None)
 
         # Name
-        assert _equal_phase(Phase("a"), Phase("a")) == (True, None)
-        assert _equal_phase(Phase("a"), Phase("b")) == (False, "names")
+        assert _equal_phase(ocm.Phase("a"), ocm.Phase("a")) == (True, None)
+        assert _equal_phase(ocm.Phase("a"), ocm.Phase("b")) == (False, "names")
 
         # Space group
-        assert _equal_phase(Phase(space_group=1), Phase(space_group=1)) == (True, None)
-        assert _equal_phase(Phase(), Phase(space_group=2)) == (False, "space groups")
-        assert _equal_phase(Phase(space_group=1), Phase(space_group=2)) == (
+        assert _equal_phase(ocm.Phase(space_group=1), ocm.Phase(space_group=1)) == (
+            True,
+            None,
+        )
+        assert _equal_phase(ocm.Phase(), ocm.Phase(space_group=2)) == (
+            False,
+            "space groups",
+        )
+        assert _equal_phase(ocm.Phase(space_group=1), ocm.Phase(space_group=2)) == (
             False,
             "space groups",
         )
 
         # Point group
-        assert _equal_phase(Phase(), Phase(point_group="m-3m")) == (
+        assert _equal_phase(ocm.Phase(), ocm.Phase(point_group="m-3m")) == (
             False,
             "point groups",
         )
-        assert _equal_phase(Phase(point_group="4"), Phase(point_group="m-3m")) == (
+        assert _equal_phase(
+            ocm.Phase(point_group="4"), ocm.Phase(point_group="m-3m")
+        ) == (
             False,
             "point groups",
         )
@@ -331,30 +368,30 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         atom_al3 = Atom("Al", [0, 0, 0], occupancy=0.5)
         atom_mn = Atom("Mn", [0, 0, 0])
         assert _equal_phase(
-            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
-            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+            ocm.Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+            ocm.Phase(structure=Structure(atoms=[atom_al, atom_mn])),
         ) == (True, None)
         assert _equal_phase(
-            Phase(structure=Structure(atoms=[atom_al])),
-            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+            ocm.Phase(structure=Structure(atoms=[atom_al])),
+            ocm.Phase(structure=Structure(atoms=[atom_al, atom_mn])),
         ) == (False, "number of atoms")
         assert _equal_phase(
-            Phase(structure=Structure(atoms=[atom_al2, atom_mn])),
-            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+            ocm.Phase(structure=Structure(atoms=[atom_al2, atom_mn])),
+            ocm.Phase(structure=Structure(atoms=[atom_al, atom_mn])),
         ) == (False, "atoms")
         assert _equal_phase(
-            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
-            Phase(structure=Structure(atoms=[atom_al3, atom_mn])),
+            ocm.Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+            ocm.Phase(structure=Structure(atoms=[atom_al3, atom_mn])),
         ) == (False, "atoms")
 
         # Lattice
         assert _equal_phase(
-            Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
-            Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
+            ocm.Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
+            ocm.Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
         ) == (True, None)
         assert _equal_phase(
-            Phase(structure=Structure(lattice=Lattice(1, 2, 4, 90, 100, 110))),
-            Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
+            ocm.Phase(structure=Structure(lattice=Lattice(1, 2, 4, 90, 100, 110))),
+            ocm.Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
         ) == (False, "lattice parameters")
 
     def test_refinement_invalid_phase(self, dummy_signal, get_single_phase_xmap):
@@ -448,9 +485,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         ],
         indirect=["ebsd_with_axes_and_random_data", "detector"],
     )
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is None, reason="NLopt is not installed"
-    )
+    @pytest.mark.skipif_nlopt_not_installed
     def test_refine_orientation_local_nlopt(
         self,
         ebsd_with_axes_and_random_data,
@@ -577,9 +612,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         )
         assert np.allclose(xmap_ref.scores, s.xmap.scores, atol=1e-3)
 
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is None, reason="NLopt is not installed"
-    )
+    @pytest.mark.skipif_nlopt_not_installed
     def test_refine_orientation_nickel_ebsd_small_nlopt(self):
         """Refine already refined orientations with NLopt, which should
         produce slightly better results.
@@ -604,9 +637,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         )
         assert xmap_ref.scores.mean() > s.xmap.scores.mean()
 
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is None, reason="NLopt is not installed"
-    )
+    @pytest.mark.skipif_nlopt_not_installed
     def test_refine_orientation_pseudo_symmetry_nlopt(self):
         s = self.nickel_ebsd_small
 
@@ -614,7 +645,9 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
-        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+        rot_ps = oqu.Rotation.from_axes_angles(
+            [[0, 0, 1], [0, 0, -1]], 30, degrees=True
+        )
 
         # Apply the first rotation so that the second rotation (the
         # inverse) is the best match
@@ -644,7 +677,9 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
-        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+        rot_ps = oqu.Rotation.from_axes_angles(
+            [[0, 0, 1], [0, 0, -1]], 30, degrees=True
+        )
 
         # Apply the second rotation so that the first rotation (the
         # inverse) is the best match
@@ -869,9 +904,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         ],
         indirect=["ebsd_with_axes_and_random_data", "detector"],
     )
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is None, reason="NLopt is not installed"
-    )
+    @pytest.mark.skipif_nlopt_not_installed
     def test_refine_projection_center_local_nlopt(
         self,
         ebsd_with_axes_and_random_data,
@@ -1038,9 +1071,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
             ("LN_NELDERMEAD", [0.5, 0.5, 0.5, 0.01, 0.01, 0.01], 1e-4, [1, 0.02], None),
         ],
     )
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is None, reason="NLopt is not installed"
-    )
+    @pytest.mark.skipif_nlopt_not_installed
     def test_refine_orientation_projection_center_local_nlopt(
         self,
         dummy_signal,
@@ -1152,9 +1183,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         # Should ideally be (9, 8) with better use of map_blocks()
         assert dask_array.shape == (9, 1)
 
-    @pytest.mark.skipif(
-        dependency_version["nlopt"] is None, reason="NLopt is not installed"
-    )
+    @pytest.mark.skipif_nlopt_not_installed
     def test_refine_orientation_pc_pseudo_symmetry_nlopt(self):
         s = self.nickel_ebsd_small
 
@@ -1162,7 +1191,9 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
-        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+        rot_ps = oqu.Rotation.from_axes_angles(
+            [[0, 0, 1], [0, 0, -1]], 30, degrees=True
+        )
 
         # Apply the first rotation so that the second rotation (the
         # inverse) is the best match
@@ -1192,7 +1223,9 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
-        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+        rot_ps = oqu.Rotation.from_axes_angles(
+            [[0, 0, 1], [0, 0, -1]], 30, degrees=True
+        )
 
         # Apply the second rotation so that the first rotation (the
         # inverse) is the best match
@@ -1212,7 +1245,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         )
 
         # Nelder-Mead
-        xmap_ref, det_ref = s.refine_orientation_projection_center(
+        xmap_ref, _ = s.refine_orientation_projection_center(
             trust_region=[2, 2, 2, 0.05, 0.05, 0.05], **ref_kw
         )
         assert xmap_ref.scores.mean() > xmap.scores.mean()

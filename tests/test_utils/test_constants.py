@@ -19,12 +19,10 @@
 
 import pytest
 
-from kikuchipy._constants import dependency_version, verify_dependency_or_raise
+from kikuchipy._constants import verify_dependency_or_raise
 
 
-@pytest.mark.skipif(
-    dependency_version["ipywidgets"] is not None, reason="ipywidgets is installed"
-)
+@pytest.mark.skipif_ipywidgets_installed
 def test_verify_dependency_or_raise():
     verify_dependency_or_raise("numpy", "")
 

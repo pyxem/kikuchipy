@@ -13,6 +13,86 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.14.0 (2026-11-08)
+===================
+
+Added
+-----
+- ``EBSDDetector.to_stereo()`` for projecting one or more patterns from the detector
+  onto the sphere, returned as a master pattern in the stereographic projection with
+  both hemispheres.
+  Intensities from multiple patterns, and optionally from all symmetrically equivalent
+  orientations, are averaged.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
+- Optimization of processing parameters of a single pattern against a reference pattern,
+  scored by the normalized cross-correlation:
+  ``pattern.optimize_remove_dynamic_background()``,
+  ``pattern.optimize_adaptive_histogram_equalization()``, and
+  ``pattern.optimize_bandpass_filter()`` optimize one processing step each, while
+  ``pattern.optimize_pattern_processing()`` optimizes any of these steps together, in
+  any order.
+  Parameters are found by Bayesian optimization, which requires the optional dependency
+  ``bayesian-optimization``, or by local optimization with the Nelder-Mead method with
+  restarts.
+  A signal mask can be passed to exclude pixels from the score.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- ``draw.plot_pattern_processing_result()`` for plotting the pattern after each step of
+  a pattern processing optimization, annotated with image quality and normalized
+  cross-correlation.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- ``filters.bandpass_fft_filter()`` for creating a band-pass filter transfer function
+  for use with ``EBSD.fft_filter()``, e.g. with parameters from
+  ``pattern.optimize_bandpass_filter()``.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- ``pattern.get_signal_mask()`` for getting a signal mask of pixels without Kikuchi
+  diffraction in a pattern by intensity thresholding, for use in e.g. refinement or
+  pattern processing optimization.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Project master pattern from the Lambert to the stereographic projection.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
+
+Fixed
+-----
+- ``pattern.remove_dynamic_background()`` no longer fails for patterns with an integer
+  data type, and no longer overwrites patterns with a floating point data type.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Hough indexing, dictionary indexing, and refinement of a single pattern (without
+  navigation axes) no longer create a crystal map with coordinates of 50 points instead
+  of one.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Reading a file saved ``EBSDDetector.save()`` with kikuchipy < 0.12.0 now works.
+  (`#830 <https://github.com/pyxem/kikuchipy/pull/830>`_)
+- The missing hemisphere of a master pattern of a centrosymmetric phase with only one
+  hemisphere is now the present hemisphere rotated 180 degrees about the z axis, not
+  a copy of it.
+  A copy is only correct if the point group also has a 2-fold axis along z, and was
+  wrong for point groups -1, -3, and -3m.
+  This affects ``EBSDMasterPattern.get_patterns()``, orientation and projection center
+  refinement, ``plot_spherical()``, ``draw.EBSDDetectorPlotter.set_master_pattern()``,
+  and reading an ebsdsim master pattern file of a centrosymmetric phase with
+  ``hemisphere="both"``.
+  (`#837 <https://github.com/pyxem/kikuchipy/pull/837>`_)
+
+Changed
+-------
+- ``normalize_intensity()`` of all signals and ``pattern.normalize_intensity()`` ignore
+  NaN values when calculating the mean and standard deviation.
+  (`#807 <https://github.com/pyxem/kikuchipy/pull/807>`_)
+- Minimum version of NumPy is 1.25 and of Numba is 0.58, since the optional
+  dependency ``bayesian-optimization`` requires NumPy >= 1.25, which Numba supports from
+  version 0.58.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- The normalized cross-correlation metric "ncc" returns a score of zero instead of NaN
+  for flat patterns.
+  (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
+- Trying to project a master pattern in the Lambert projection with ``as_lambert()`` now
+  raises a ``ValueError`` instead of just warning.
+  (`#835 <https://github.com/pyxem/kikuchipy/pull/835>`_)
+- All parameters to the master pattern method ``as_lambert()`` must be given as keyword
+  arguments.
+  (`#835 <https://github.com/pyxem/kikuchipy/pull/835>`_)
+
+
 0.13.1 (2026-09-04)
 ===================
 

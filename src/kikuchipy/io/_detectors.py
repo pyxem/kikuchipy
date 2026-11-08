@@ -20,6 +20,7 @@
 """IO functions for the EBSD detector."""
 
 from datetime import datetime
+import logging
 from pathlib import Path
 import re
 from typing import Any
@@ -29,6 +30,8 @@ import numpy as np
 from kikuchipy import __version__
 from kikuchipy.detectors._ebsd_detector import PC_CONVENTIONS, EBSDDetector
 
+_logger = logging.getLogger(__name__)
+
 
 def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
     """See the docstring of the EBSD detector method using this function
@@ -36,53 +39,67 @@ def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
     """
     pc = np.loadtxt(fname)
 
-    keys = [
+    keys = {
         "shape",
         "px_size",
         "binning",
         "tilt",
         "azimuthal",
-        "twist",
+        "twist",  # New in v0.12.0
         "sample_tilt",
         "convention",
         "navigation_shape",
-    ]
+    }
 
-    detector_kw: dict[str, Any] = dict(zip(keys, [None] * len(keys)))
+    # Parse header
+    header: dict[str, str] = {}
     with open(fname, mode="r") as f:
-        header = []
         for line in f.readlines():
             if line[0] == "#":
                 line = line[2:-1].lstrip(" ")
                 if len(line) > 0:
-                    header.append(line)
                     match = re.match(r"^(\w+|\w+\s\w+): (.*)", line)
                     if match:
                         groups = match.groups()
-                        if groups[0] in detector_kw and len(groups) > 1:
-                            detector_kw[groups[0]] = groups[1]
+                        if groups[0] in keys and len(groups) > 1:
+                            header[groups[0]] = groups[1]
             else:
                 break
 
-    for k in ["shape", "navigation_shape"]:
-        shape = detector_kw[k]
-        try:
-            detector_kw[k] = tuple(int(i) for i in shape[1:-1].split(","))
-        except ValueError:  # pragma: no cover
-            detector_kw[k] = None
-    for k in ["px_size", "binning", "tilt", "azimuthal", "twist", "sample_tilt"]:
-        value = detector_kw[k].rstrip(" deg")
-        try:
-            detector_kw[k] = float(value)
-        except Exception:  # pragma: no cover
-            detector_kw[k] = None
+    missing_keys = keys - set(header.keys())
+    for k in missing_keys:
+        _logger.debug(
+            f"Detector parameter {k!r} missing from file {str(fname)}, using default"
+        )
 
-    nav_shape = detector_kw.pop("navigation_shape")
+    detector_kw: dict[str, tuple[int, int] | float | str | np.ndarray] = {}
 
-    if isinstance(nav_shape, tuple):
-        pc = pc.reshape(nav_shape + (3,))
-
+    # Fail if not working as expected
+    nrows, ncols = tuple(map(int, header["shape"][1:-1].split(",")))
+    detector_kw["shape"] = (nrows, ncols)
+    nav_shape_str_list = header["navigation_shape"][1:-1].split(",")
+    nav_shape = []
+    for i in nav_shape_str_list:
+        if len(i.strip()) > 0:
+            nav_shape.append(int(i))
+    nav_shape = tuple(nav_shape)
+    pc = pc.reshape(nav_shape + (3,))
     detector_kw["pc"] = pc
+
+    # Allowed to fail silently (with log message)
+    for k, v in header.items():
+        if k in {"shape", "navigation_shape"}:
+            continue
+        if k in {"convention"}:
+            detector_kw[k] = v
+            continue
+        v = v.removesuffix(" deg")
+        try:
+            detector_kw[k] = float(v)
+        except ValueError:
+            _logger.debug(
+                f"Cannot cast detector parameter {k!r}: {v} to a float, using default"
+            )
 
     return detector_kw
 

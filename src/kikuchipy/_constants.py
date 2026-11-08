@@ -19,6 +19,7 @@ deps_for_version_check = [
     "rosettasciio",
     "scikit-image",
     # Optional
+    "bayesian-optimization",
     "ebsdsim",
     "IPython",
     "ipywidgets",
@@ -64,14 +65,5 @@ except Exception:  # pragma: no cover
     # LogicError, but we also want to catch import errors here
     pyopencl_context_available = False
 
-
-# TODO: Remove and use numpy.exceptions.VisibleDeprecationWarning once
-# NumPy 1.25 is minimal supported version
-try:
-    # Added in NumPy 1.25.0
-    from numpy.exceptions import VisibleDeprecationWarning
-except ImportError:  # pragma: no cover
-    # Removed in NumPy 2.0.0
-    from numpy import VisibleDeprecationWarning  # noqa: F401
 
 del dep_version, deps_for_version_check, version

@@ -23,7 +23,6 @@ from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
-from kikuchipy._constants import dependency_version
 
 
 class TestECPMasterPattern:
@@ -71,11 +70,11 @@ class TestECPMasterPattern:
         )
         mp_upper, mp_lower = mp._get_master_pattern_arrays_from_energy()
         assert np.allclose(mp_upper, data[1])
-        assert np.allclose(mp_lower, data[1])
+        # Assumed centrosymmetric: lower hemisphere is the upper one
+        # rotated 180 degrees about the z axis
+        assert np.allclose(mp_lower, data[1, ::-1, ::-1])
 
-    @pytest.mark.skipif(
-        dependency_version["pyvista"] is None, reason="PyVista is not installed"
-    )
+    @pytest.mark.skipif_pyvista_not_installed
     def test_plot_spherical(
         self, emsoft_ecp_master_pattern_file, skipif_no_vtk_support
     ):

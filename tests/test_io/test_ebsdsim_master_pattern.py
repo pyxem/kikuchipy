@@ -79,10 +79,11 @@ class TestEbsdsimMasterPatternReader:
     def test_hemisphere_both(self, ebsdsim_master_pattern_file):
         mp = kp.load(ebsdsim_master_pattern_file, hemisphere="both")
 
-        # Centrosymmetric: northern hemisphere is duplicated to form the south.
+        # Centrosymmetric: southern hemisphere is the northern one
+        # rotated 180 degrees about the z axis
         assert mp.data.shape == (2, 2, 21, 21)
         assert mp.hemisphere == "both"
-        np.testing.assert_array_equal(mp.data[0], mp.data[1])
+        np.testing.assert_array_equal(mp.data[0][..., ::-1, ::-1], mp.data[1])
 
     def test_hemisphere_lower_raises_for_centrosymmetric(
         self, ebsdsim_master_pattern_file

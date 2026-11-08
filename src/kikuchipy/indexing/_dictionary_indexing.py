@@ -26,11 +26,12 @@ from time import sleep, time
 import dask.array as da
 from dask.diagnostics.progress import ProgressBar
 import numpy as np
-from orix.crystal_map import CrystalMap, create_coordinate_arrays
+from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 from tqdm import tqdm
 
 from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
+from kikuchipy.signals.util._crystal_map import _create_coordinate_arrays
 
 
 def _dictionary_indexing(
@@ -138,7 +139,7 @@ def _dictionary_indexing(
         f"{comparisons_per_second:.5f} comparisons/s"
     )
 
-    xmap_kw, _ = create_coordinate_arrays(experimental_nav_shape, step_sizes)
+    xmap_kw, _ = _create_coordinate_arrays(experimental_nav_shape, step_sizes)
     if metric.navigation_mask is not None:
         nav_mask = ~metric.navigation_mask.ravel()
         xmap_kw["is_in_data"] = nav_mask
