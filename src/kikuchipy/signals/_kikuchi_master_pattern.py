@@ -146,7 +146,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
     # --------------------------- Methods ---------------------------- #
 
-    def as_lambert(self, show_progressbar: bool | None = None) -> Self:
+    def as_lambert(self, *, show_progressbar: bool | None = None) -> Self:
         """Return a new master pattern in the Lambert projection
         :cite:`callahan2013dynamical`.
 
