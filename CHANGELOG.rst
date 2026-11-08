@@ -62,6 +62,16 @@ Fixed
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
 - Reading a file saved ``EBSDDetector.save()`` with kikuchipy < 0.12.0 now works.
   (`#830 <https://github.com/pyxem/kikuchipy/pull/830>`_)
+- The missing hemisphere of a master pattern of a centrosymmetric phase with only one
+  hemisphere is now the present hemisphere rotated 180 degrees about the z axis, not
+  a copy of it.
+  A copy is only correct if the point group also has a 2-fold axis along z, and was
+  wrong for point groups -1, -3, and -3m.
+  This affects ``EBSDMasterPattern.get_patterns()``, orientation and projection center
+  refinement, ``plot_spherical()``, ``draw.EBSDDetectorPlotter.set_master_pattern()``,
+  and reading an ebsdsim master pattern file of a centrosymmetric phase with
+  ``hemisphere="both"``.
+  (`#837 <https://github.com/pyxem/kikuchipy/pull/837>`_)
 
 Changed
 -------

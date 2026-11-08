@@ -18,6 +18,7 @@
 #
 
 import dask.array as da
+from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
 from hyperspy._signals.signal2d import Signal2D
 import hyperspy.api as hs
@@ -87,7 +88,69 @@ class TestEBSDMasterPattern:
         )
         mp_upper, mp_lower = mp._get_master_pattern_arrays_from_energy()
         assert np.allclose(mp_upper, data[1])
-        assert np.allclose(mp_lower, data[1])
+        # Assumed centrosymmetric: lower hemisphere is the upper one
+        # rotated 180 degrees about the z axis
+        assert np.allclose(mp_lower, data[1, ::-1, ::-1])
+
+    def test_get_master_pattern_arrays_one_hemisphere_centrosymmetric(self):
+        """The missing hemisphere of a centrosymmetric phase is the
+        present one rotated 180 degrees about the z axis, also for point
+        groups without a 2-fold axis along z, like -1, -3, and -3m.
+        """
+        lattice = Lattice(4.1, 5.3, 6.2, 80, 95, 105)
+        atoms = [Atom("Fe", [0.11, 0.23, 0.37]), Atom("O", [0.31, 0.07, 0.19])]
+        phase = Phase(space_group=2, structure=Structure(atoms, lattice))  # P-1
+        assert phase.point_group.name == "-1"
+
+        ref = ReciprocalLatticeVector.from_min_dspacing(phase, 1.5)
+        ref.sanitise_phase()
+        ref = ref.unique(use_symmetry=True).symmetrise()
+        ref.calculate_structure_factor()
+        ref.calculate_theta(20e3)
+        simulator = kp.simulations.KikuchiPatternSimulator(ref)
+        mp_both = simulator.calculate_master_pattern(
+            half_size=50, hemisphere="both"
+        ).as_lambert()
+        upper, lower = mp_both.data
+
+        # Kinematical bands have sharp edges, so a few pixels on band
+        # edges differ between hemispheres due to floating point
+        # precision. Compare the fraction of equal pixels instead.
+        def fraction_equal(a, b):
+            return np.isclose(a, b, atol=1e-3).mean()
+
+        # A copy is wrong for this point group
+        assert fraction_equal(upper, lower) < 0.5
+
+        mp_upper = mp_both.inav[0]
+        mp_upper.hemisphere = "upper"
+        mp_upper2, mp_lower2 = mp_upper._get_master_pattern_arrays_from_energy()
+        assert np.allclose(mp_upper2, upper)
+        assert fraction_equal(mp_lower2, lower) > 0.99
+        assert mp_lower2.flags.c_contiguous
+
+        mp_lower = mp_both.inav[1]
+        mp_lower.hemisphere = "lower"
+        mp_upper3, mp_lower3 = mp_lower._get_master_pattern_arrays_from_energy()
+        assert fraction_equal(mp_upper3, upper) > 0.99
+        assert np.allclose(mp_lower3, lower)
+
+        # Patterns showing parts of both hemispheres are the same
+        # whether they are projected from one or both hemispheres
+        det = kp.detectors.EBSDDetector(shape=(30, 40), pc=(0.5, 0.5, 0.5))
+        rot = Rotation.from_euler([[0, 90, 0], [30, 120, 45]], degrees=True)
+        kw = dict(compute=True, show_progressbar=False)
+        patterns_both = mp_both.get_patterns(rot, det, **kw)
+        patterns_upper = mp_upper.get_patterns(rot, det, **kw)
+        patterns_lower = mp_lower.get_patterns(rot, det, **kw)
+        assert fraction_equal(patterns_upper.data, patterns_both.data) > 0.99
+        assert fraction_equal(patterns_lower.data, patterns_both.data) > 0.99
+
+    def test_get_master_pattern_arrays_one_hemisphere_lazy(self):
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert", lazy=True)
+        mp_upper, mp_lower = mp._get_master_pattern_arrays_from_energy()
+        assert isinstance(mp_lower, da.Array)
+        assert np.allclose(mp_lower.compute(), mp_upper.compute()[::-1, ::-1])
 
 
 class TestIO:
