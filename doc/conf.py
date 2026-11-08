@@ -132,6 +132,22 @@ exclude_patterns = [
     "examples/*/*.py",
 ]
 
+# Version switcher
+# ----------------
+# https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/version-dropdown.html
+# All versions read the list of versions from the latest docs, so that
+# the list only has to be updated in one place. Development builds
+# (latest, PRs and local builds) read the list from their own source,
+# so that changes to the list are visible before they are merged.
+# Only the latest patch of each minor version is listed, so versions
+# are matched on MAJOR.MINOR.
+if "dev" in release or os.environ.get("READTHEDOCS_VERSION") == "latest":
+    switcher_version_match = "dev"
+    switcher_json_url = "_static/switcher.json"
+else:
+    switcher_version_match = ".".join(release.split(".")[:2])
+    switcher_json_url = "https://kikuchipy.org/en/latest/_static/switcher.json"
+
 # HTML theming: pydata-sphinx-theme
 # https://pydata-sphinx-theme.readthedocs.io
 html_theme = "pydata_sphinx_theme"
@@ -149,8 +165,14 @@ html_theme_options = {
         "alt_text": "kikuchipy",
         "image_dark": "_static/logo/plasma_banner_dark.png",
     },
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "navigation_with_keys": True,
     "show_toc_level": 2,
+    "show_version_warning_banner": True,
+    "switcher": {
+        "json_url": switcher_json_url,
+        "version_match": switcher_version_match,
+    },
     "use_edit_page_button": True,
 }
 html_context = {
