@@ -165,7 +165,11 @@ html_theme_options = {
         "alt_text": "kikuchipy",
         "image_dark": "_static/logo/plasma_banner_dark.png",
     },
-    "navbar_start": ["navbar-logo", "version-switcher"],
+    "navbar_end": [
+        "theme-switcher",
+        "version-switcher",
+        "navbar-icon-links",
+    ],
     "navigation_with_keys": True,
     "show_toc_level": 2,
     "show_version_warning_banner": True,
