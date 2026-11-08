@@ -805,11 +805,6 @@ class TestAsStereo:
         # Use the upper hemisphere rotated 180 degrees as the lower one
         # for centrosymmetric point groups. Upper and lower hemispheres
         # are identical for Ni.
-        # TODO: Ni (m-3m) cannot distinguish a copy from a 180 degree
-        # rotation. Also test with a kinematical master pattern of a -1
-        # phase (KikuchiPatternSimulator.calculate_master_pattern() with
-        # hemisphere="both"), comparing an upper-only signal against
-        # both hemispheres.
         mp_upper = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         assert mp_upper.phase.point_group.contains_inversion
         mp_sp_upper = mp_upper.as_stereo(exclude_outside_equator=False)
