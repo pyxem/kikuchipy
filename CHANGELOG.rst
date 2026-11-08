@@ -18,6 +18,25 @@ Unreleased
 
 Added
 -----
+
+Fixed
+-----
+
+Changed
+-------
+
+Removed
+-------
+
+Deprecated
+----------
+
+
+0.14.0 (2026-11-08)
+===================
+
+Added
+-----
 - ``EBSDDetector.to_stereo()`` for projecting one or more patterns from the detector
   onto the sphere, returned as a master pattern in the stereographic projection with
   both hemispheres.
@@ -91,12 +110,6 @@ Changed
 - All parameters to the master pattern method ``as_lambert()`` must be given as keyword
   arguments.
   (`#835 <https://github.com/pyxem/kikuchipy/pull/835>`_)
-
-Removed
--------
-
-Deprecated
-----------
 
 
 0.13.1 (2026-09-04)
