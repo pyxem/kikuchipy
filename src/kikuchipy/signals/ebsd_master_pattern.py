@@ -19,14 +19,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import dask
 import dask.array as da
 from dask.diagnostics.progress import ProgressBar
 import hyperspy.api as hs
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase, PhaseList
+from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
 from skimage.util.dtype import dtype_range
 
@@ -40,9 +38,6 @@ from kikuchipy.signals.util._master_pattern import (
     _project_patterns_from_master_pattern_with_fixed_pc,
     _project_patterns_from_master_pattern_with_varying_pc,
 )
-
-if TYPE_CHECKING:  # pragma: no cover
-    from pyvista import Plotter
 
 
 class EBSDMasterPattern(KikuchiMasterPattern):
@@ -375,128 +370,6 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             raise error
         else:
             return suitable
-
-    # --- Inherited methods and properties from KikuchiMasterPattern
-    # overwritten. If the inherited properties or methods are not
-    # altered, they are included for documentation purposes.
-
-    @property
-    def _has_multiple_energies(self) -> bool:
-        return super()._has_multiple_energies
-
-    @property
-    def hemisphere(self) -> str:
-        return super().hemisphere
-
-    @hemisphere.setter
-    def hemisphere(self, value: str) -> None:
-        super(EBSDMasterPattern, type(self)).hemisphere.fset(self, value)
-
-    @property
-    def phase(self) -> Phase:
-        return super().phase
-
-    @phase.setter
-    def phase(self, value: Phase) -> None:
-        super(EBSDMasterPattern, type(self)).phase.fset(self, value)
-
-    @property
-    def projection(self) -> str:
-        return super().projection
-
-    @projection.setter
-    def projection(self, value: str) -> None:
-        super(EBSDMasterPattern, type(self)).projection.fset(self, value)
-
-    def as_lambert(self, show_progressbar: bool | None = None) -> EBSDMasterPattern:
-        return super().as_lambert(show_progressbar=show_progressbar)
-
-    def plot_spherical(
-        self,
-        energy: int | float | None = None,
-        return_figure: bool = False,
-        style: str = "surface",
-        plotter_kwargs: dict | None = None,
-        show_kwargs: dict | None = None,
-    ) -> "Plotter | None":
-        return super().plot_spherical(
-            energy=energy,
-            return_figure=return_figure,
-            style=style,
-            plotter_kwargs=plotter_kwargs,
-            show_kwargs=show_kwargs,
-        )
-
-    # --- Inherited methods from KikuchipySignal overwritten. If the
-    # inherited methods are not altered, they are included for
-    # documentation purposes.
-
-    def normalize_intensity(
-        self,
-        num_std: int = 1,
-        divide_by_square_root: bool = False,
-        dtype_out: str | np.dtype | type | None = None,
-        show_progressbar: bool | None = None,
-        inplace: bool = True,
-        lazy_output: bool | None = None,
-    ) -> EBSDMasterPattern | LazyEBSDMasterPattern | None:
-        return super().normalize_intensity(
-            num_std=num_std,
-            divide_by_square_root=divide_by_square_root,
-            dtype_out=dtype_out,
-            show_progressbar=show_progressbar,
-            inplace=inplace,
-            lazy_output=lazy_output,
-        )
-
-    def rescale_intensity(
-        self,
-        relative: bool = False,
-        in_range: tuple[int, int] | tuple[float, float] | None = None,
-        out_range: tuple[int, int] | tuple[float, float] | None = None,
-        dtype_out: (
-            str | np.dtype | type | tuple[int, int] | tuple[float, float] | None
-        ) = None,
-        percentiles: tuple[int, int] | tuple[float, float] | None = None,
-        show_progressbar: bool | None = None,
-        inplace: bool = True,
-        lazy_output: bool | None = None,
-    ) -> EBSDMasterPattern | LazyEBSDMasterPattern | None:
-        return super().rescale_intensity(
-            relative=relative,
-            in_range=in_range,
-            out_range=out_range,
-            dtype_out=dtype_out,
-            percentiles=percentiles,
-            show_progressbar=show_progressbar,
-            inplace=inplace,
-            lazy_output=lazy_output,
-        )
-
-    def adaptive_histogram_equalization(
-        self,
-        kernel_size: tuple[int, int] | list[int] | None = None,
-        clip_limit: int | float = 0.0,
-        nbins: int = 128,
-        show_progressbar: bool | None = None,
-        inplace: bool = True,
-        lazy_output: bool | None = None,
-    ) -> EBSDMasterPattern | LazyEBSDMasterPattern | None:
-        return super().adaptive_histogram_equalization(
-            kernel_size,
-            clip_limit,
-            nbins,
-            show_progressbar,
-            inplace,
-            lazy_output,
-        )
-
-    # --- Inherited methods from Signal2D overwritten. If the inherited
-    # methods are not altered, they are included for documentation
-    # purposes.
-
-    def deepcopy(self) -> EBSDMasterPattern:
-        return super().deepcopy()
 
 
 class LazyEBSDMasterPattern(LazyKikuchipySignal2D, EBSDMasterPattern):

@@ -539,7 +539,7 @@ class GeometricalSimulationOverlay(EBSDDetectorOverlay):
         if band_coords.shape[0] > 0:
             segments = list(band_coords.reshape(-1, 2, 2))
             lines = mcollections.LineCollection(segments, **self._bands_kwargs)
-            ax.add_collection(lines)
+            ax.add_collection(lines, autolim=False)
         if za_coords.shape[0] > 0:
             ax.scatter(za_coords[:, 0], za_coords[:, 1], **self._zone_axes_kwargs)
 

@@ -22,8 +22,9 @@
 Project patterns from detector to sphere
 ========================================
 
-This example shows how to project EBSD patterns from the detector onto the sphere, in
-the stereographic projection, using :meth:`~kikuchipy.detectors.EBSDDetector.to_stereo`.
+This example shows how to project EBSD patterns from the detector (gnomonic projection)
+onto the sphere, in the stereographic projection, using
+:meth:`~kikuchipy.detectors.EBSDDetector.to_stereo`.
 
 This requires the detector-sample geometry and the crystal orientation of each
 pattern to be known.
@@ -32,10 +33,10 @@ projection with both hemispheres.
 
 We project patterns in four ways:
 
-1. One pattern
-2. One pattern, symmetrized
-3. Multiple patterns
-4. Multiple patterns, symmetrized
+- One pattern
+- One pattern, symmetrized
+- Multiple patterns
+- Multiple patterns, symmetrized
 """
 
 # %%
@@ -111,8 +112,8 @@ def plot_on_simulated_sphere(mp: kp.signals.EBSDMasterPattern, title: str) -> No
 
 
 # %%
-# 1. One pattern
-# ==============
+# One pattern
+# ===========
 #
 # Get the first pattern.
 # Slicing the signal also slices its crystal map and detector.
@@ -146,8 +147,8 @@ print(mp1.hemisphere)
 print(mp1.phase)
 
 # %%
-# 2. One pattern, symmetrized
-# ===========================
+# One pattern, symmetrized
+# ========================
 #
 # Project the same pattern for all symmetrically equivalent orientations.
 # This requires the orientation to have the crystal symmetry, here point group *m-3m*
@@ -190,8 +191,8 @@ plot_on_simulated_sphere(mp22, "One pattern, symmetrized, including outside equa
 # single experimental pattern lacks the a [111] zone axis.
 
 # %%
-# 3. Multiple patterns
-# ====================
+# Multiple patterns
+# =================
 #
 # Project all nine patterns.
 # Patterns may have any navigation shape, but the number of orientations must match the
@@ -206,8 +207,8 @@ mp3 = det.to_stereo(s.data, xmap.orientations.reduce(), size=size)
 plot_on_simulated_sphere(mp3, "Multiple patterns")
 
 # %%
-# 4. Multiple patterns, symmetrized
-# =================================
+# Multiple patterns, symmetrized
+# ==============================
 #
 # Project all patterns for all symmetrically equivalent orientations.
 mp4 = det.to_stereo(s.data, xmap.orientations, size=size, symmetrize=True)

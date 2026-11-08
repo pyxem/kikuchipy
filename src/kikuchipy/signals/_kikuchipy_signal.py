@@ -30,6 +30,7 @@ from hyperspy.signals import Signal2D
 import numpy as np
 from packaging.version import Version
 from skimage.util.dtype import dtype_range
+from typing_extensions import Self
 import yaml
 
 from kikuchipy._constants import dependency_version
@@ -97,7 +98,7 @@ class KikuchipySignal2D(Signal2D):
         show_progressbar: bool | None = None,
         inplace: bool = True,
         lazy_output: bool | None = None,
-    ) -> Any | None:
+    ) -> Self | None:
         """Rescale image intensities.
 
         Output min./max. intensity is determined from *out_range* or
@@ -250,7 +251,7 @@ class KikuchipySignal2D(Signal2D):
         show_progressbar: bool | None = None,
         inplace: bool = True,
         lazy_output: bool | None = None,
-    ) -> Any | None:
+    ) -> Self | None:
         """Normalize image intensities to a mean of zero with a given
         standard deviation.
 
@@ -345,7 +346,7 @@ class KikuchipySignal2D(Signal2D):
         show_progressbar: bool | None = None,
         inplace: bool = True,
         lazy_output: bool | None = None,
-    ) -> Any | None:
+    ) -> Self | None:
         """Enhance the local contrast using adaptive histogram
         equalization.
 
@@ -571,7 +572,7 @@ class KikuchipySignal2D(Signal2D):
                 except AttributeError:
                     pass
 
-    def deepcopy(self) -> Any:
+    def deepcopy(self) -> Self:
         s_new = super().deepcopy()
 
         if s_new._signal_type in SIGNAL_TYPES:
