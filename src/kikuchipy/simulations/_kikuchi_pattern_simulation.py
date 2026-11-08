@@ -416,7 +416,7 @@ class GeometricalKikuchiPatternSimulation:
                 for text_i in c:
                     ax.add_artist(text_i)
             else:
-                ax.add_collection(c)
+                ax.add_collection(c, autolim=False)
         if return_figure:
             return fig
 

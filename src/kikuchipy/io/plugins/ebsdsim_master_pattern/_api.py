@@ -186,12 +186,14 @@ def file_reader(
         data = energy_data[:, 1, :, :]  # (n_energy, side, side)
     else:  # "both"
         # For centrosymmetric materials, ebsdsim only stores the
-        # northern hemisphere (hemisphere_dim=1). Duplicate it so "both"
-        # always yields a size-2 hemisphere axis, consistent with EMsoft
-        # behaviour.
+        # northern hemisphere (hemisphere_dim=1). Derive the southern
+        # hemisphere from it so "both" always yields a size-2 hemisphere
+        # axis. The intensity of (x, y, -z) equals that of (-x, -y, z),
+        # so the southern hemisphere is the northern one rotated 180
+        # degrees about the z axis.
         nh = energy_data[:, 0:1, :, :]  # (n_energy, 1, side, side)
         if n_hemispheres == 1:
-            sh = nh
+            sh = nh[..., ::-1, ::-1]
         else:
             sh = energy_data[:, 1:2, :, :]
         data = np.moveaxis(

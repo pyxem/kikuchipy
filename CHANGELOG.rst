@@ -18,6 +18,48 @@ Unreleased
 
 Added
 -----
+
+Fixed
+-----
+- Loading an EBSD detector that was saved with ``EBSDDetector.save()``, or an EBSD
+  signal that was saved in the kikuchipy h5ebsd format, with kikuchipy < 0.12.0 now
+  correctly negates the azimuthal angle, as the interpretation of the angle changed in
+  0.12.0.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- ``EBSDDetector.euler`` now matches the detector-sample geometry used for projection
+  when both the detector tilt and azimuthal angles are non-zero.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- The detector tilt, azimuthal, and twist angles are now all derived from the detector
+  orientation in Oxford Instruments h5ebsd (H5OINA) files, so that the detector-sample
+  geometry matches the one in the file.
+  Previously, only the detector tilt was read, and only approximately.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- The sample tilt is now read from Bruker h5ebsd files.
+  Previously, it was always set to 0 degrees.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- The detector azimuthal angle read from EDAX h5ebsd files is now negated, so that the
+  detector-sample geometry is the same as with kikuchipy < 0.12.0.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+
+Changed
+-------
+- Loading an EBSD detector with ``EBSDDetector.load()`` raises an error if the file does
+  not contain a valid kikuchipy version, and so does loading a kikuchipy h5ebsd file
+  with an invalid version.
+  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+
+Removed
+-------
+
+Deprecated
+----------
+
+
+0.14.0 (2026-11-08)
+===================
+
+Added
+-----
 - ``EBSDDetector.to_stereo()`` for projecting one or more patterns from the detector
   onto the sphere, returned as a master pattern in the stereographic projection with
   both hemispheres.
@@ -63,25 +105,16 @@ Fixed
 - Loading an EBSD detector that was saved with ``EBSDDetector.save()`` with kikuchipy <
   0.12.0 now works.
   (`#830 <https://github.com/pyxem/kikuchipy/pull/830>`_)
-- Loading an EBSD detector that was saved with ``EBSDDetector.save()``, or an EBSD
-  signal that was saved in the kikuchipy h5ebsd format, with kikuchipy < 0.12.0 now
-  correctly negates the azimuthal angle, as the interpretation of the angle changed in
-  0.12.0.
-  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
-- ``EBSDDetector.euler`` now matches the detector-sample geometry used for projection
-  when both the detector tilt and azimuthal angles are non-zero.
-  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
-- The detector tilt, azimuthal, and twist angles are now all derived from the detector
-  orientation in Oxford Instruments h5ebsd (H5OINA) files, so that the detector-sample
-  geometry matches the one in the file.
-  Previously, only the detector tilt was read, and only approximately.
-  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
-- The sample tilt is now read from Bruker h5ebsd files.
-  Previously, it was always set to 0 degrees.
-  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
-- The detector azimuthal angle read from EDAX h5ebsd files is now negated, so that the
-  detector-sample geometry is the same as with kikuchipy < 0.12.0.
-  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
+- The missing hemisphere of a master pattern of a centrosymmetric phase with only one
+  hemisphere is now the present hemisphere rotated 180 degrees about the z axis, not
+  a copy of it.
+  A copy is only correct if the point group also has a 2-fold axis along z, and was
+  wrong for point groups -1, -3, and -3m.
+  This affects ``EBSDMasterPattern.get_patterns()``, orientation and projection center
+  refinement, ``plot_spherical()``, ``draw.EBSDDetectorPlotter.set_master_pattern()``,
+  and reading an ebsdsim master pattern file of a centrosymmetric phase with
+  ``hemisphere="both"``.
+  (`#837 <https://github.com/pyxem/kikuchipy/pull/837>`_)
 
 Changed
 -------
@@ -95,16 +128,12 @@ Changed
 - The normalized cross-correlation metric "ncc" returns a score of zero instead of NaN
   for flat patterns.
   (`#816 <https://github.com/pyxem/kikuchipy/pull/816>`_)
-- Loading an EBSD detector with ``EBSDDetector.load()`` raises an error if the file does
-  not contain a valid kikuchipy version, and so does loading a kikuchipy h5ebsd file
-  with an invalid version.
-  (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
-
-Removed
--------
-
-Deprecated
-----------
+- Trying to project a master pattern in the Lambert projection with ``as_lambert()`` now
+  raises a ``ValueError`` instead of just warning.
+  (`#835 <https://github.com/pyxem/kikuchipy/pull/835>`_)
+- All parameters to the master pattern method ``as_lambert()`` must be given as keyword
+  arguments.
+  (`#835 <https://github.com/pyxem/kikuchipy/pull/835>`_)
 
 
 0.13.1 (2026-09-04)

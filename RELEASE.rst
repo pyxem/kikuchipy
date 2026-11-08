@@ -27,6 +27,18 @@ Preparation
   From time to time, check the documentation links (``make linkcheck``).
   Fix broken links.
 
+- For a minor release, update the documentation version switcher list
+  ``doc/_static/switcher.json``.
+  The list has one entry per minor version (MAJOR.MINOR), pointing to the latest patch.
+  Change the "version" and "name" of the stable entry to the new minor version, e.g.
+  "0.42" and "0.42 (stable)".
+  Add an entry for the previous minor version pointing to its latest patch, e.g. with
+  "version" and "name" "0.41" and "url" "https://kikuchipy.org/en/v0.41.2/".
+  For a patch release of the stable version, no changes are needed, since the stable
+  entry points to "https://kikuchipy.org/en/stable/".
+  All versions of the documentation read this list from the ``latest`` documentation,
+  so the changes are visible once ``main`` is merged onto ``develop`` after the release.
+
 - Ensure all contributors are included and sorted correctly by reviewing the contributor
   list ``__credits__`` in ``kikuchipy/__init__.py``.
   Do the same for the Zenodo contributors file ``.zenodo.json``.

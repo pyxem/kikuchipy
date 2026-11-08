@@ -1,0 +1,28 @@
+[
+  {
+    "name": "dev",
+    "version": "dev",
+    "url": "https://kikuchipy.org/en/latest/"
+  },
+  {
+    "name": "0.14 (stable)",
+    "version": "0.14",
+    "url": "https://kikuchipy.org/en/stable/",
+    "preferred": true
+  },
+  {
+    "name": "0.13",
+    "version": "0.13",
+    "url": "https://kikuchipy.org/en/v0.13.1/"
+  },
+  {
+    "name": "0.12",
+    "version": "0.12",
+    "url": "https://kikuchipy.org/en/v0.12.2/"
+  },
+  {
+    "name": "0.11",
+    "version": "0.11",
+    "url": "https://kikuchipy.org/en/v0.11.5/"
+  }
+]

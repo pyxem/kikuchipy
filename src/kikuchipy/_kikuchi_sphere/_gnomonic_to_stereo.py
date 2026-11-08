@@ -17,7 +17,9 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Functions for projecting from the detector to the unit sphere."""
+"""Functions for projecting from the EBSD detector (gnomonic projection)
+to the unit sphere (stereographic projection).
+"""
 
 from __future__ import annotations
 
@@ -307,7 +309,7 @@ def _normalize_accumulator(accumulator: np.ndarray, counts: np.ndarray) -> np.nd
     return sphere
 
 
-def _detector_to_stereo(
+def _project_gnomonic_to_stereo(
     detector: EBSDDetector,
     pattern: np.ndarray | da.Array,
     mat_s2c: oqu.Orientation | oqu.Rotation,

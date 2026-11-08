@@ -18,6 +18,7 @@
 #
 
 import dask.array as da
+from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
 from hyperspy._signals.signal2d import Signal2D
 import hyperspy.api as hs
@@ -87,7 +88,69 @@ class TestEBSDMasterPattern:
         )
         mp_upper, mp_lower = mp._get_master_pattern_arrays_from_energy()
         assert np.allclose(mp_upper, data[1])
-        assert np.allclose(mp_lower, data[1])
+        # Assumed centrosymmetric: lower hemisphere is the upper one
+        # rotated 180 degrees about the z axis
+        assert np.allclose(mp_lower, data[1, ::-1, ::-1])
+
+    def test_get_master_pattern_arrays_one_hemisphere_centrosymmetric(self):
+        """The missing hemisphere of a centrosymmetric phase is the
+        present one rotated 180 degrees about the z axis, also for point
+        groups without a 2-fold axis along z, like -1, -3, and -3m.
+        """
+        lattice = Lattice(4.1, 5.3, 6.2, 80, 95, 105)
+        atoms = [Atom("Fe", [0.11, 0.23, 0.37]), Atom("O", [0.31, 0.07, 0.19])]
+        phase = Phase(space_group=2, structure=Structure(atoms, lattice))  # P-1
+        assert phase.point_group.name == "-1"
+
+        ref = ReciprocalLatticeVector.from_min_dspacing(phase, 1.5)
+        ref.sanitise_phase()
+        ref = ref.unique(use_symmetry=True).symmetrise()
+        ref.calculate_structure_factor()
+        ref.calculate_theta(20e3)
+        simulator = kp.simulations.KikuchiPatternSimulator(ref)
+        mp_both = simulator.calculate_master_pattern(
+            half_size=50, hemisphere="both"
+        ).as_lambert()
+        upper, lower = mp_both.data
+
+        # Kinematical bands have sharp edges, so a few pixels on band
+        # edges differ between hemispheres due to floating point
+        # precision. Compare the fraction of equal pixels instead.
+        def fraction_equal(a, b):
+            return np.isclose(a, b, atol=1e-3).mean()
+
+        # A copy is wrong for this point group
+        assert fraction_equal(upper, lower) < 0.5
+
+        mp_upper = mp_both.inav[0]
+        mp_upper.hemisphere = "upper"
+        mp_upper2, mp_lower2 = mp_upper._get_master_pattern_arrays_from_energy()
+        assert np.allclose(mp_upper2, upper)
+        assert fraction_equal(mp_lower2, lower) > 0.99
+        assert mp_lower2.flags.c_contiguous
+
+        mp_lower = mp_both.inav[1]
+        mp_lower.hemisphere = "lower"
+        mp_upper3, mp_lower3 = mp_lower._get_master_pattern_arrays_from_energy()
+        assert fraction_equal(mp_upper3, upper) > 0.99
+        assert np.allclose(mp_lower3, lower)
+
+        # Patterns showing parts of both hemispheres are the same
+        # whether they are projected from one or both hemispheres
+        det = kp.detectors.EBSDDetector(shape=(30, 40), pc=(0.5, 0.5, 0.5))
+        rot = Rotation.from_euler([[0, 90, 0], [30, 120, 45]], degrees=True)
+        kw = dict(compute=True, show_progressbar=False)
+        patterns_both = mp_both.get_patterns(rot, det, **kw)
+        patterns_upper = mp_upper.get_patterns(rot, det, **kw)
+        patterns_lower = mp_lower.get_patterns(rot, det, **kw)
+        assert fraction_equal(patterns_upper.data, patterns_both.data) > 0.99
+        assert fraction_equal(patterns_lower.data, patterns_both.data) > 0.99
+
+    def test_get_master_pattern_arrays_one_hemisphere_lazy(self):
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert", lazy=True)
+        mp_upper, mp_lower = mp._get_master_pattern_arrays_from_energy()
+        assert isinstance(mp_lower, da.Array)
+        assert np.allclose(mp_lower.compute(), mp_upper.compute()[::-1, ::-1])
 
 
 class TestIO:
@@ -584,15 +647,16 @@ class TestAsLambert:
         assert mp_lp.hemisphere == mp_sp.hemisphere
         assert mp_lp.phase.point_group == mp_sp.phase.point_group
 
-        # Warns and raises
+        # Raises
         mp_lp_ref = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
-        with pytest.warns(UserWarning, match="Already in the Lambert projection, "):
-            mp_lp_ref2 = mp_lp_ref.as_lambert()
-            assert not np.may_share_memory(mp_lp_ref.data, mp_lp_ref2.data)
+        with pytest.raises(
+            ValueError, match="Master pattern already in the Lambert projection"
+        ):
+            mp_lp_ref.as_lambert()
 
         mp_sp_lazy = mp_sp.as_lazy()
         with pytest.raises(NotImplementedError, match="Only implemented for non-lazy "):
-            _ = mp_sp_lazy.as_lambert()
+            mp_sp_lazy.as_lambert()
 
         # Quite similar to EMsoft's Lambert master pattern
         ncc = kp.indexing.NormalizedCrossCorrelationMetric(1, 1)
@@ -652,15 +716,16 @@ class TestAsStereo:
         assert mp_sp.hemisphere == mp_lp.hemisphere
         assert mp_sp.phase.point_group == mp_lp.phase.point_group
 
-        # Warns and raises
+        # Raises
         mp_sp_ref = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-        with pytest.warns(UserWarning, match="Already in the stereographic projection"):
-            mp_sp_ref2 = mp_sp_ref.as_stereo()
-            assert not np.may_share_memory(mp_sp_ref.data, mp_sp_ref2.data)
+        with pytest.raises(
+            ValueError, match="Master pattern already in the stereographic projection"
+        ):
+            mp_sp_ref.as_stereo()
 
         mp_lp_lazy = mp_lp.as_lazy()
-        with pytest.raises(NotImplementedError, match="Only implemented for non-lazy "):
-            _ = mp_lp_lazy.as_stereo()
+        with pytest.raises(NotImplementedError, match="Not implemented for lazy "):
+            mp_lp_lazy.as_stereo()
 
         # Quite similar to EMsoft's stereographic master pattern
         ncc = kp.indexing.NormalizedCrossCorrelationMetric(1, 1)
@@ -691,6 +756,67 @@ class TestAsStereo:
 
         mp_sp_energy = mp.as_stereo()
         assert mp_sp_energy.data.ndim == 4
+
+        # Hemisphere axis is not the first axis in the data
+        mp_sp_energy2 = mp.as_stereo(exclude_outside_equator=False)
+        assert np.allclose(mp_sp_energy2.data[0], mp_sp_energy2.data[1])
+        assert not np.allclose(mp_sp_energy2.data, mp_sp_energy.data)
+
+    def test_as_stereo_include_outside_equator(self):
+        mp = kp.data.nickel_ebsd_master_pattern_small(
+            projection="lambert", hemisphere="both"
+        )
+        # Make hemispheres distinguishable
+        mp.change_dtype("float32")
+        mp.data[1] *= 2
+
+        mp_sp1 = mp.as_stereo()
+        mp_sp2 = mp.as_stereo(exclude_outside_equator=False)
+        assert mp_sp2.data.shape == mp_sp1.data.shape
+
+        # Same intensities inside the equator, zero outside if excluded
+        n = mp.axes_manager.signal_shape[0]
+        arr = np.linspace(-1, 1, n)
+        x, y = np.meshgrid(arr, arr)
+        outside = x**2 + y**2 > 1
+        assert np.allclose(mp_sp1.data[:, ~outside], mp_sp2.data[:, ~outside])
+        assert np.allclose(mp_sp1.data[:, outside], 0)
+        assert np.all(mp_sp2.data[:, outside] > 0)
+
+        # A pixel (X, Y) outside the equator gets the intensity of the
+        # pixel (X, Y) / (X^2 + Y^2) inside the equator of the opposite
+        # hemisphere. Rows and columns are (row, col) = (Y, X).
+        # (1, 1) -> (0.5, 0.5) and (1, 0.5) -> (0.8, 0.4)
+        step = (n - 1) // 2
+        for (r_out, c_out), (r_in, c_in) in [
+            ((n - 1, n - 1), (round(1.5 * step), round(1.5 * step))),
+            ((round(1.5 * step), n - 1), (round(1.4 * step), round(1.8 * step))),
+        ]:
+            upper_in = mp_sp1.data[0, r_in, c_in]
+            assert np.isclose(mp_sp2.data[0, r_out, c_out], 2 * upper_in)
+            assert np.isclose(mp_sp2.data[1, r_out, c_out], upper_in)
+
+    def test_as_stereo_include_outside_equator_one_hemisphere(self):
+        mp_both = kp.data.nickel_ebsd_master_pattern_small(
+            projection="lambert", hemisphere="both"
+        )
+        mp_sp_both = mp_both.as_stereo(exclude_outside_equator=False)
+
+        # Use the upper hemisphere rotated 180 degrees as the lower one
+        # for centrosymmetric point groups. Upper and lower hemispheres
+        # are identical for Ni.
+        mp_upper = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        assert mp_upper.phase.point_group.contains_inversion
+        mp_sp_upper = mp_upper.as_stereo(exclude_outside_equator=False)
+        assert np.allclose(mp_sp_upper.data, mp_sp_both.data[0])
+
+        mp_upper.phase.space_group = 185  # P63cm
+        with pytest.raises(ValueError, match="Both hemispheres must be present "):
+            _ = mp_upper.as_stereo(exclude_outside_equator=False)
+
+        mp_upper.phase.point_group = None
+        with pytest.raises(ValueError, match="Both hemispheres must be present "):
+            _ = mp_upper.as_stereo(exclude_outside_equator=False)
 
     def test_sphere2lambert_numba(self):
         arr = np.linspace(-1, 1, 41, dtype=np.float64)

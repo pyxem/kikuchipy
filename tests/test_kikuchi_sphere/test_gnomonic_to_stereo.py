@@ -17,19 +17,23 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""Tests of the projection from the EBSD detector (gnomonic projection)
+to the unit sphere (stereographic projection).
+"""
+
 import dask.array as da
 import numpy as np
 import orix.quaternion as oqu
 import pytest
 
 import kikuchipy as kp
-from kikuchipy._kikuchi_sphere._detector_to_stereo import (
+from kikuchipy._kikuchi_sphere._gnomonic_to_stereo import (
     _accumulate_intensities,
-    _detector_to_stereo,
     _get_crystal_to_detector_matrices,
     _get_unit_sphere_vectors,
     _normalize_accumulator,
     _project_detector_to_sphere,
+    _project_gnomonic_to_stereo,
 )
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     _ncc_single_patterns_2d_ref_normalized,
@@ -166,7 +170,7 @@ class TestDetectorToStereo:
             rot, detector, compute=True, show_progressbar=False
         ).data
 
-        sphere = _detector_to_stereo(
+        sphere = _project_gnomonic_to_stereo(
             detector, pattern.reshape((1,) + detector.shape), rot, size=n
         )
         assert sphere.shape == (2, n, n)
@@ -183,7 +187,7 @@ class TestDetectorToStereo:
 
         # Wrong orientation gives a poor match
         rot2 = oqu.Rotation.from_euler(np.deg2rad([40, 20, 30]))
-        sphere2 = _detector_to_stereo(
+        sphere2 = _project_gnomonic_to_stereo(
             detector, pattern.reshape((1,) + detector.shape), rot2, size=n
         )
         signal_mask2 = ~np.isfinite(sphere2[0])
@@ -200,9 +204,9 @@ class TestDetectorToStereo:
         patterns = np.ones((2,) + detector.shape)
         patterns[1] = 3
 
-        sphere1 = _detector_to_stereo(detector, patterns[:1], rot[0], size=n)
-        sphere2 = _detector_to_stereo(detector, patterns[1:], rot[1], size=n)
-        sphere = _detector_to_stereo(detector, patterns, rot, size=n)
+        sphere1 = _project_gnomonic_to_stereo(detector, patterns[:1], rot[0], size=n)
+        sphere2 = _project_gnomonic_to_stereo(detector, patterns[1:], rot[1], size=n)
+        sphere = _project_gnomonic_to_stereo(detector, patterns, rot, size=n)
 
         both = np.isfinite(sphere1) & np.isfinite(sphere2)
         only1 = np.isfinite(sphere1) & np.isnan(sphere2)
@@ -218,8 +222,8 @@ class TestDetectorToStereo:
         rot = oqu.Rotation.from_euler(np.deg2rad([[10, 20, 30], [50, 40, 10]]))
         rot = oqu.Rotation(np.concatenate([rot.data, rot.data]))
         patterns = np.random.default_rng(42).random((4,) + detector.shape)
-        sphere1 = _detector_to_stereo(detector, patterns, rot, size=n)
-        sphere2 = _detector_to_stereo(
+        sphere1 = _project_gnomonic_to_stereo(detector, patterns, rot, size=n)
+        sphere2 = _project_gnomonic_to_stereo(
             detector, da.from_array(patterns, chunks=(3, -1, -1)), rot, size=n
         )
         assert np.allclose(sphere1, sphere2, equal_nan=True)
@@ -230,7 +234,7 @@ class TestDetectorToStereo:
         detector.pcz = [0.5, 0.7]
         rot = oqu.Rotation.from_euler(np.deg2rad([[10, 20, 30], [10, 20, 30]]))
         patterns = np.random.default_rng(42).random((2,) + detector.shape)
-        sphere = _detector_to_stereo(detector, patterns, rot, size=n)
+        sphere = _project_gnomonic_to_stereo(detector, patterns, rot, size=n)
 
         # Same as projecting each pattern with its own PC and combining
         accumulator = np.zeros((2, n, n))
@@ -243,7 +247,7 @@ class TestDetectorToStereo:
                 pc=detector.pc[i],
                 sample_tilt=detector.sample_tilt,
             )
-            sphere_i = _detector_to_stereo(
+            sphere_i = _project_gnomonic_to_stereo(
                 detector_i, patterns[i : i + 1], rot[i], size=n
             )
             is_valid = np.isfinite(sphere_i)
@@ -261,8 +265,10 @@ class TestDetectorToStereo:
         ori = oqu.Orientation.from_euler(np.deg2rad([10, 20, 30]), symmetry=pg)
         patterns = np.ones((1,) + detector.shape)
 
-        sphere1 = _detector_to_stereo(detector, patterns, ori, size=n)
-        sphere2 = _detector_to_stereo(detector, patterns, ori, size=n, symmetrize=True)
+        sphere1 = _project_gnomonic_to_stereo(detector, patterns, ori, size=n)
+        sphere2 = _project_gnomonic_to_stereo(
+            detector, patterns, ori, size=n, symmetrize=True
+        )
         assert np.allclose(sphere2[np.isfinite(sphere2)], 1)
 
         # The 24 proper operators of m-3m cover (almost) the whole
@@ -284,8 +290,8 @@ class TestDetectorToStereo:
         rot = oqu.Rotation.from_axes_angles([1, 0, 0], -np.pi / 2)
         patterns = np.ones((1,) + detector.shape)
 
-        sphere1 = _detector_to_stereo(detector, patterns, rot, size=n)
-        sphere2 = _detector_to_stereo(
+        sphere1 = _project_gnomonic_to_stereo(detector, patterns, rot, size=n)
+        sphere2 = _project_gnomonic_to_stereo(
             detector, patterns, rot, size=n, exclude_outside_equator=False
         )
         assert np.isnan(sphere1[:, outside]).all()
@@ -297,6 +303,8 @@ class TestDetectorToStereo:
     def test_progressbar(self, detector, capsys):
         patterns = np.ones((2,) + detector.shape)
         rot = oqu.Rotation.identity((2,))
-        _ = _detector_to_stereo(detector, patterns, rot, size=11, show_progressbar=True)
+        _ = _project_gnomonic_to_stereo(
+            detector, patterns, rot, size=11, show_progressbar=True
+        )
         captured = capsys.readouterr()
         assert "2/2" in captured.err
