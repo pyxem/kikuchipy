@@ -35,6 +35,7 @@ credits = [
     "Carter Francis",
     "Magnus Nord",
     "Tijmen Vermeij",
+    "Sebastian Samberger",
 ]
 
 __version__ = "0.15.dev0"
