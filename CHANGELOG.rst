@@ -21,6 +21,10 @@ Added
 
 Fixed
 -----
+- A file written with ``EBSDDetector.save()`` with kikuchipy < 0.12.0 and NumPy >= 2 can
+  store a detector with shape (60, 60) as "(np.int32(60), np.int32(60)", which could not
+  be read before.
+  Now it can.
 
 Changed
 -------
