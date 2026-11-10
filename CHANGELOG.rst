@@ -21,6 +21,11 @@ Added
 
 Fixed
 -----
+- A file written with ``EBSDDetector.save()`` with kikuchipy < 0.12.0 and NumPy >= 2 can
+  store a detector with shape (60, 60) as "(np.int32(60), np.int32(60)", which could not
+  be read before.
+  Now it can.
+  (`#834 <https://github.com/pyxem/kikuchipy/pull/834>`_)
 - Loading an EBSD detector that was saved with ``EBSDDetector.save()``, or an EBSD
   signal that was saved in the kikuchipy h5ebsd format, with kikuchipy < 0.12.0 now
   correctly negates the azimuthal angle, as the interpretation of the angle changed in

@@ -82,8 +82,11 @@ def read_ebsd_detector_from_file(fname: Path | str) -> dict[str, Any]:
 
     detector_kw: dict[str, tuple[int, int] | float | str | np.ndarray] = {}
 
-    # Fail if not working as expected
-    nrows, ncols = tuple(map(int, header["shape"][1:-1].split(",")))
+    # Fail if not working as expected. Files written with kikuchipy <
+    # 0.12.0 and NumPy >= 2 can have NumPy integers in the shape, like
+    # "(np.int32(60), np.int32(60))".
+    shape_str = re.sub(r"np\.\w+\((\d+)\)", r"\1", header["shape"])
+    nrows, ncols = tuple(map(int, shape_str[1:-1].split(",")))
     detector_kw["shape"] = (nrows, ncols)
     nav_shape_str_list = header["navigation_shape"][1:-1].split(",")
     nav_shape = []

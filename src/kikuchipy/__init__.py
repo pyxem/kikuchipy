@@ -31,6 +31,7 @@ credits = [
     "Austin Gerlt",
     "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
+    "Sebastian Samberger",
     "Zhou Xu",
     "Carter Francis",
     "Magnus Nord",
