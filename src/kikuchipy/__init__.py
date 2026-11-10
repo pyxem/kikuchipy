@@ -31,11 +31,11 @@ credits = [
     "Austin Gerlt",
     "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
+    "Sebastian Samberger",
     "Zhou Xu",
     "Carter Francis",
     "Magnus Nord",
     "Tijmen Vermeij",
-    "Sebastian Samberger",
 ]
 
 __version__ = "0.15.dev0"
