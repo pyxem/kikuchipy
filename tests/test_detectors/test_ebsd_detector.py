@@ -1153,6 +1153,23 @@ class TestSaveLoadDetector:
         assert np.isclose(det1.tilt, det0.tilt)
         assert det1.twist == 0
 
+    def test_load_detector_numpy_integer_shape(self, tmp_path):
+        """Files written with kikuchipy < 0.12.0 and NumPy >= 2 can have
+        NumPy integers in the shape.
+        """
+        det0 = kp.detectors.EBSDDetector(shape=(10, 20), pc=(0.4, 0.3, 0.6))
+        fname = tmp_path / "det_temp.txt"
+        det0.save(fname)
+
+        text = fname.read_text()
+        assert "shape: (10, 20)" in text
+        text = text.replace("shape: (10, 20)", "shape: (np.int32(10), np.int32(20))")
+        fname.write_text(text)
+
+        det1 = kp.detectors.EBSDDetector.load(fname)
+        assert det1.shape == (10, 20)
+        assert np.allclose(det1.pc, det0.pc)
+
     def test_load_detector_invalid_value(self, tmp_path, caplog):
         det0 = kp.detectors.EBSDDetector(shape=(10, 20), pc=(0.4, 0.3, 0.6), tilt=3)
         fname = tmp_path / "det_temp.txt"

@@ -41,7 +41,8 @@ KIKUCHIPY_FILE_GROUP_NAMES = ["Scan 1", "Scan 2"]
 class TestH5EBSD:
     def test_repr(self, kikuchipy_h5ebsd_path):
         reader = KikuchipyH5EBSDReader(kikuchipy_h5ebsd_path / "patterns.h5")
-        repr_str_list = repr(reader).split(" ")
+        # The file path can contain spaces
+        repr_str_list = repr(reader).split(" ", maxsplit=2)
         assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.8.dev0):"]
         assert repr_str_list[2][-11:] == "patterns.h5"
 
