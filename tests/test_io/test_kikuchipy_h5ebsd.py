@@ -344,8 +344,12 @@ class TestKikuchipyH5EBSD:
         s.detector.azimuthal = 1.87
         s.save(save_path_hdf5)
 
+        # Recreate the dataset, since it has a fixed-length string dtype
+        # sized to the installed kikuchipy version and longer strings
+        # would be truncated on assignment
         with h5py.File(save_path_hdf5, mode="r+") as f:
-            f["version"][()] = version.encode()
+            del f["version"]
+            f.create_dataset("version", data=np.array([version.encode()]))
 
         with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
             s2 = kp.load(save_path_hdf5)
