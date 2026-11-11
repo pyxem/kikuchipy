@@ -161,9 +161,9 @@ def _optimise_lambda(
     sigma_numba = getattr(nlpar.NLPAR(), "sigma_numba")
 
     if signal_mask is None:
-        signal_mask = np.ones((sy, sx), bool)
+        signal_mask = np.zeros((sy, sx), bool)
 
-    indices = np.arange(sy * sx) * signal_mask.flatten()
+    indices = np.arange(sy * sx) * ~signal_mask.flatten()
 
     # C.f. lines 266 & 486:
     # https://github.com/USNavalResearchLaboratory/PyEBSDIndex/blob/main/pyebsdindex/nlpar_cpu.py
@@ -218,28 +218,46 @@ def _average_non_local_neighbour_patterns(
 
     pats = patterns.astype("float32")
     nrows, ncols, h, w = pats.shape
+    win_shape = window.shape[:2]
 
-    # Center patterns
+    sr = tuple(  # ((-row,+row), (-col,+col))
+        (
+            size // 2,
+            size - 1 - (size // 2),
+        )
+        for size in win_shape
+    )
+
+    # Patterns of interest within the search window:
+    win_mask = np.asarray(window[:, :, 0, 0], dtype=bool).ravel()
+
+    # Center patterns | (nrows, ncols, h, w) -> (nrows, ncols, h*w[mask])
     center = pats.reshape(nrows, ncols, h * w)[:, :, ~signal_mask.ravel()]
 
     # Tot. num. of pixels of interest per pattern
     npix = center.shape[-1]
-    win = window.shape[:2]
 
-    sr = tuple(
-        (
-            size // 2,
-            size - 1 - size // 2,
-        )
-        for size in win
-    )
-
-    # Preparing patterns, neighbour patterns, and sigmas
+    # Mapping neighbour patterns and sigmas:
     padded_pat = np.pad(
         array=center,
         pad_width=(sr[0], sr[1], (0, 0)),
         mode="edge",
     )
+
+    # Mapping neighbours
+    neigh = sliding_window_view(
+        padded_pat,
+        win_shape,
+        axis=(0, 1),
+    )
+
+    neigh = np.moveaxis(
+        a=neigh, source=(-2, -1), destination=(2, 3)
+    ).reshape(  # (..., sr[col], sr[row], npix) -> (..., sr[col]*sr[row][window], npix)
+        (nrows, ncols, np.prod(win_shape), npix)
+    )
+
+    neigh = neigh[:, :, win_mask, :]
 
     padded_sigma = np.pad(
         array=sigma,
@@ -247,61 +265,64 @@ def _average_non_local_neighbour_patterns(
         mode="edge",
     )
 
-    neigh = sliding_window_view(
-        padded_pat,
-        win,
-        axis=(0, 1),
-    )
-
-    neigh = np.moveaxis(neigh, (-2, -1), (2, 3)).reshape(
-        nrows,
-        ncols,
-        np.prod(win),
-        npix,
-    )
-
-    win_mask = np.asarray(window[:, :, 0, 0], dtype=bool).ravel()
-
-    neigh = neigh[:, :, win_mask, :]
-
     neigh_sigma = sliding_window_view(
         padded_sigma,
-        win,
+        win_shape,
         axis=(0, 1),
     )
 
-    # (X, Y, 1, 1, x1+x2, y1+y2)
     neigh_sigma = neigh_sigma.reshape(
         nrows,
         ncols,
-        np.prod(win),
+        np.prod(win_shape),
     )[:, :, win_mask]
 
-    # Expanding the dimensions
+    # Expand center pattern dimensions: (nrows, ncols, 1, npix)
     center = center[:, :, None, :]
 
     # Euclidean distance | Eq. 3
-    diff = neigh - center
+    diff = center - neigh
 
     d2 = np.sum(diff * diff, axis=-1, dtype=np.float32)
 
     # Sum of sigmas squared | c.f. Eq. 7
-    sig2 = sigma[:, :, 0, 0, None] ** 2 + neigh_sigma**2
+    sig2 = (sigma[:, :, 0, 0, None] ** 2) + (neigh_sigma**2)
 
     # Normalised distance | Eq. 7
-    dnorm = (d2 - (npix * sig2)) / (sig2 * np.sqrt(2.0 * npix))
+    num = d2 - (npix * sig2)
+    denom = sig2 * np.sqrt(2.0 * npix)
 
-    # Weights | Eq. 8
-    weights = np.exp(-np.maximum(dnorm, 0.0) / (lamda * lamda)).astype("float32")
+    dist = np.zeros_like(d2, dtype=np.float32)
 
-    weights /= (
-        weights.sum(axis=-1, keepdims=True) + 1e-12  # 1e-6
+    valid = denom > 1e-8
+    np.divide(num, denom, out=dist, where=valid)
+
+    dist[~valid] = np.float32(1.0e6) * npix
+
+    center_flat = (  # int
+        (win_shape[0] // 2) * win_shape[1] + (win_shape[1] // 2)
     )
 
-    # Processed pattern vectors | Eq. 1
+    mask_indices = np.flatnonzero(win_mask)
+    center_matches = np.where(mask_indices == center_flat)[0]
+    if center_matches.size:
+        center_idx = center_matches[0]
+        dist[:, :, center_idx] = np.float32(-1.0e6)
+
+    # Weights | Eq. 8
+    weights = np.maximum(dist, 0.0, dtype=np.float32)
+    weights = np.exp(-weights / (np.float32(lamda) ** 2)).astype(np.float32)
+
+    weights /= weights.sum(
+        axis=2,
+        keepdims=True,
+        dtype=np.float32,
+    )
+
     pats[:, :, ~signal_mask] = np.sum(
         neigh * weights[..., None],
         axis=2,
+        dtype=np.float32,
     )
 
     rescaled_patterns = _rescale_neighbour_averaged_patterns(
