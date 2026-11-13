@@ -21,6 +21,22 @@ Added
 
 Fixed
 -----
+
+Changed
+-------
+
+Removed
+-------
+
+Deprecated
+----------
+
+
+0.14.1 (2026-11-13)
+===================
+
+Fixed
+-----
 - A file written with ``EBSDDetector.save()`` with kikuchipy < 0.12.0 and NumPy >= 2 can
   store a detector with shape (60, 60) as "(np.int32(60), np.int32(60)", which could not
   be read before.
@@ -52,12 +68,6 @@ Changed
   not contain a valid kikuchipy version, and so does loading a kikuchipy h5ebsd file
   with an invalid version.
   (`#831 <https://github.com/pyxem/kikuchipy/pull/831>`_)
-
-Removed
--------
-
-Deprecated
-----------
 
 
 0.14.0 (2026-11-08)
