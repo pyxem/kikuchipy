@@ -17,6 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import logging
 import os
 
 import dask.array as da
@@ -24,7 +25,7 @@ import h5py
 import hyperspy.api as hs
 import numpy as np
 from orix.quaternion import Rotation
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 import pytest
 
 import kikuchipy as kp
@@ -41,7 +42,8 @@ KIKUCHIPY_FILE_GROUP_NAMES = ["Scan 1", "Scan 2"]
 class TestH5EBSD:
     def test_repr(self, kikuchipy_h5ebsd_path):
         reader = KikuchipyH5EBSDReader(kikuchipy_h5ebsd_path / "patterns.h5")
-        repr_str_list = repr(reader).split(" ")
+        # The file path can contain spaces
+        repr_str_list = repr(reader).split(" ", maxsplit=2)
         assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.8.dev0):"]
         assert repr_str_list[2][-11:] == "patterns.h5"
 
@@ -331,6 +333,38 @@ class TestKikuchipyH5EBSD:
         assert s_x_only3.data.shape == desired_shape
         assert s_x_only3.axes_manager.navigation_axes[0].name == "x"
         assert s_x_only3.axes_manager.navigation_extent == desired_nav_extent
+
+    @pytest.mark.parametrize(
+        "version, azimuthal_sign",
+        [("0.11.2", -1), ("0.12.0", 1), ("0.14.dev1", 1)],
+    )
+    def test_load_azimuthal_sign(self, save_path_hdf5, caplog, version, azimuthal_sign):
+        """The sign of the azimuthal angle changed in v0.12.0."""
+        s = kp.signals.EBSD(np.zeros((2, 3, 5, 5), dtype=np.uint8))
+        s.detector.azimuthal = 1.87
+        s.save(save_path_hdf5)
+
+        # Recreate the dataset, since it has a fixed-length string dtype
+        # sized to the installed kikuchipy version and longer strings
+        # would be truncated on assignment
+        with h5py.File(save_path_hdf5, mode="r+") as f:
+            del f["version"]
+            f.create_dataset("version", data=np.array([version.encode()]))
+
+        with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
+            s2 = kp.load(save_path_hdf5)
+        assert np.isclose(s2.detector.azimuthal, azimuthal_sign * s.detector.azimuthal)
+        assert ("Inverted azimuthal angle" in caplog.text) == (azimuthal_sign == -1)
+
+    def test_load_invalid_version_raises(self, save_path_hdf5):
+        s = kp.signals.EBSD(np.zeros((2, 3, 5, 5), dtype=np.uint8))
+        s.save(save_path_hdf5)
+
+        with h5py.File(save_path_hdf5, mode="r+") as f:
+            f["version"][()] = b"a.b"
+
+        with pytest.raises(InvalidVersion, match="Invalid version: 'a.b'"):
+            _ = kp.load(save_path_hdf5)
 
     # TODO: Remove this skip once issue is resolved
     @pytest.mark.skipif(

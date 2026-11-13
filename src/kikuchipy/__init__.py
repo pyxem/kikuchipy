@@ -31,13 +31,14 @@ credits = [
     "Austin Gerlt",
     "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
+    "Sebastian Samberger",
     "Zhou Xu",
     "Carter Francis",
     "Magnus Nord",
     "Tijmen Vermeij",
 ]
 
-__version__ = "0.14.0"
+__version__ = "0.14.1"
 
 __getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
