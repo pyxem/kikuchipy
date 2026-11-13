@@ -1292,11 +1292,7 @@ class EBSD(KikuchipySignal2D):
 
         dtype_out = self.data.dtype
         omin, omax = dtype_range[dtype_out.type]
-        print("window argument:", window)
-        print("window shape:", averaging_window.shape)
-        print("window coefficients:")
-        print(averaging_window.astype(int))
-        print("lambda:", lamda)
+
         averaged_patterns = da.overlap.map_overlap(
             _average_non_local_neighbour_patterns,
             dask_array,
