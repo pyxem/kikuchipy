@@ -89,6 +89,9 @@ Post-release action
 
 - Monitor the `documentation build <https://readthedocs.org/projects/kikuchipy/builds>`__
   to ensure that the new stable documentation is successfully built from the release.
+  If a patch release was made, on a successful build, hide (don't deactivate) the
+  documentation version for the previous release for that minor version (say, hide
+  v0.14.0 if v0.14.1 was released).
 
 - Ensure that `Zenodo <https://doi.org/10.5281/zenodo.3597646>`__ displays the new
   release.
