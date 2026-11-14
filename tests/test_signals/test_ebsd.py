@@ -17,11 +17,14 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import importlib
 import logging
 
+from dask import __version__ as dv
 import dask.array as da
 import hyperspy.api as hs
 import matplotlib.pyplot as plt
+from numba import __version__ as nbv
 import numpy as np
 from packaging.version import Version
 import pytest
@@ -1540,7 +1543,6 @@ class TestAverageNeighbourPatternsEBSD:
         d = dummy_signal.data
         if lazy:
             d = d.compute()
-        print(d)
 
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
         assert np.allclose(dummy_signal.data, answer)
@@ -1693,6 +1695,513 @@ class TestAverageNeighbourPatternsEBSD:
         s3 = dummy_signal.as_lazy()
         s4 = s3.average_neighbour_patterns(inplace=False, lazy_output=False)
         assert isinstance(s4, kp.signals.EBSD)
+
+
+class TestAverageNonLocalNeighbourPatternsEBSD:
+    @pytest.mark.parametrize(
+        "window, window_shape, sigma, lamda, lazy, answer, kwargs",
+        [
+            (
+                "circular",
+                (3, 3),
+                np.ones((3, 3)),
+                1,
+                False,
+                np.array(
+                    [
+                        182,
+                        218,
+                        182,
+                        255,
+                        218,
+                        182,
+                        218,
+                        36,
+                        0,
+                        255,
+                        198,
+                        226,
+                        198,
+                        0,
+                        226,
+                        226,
+                        198,
+                        169,
+                        0,
+                        84,
+                        84,
+                        141,
+                        56,
+                        255,
+                        84,
+                        84,
+                        255,
+                        254,
+                        0,
+                        218,
+                        182,
+                        109,
+                        254,
+                        255,
+                        35,
+                        35,
+                        113,
+                        0,
+                        255,
+                        0,
+                        28,
+                        0,
+                        56,
+                        56,
+                        141,
+                        255,
+                        191,
+                        0,
+                        127,
+                        223,
+                        223,
+                        223,
+                        191,
+                        0,
+                        170,
+                        42,
+                        255,
+                        127,
+                        169,
+                        0,
+                        42,
+                        42,
+                        0,
+                        141,
+                        255,
+                        226,
+                        113,
+                        170,
+                        0,
+                        56,
+                        255,
+                        56,
+                        255,
+                        72,
+                        36,
+                        145,
+                        109,
+                        145,
+                        0,
+                        109,
+                        254,
+                    ]
+                ),
+                None,
+            ),
+            (
+                "rectangular",
+                (2, 3),
+                None,
+                None,
+                False,
+                np.array(
+                    [
+                        197,
+                        219,
+                        190,
+                        255,
+                        172,
+                        190,
+                        226,
+                        42,
+                        0,
+                        211,
+                        192,
+                        208,
+                        217,
+                        0,
+                        255,
+                        218,
+                        142,
+                        152,
+                        0,
+                        77,
+                        82,
+                        135,
+                        19,
+                        255,
+                        82,
+                        77,
+                        246,
+                        244,
+                        105,
+                        219,
+                        225,
+                        107,
+                        233,
+                        254,
+                        26,
+                        0,
+                        115,
+                        0,
+                        255,
+                        14,
+                        18,
+                        27,
+                        68,
+                        50,
+                        143,
+                        254,
+                        187,
+                        0,
+                        127,
+                        184,
+                        236,
+                        224,
+                        187,
+                        2,
+                        155,
+                        23,
+                        255,
+                        91,
+                        128,
+                        0,
+                        46,
+                        40,
+                        31,
+                        144,
+                        254,
+                        224,
+                        112,
+                        170,
+                        0,
+                        55,
+                        255,
+                        55,
+                        255,
+                        72,
+                        0,
+                        121,
+                        113,
+                        144,
+                        14,
+                        107,
+                        192,
+                    ]
+                ),
+                None,
+            ),
+            (
+                "gaussian",
+                (3, 3),
+                None,
+                1,
+                True,
+                np.array(
+                    [
+                        218,
+                        174,
+                        206,
+                        255,
+                        190,
+                        216,
+                        246,
+                        32,
+                        0,
+                        254,
+                        205,
+                        232,
+                        212,
+                        0,
+                        243,
+                        234,
+                        190,
+                        170,
+                        0,
+                        82,
+                        83,
+                        139,
+                        45,
+                        255,
+                        84,
+                        82,
+                        251,
+                        241,
+                        56,
+                        213,
+                        212,
+                        141,
+                        240,
+                        255,
+                        13,
+                        0,
+                        115,
+                        0,
+                        255,
+                        1,
+                        27,
+                        2,
+                        58,
+                        56,
+                        140,
+                        255,
+                        186,
+                        0,
+                        128,
+                        218,
+                        221,
+                        214,
+                        187,
+                        9,
+                        170,
+                        42,
+                        255,
+                        127,
+                        169,
+                        0,
+                        42,
+                        42,
+                        0,
+                        141,
+                        254,
+                        226,
+                        113,
+                        169,
+                        0,
+                        56,
+                        255,
+                        56,
+                        255,
+                        71,
+                        28,
+                        141,
+                        108,
+                        145,
+                        0,
+                        107,
+                        245,
+                    ]
+                ),
+                {"std": 0.03},  # standard deviation
+            ),
+        ],
+    )
+    def test_average_non_local_neighbour_patterns(
+        self,
+        dummy_signal,
+        window,
+        window_shape,
+        sigma,
+        lamda,
+        lazy,
+        answer,
+        kwargs,
+    ):
+        """Test averaging with different windows and parameters."""
+        if lazy:
+            dummy_signal = dummy_signal.as_lazy()
+
+        if kwargs is None:
+            dummy_signal.average_non_local_neighbour_patterns(
+                window=window,
+                window_shape=window_shape,
+                sigma=sigma,
+                lamda=lamda,
+                show_progressbar=True,
+            )
+
+        else:
+            dummy_signal.average_non_local_neighbour_patterns(
+                window=window,
+                window_shape=window_shape,
+                sigma=sigma,
+                lamda=lamda,
+                **kwargs,
+            )
+
+        d = dummy_signal.data
+        if lazy:
+            d = d.compute()
+
+        answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
+        assert np.allclose(dummy_signal.data, answer, rtol=1)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_no_averaging(self, dummy_signal):
+        answer = dummy_signal.data.copy()
+        with pytest.warns(UserWarning, match="A window of shape .* was "):
+            dummy_signal.average_non_local_neighbour_patterns(
+                window="rectangular", window_shape=(1, 1)
+            )
+        assert np.allclose(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_one_nav_dim(self, dummy_signal):
+        # Test that rows not included are also not averaged
+        dummy_signal.inav[:, 0].average_non_local_neighbour_patterns(window_shape=(3,))
+        # fmt: off
+        answer = np.array(
+            [
+                217, 220, 201, 255, 113, 201, 236,  49,   0, 186, 189, 192, 233,
+                  0, 255, 215,  74,  89,   0,  75,  81, 133,   4, 255,  81,  75,
+                243,   8,   1,   7,   6,   4,   8,   8,   2,   2,   4,   0,   9,
+                  0,   1,   0,   2,   2,   5,   8,   6,   0,   4,   7,   7,   7,
+                  6,   0,   4,   1,   6,   3,   4,   0,   1,   1,   0,   5,   9,
+                  8,   4,   6,   0,   2,   9,   2,   9,   4,   3,   6,   5,   6,
+                  2,   5,   9,
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        assert np.allclose(dummy_signal.data, answer, rtol=1)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_window_1d(self, dummy_signal):
+        dummy_signal.average_non_local_neighbour_patterns(window_shape=(3,))
+        # fmt: off
+        # One pattern per line
+        answer = np.array(
+            [226, 155, 212, 254, 198, 226, 254,  28,   0, 255, 198, 226, 198,
+               0, 226, 226, 198, 170,   0,  84,  84, 141,  56, 254,  84,  84,
+             254, 233, 106, 212, 233, 170, 233, 255,  21,   0, 113,   0, 255,
+               0,  27,   0,  56,  56, 141, 254, 185,   0, 127, 217, 220, 212,
+             187,  10, 170,  42, 255, 127, 169,   0,  42,  42,   0, 141, 254,
+             226, 113, 169,   0,  56, 255,  56, 254,  71,  29, 142, 108, 145,
+               0, 107, 246],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        assert np.allclose(dummy_signal.data, answer, rtol=1)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_pass_window(self, dummy_signal):
+        w = kp.filters.Window()
+        dummy_signal.average_non_local_neighbour_patterns(w)
+        # fmt: off
+        # One pattern per line
+        answer = np.array(
+            [217, 173, 205, 255, 194, 215, 246,  31,   0, 255, 202, 230, 207,
+               0, 236, 231, 192, 169,   0,  83,  84, 140,  49, 255,  84,  83,
+             253, 240,  56, 212, 212, 141, 240, 254,  14,   0, 113,   0, 255,
+               0,  27,   0,  57,  56, 141, 255, 188,   0, 127, 220, 221, 217,
+             189,   5, 170,  42, 255, 127, 169,   0,  42,  42,   0, 141, 254,
+             226, 113, 169,   0,  56, 255,  56, 255,  72,  31, 143, 109, 145,
+               0, 108, 249
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        assert np.allclose(dummy_signal.data, answer, rtol=1)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_non_local_neighbour_patterns_lazy(self):
+        chunks = ((3, 3, 4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3, 4), (75,), (6,), (6,))
+        s = kp.signals.LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
+        s.average_non_local_neighbour_patterns()
+        s.compute()
+
+    def test_average_non_local_neighbour_patterns_inplace(self, dummy_signal):
+        # Current signal is unaffected
+        s2 = dummy_signal.deepcopy()
+        s3 = s2.average_non_local_neighbour_patterns(inplace=False)
+        assert np.allclose(dummy_signal.data, s2.data)
+
+        # Custom properties carry over
+        assert isinstance(s3, kp.signals.EBSD)
+        assert np.allclose(s3.static_background, dummy_signal.static_background)
+        assert np.allclose(s3.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s3.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        s2.average_non_local_neighbour_patterns()
+        assert np.allclose(s3.data, s2.data)
+
+        # Operating on lazy signal returns lazy signal
+        s4 = dummy_signal.as_lazy()
+        s5 = s4.average_non_local_neighbour_patterns(inplace=False)
+        assert isinstance(s5, kp.signals.LazyEBSD)
+        s5.compute()
+        assert np.allclose(s5.data, s2.data)
+
+    def test_lazy_output(self, dummy_signal):
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.average_non_local_neighbour_patterns(lazy_output=True)
+
+        s2 = dummy_signal.average_non_local_neighbour_patterns(
+            inplace=False, lazy_output=True
+        )
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.average_non_local_neighbour_patterns(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("pyebsdindex") is None
+    or Version(nbv) < Version("0.58.0")
+    or Version(dv) < Version("2024.12.0"),
+    reason="Requires pyebsdindex, Numba > 0.57 and Dask > 2024.11",
+)
+class TestAverageNonLocalPatternsEBSDAndPyEBSDIndexNLPAR:
+    def test_average_non_local_patterns_pyebsdindex_nlpar(self):
+        from pyebsdindex.nlpar import NLPAR
+
+        nlpar = getattr(NLPAR, "nlpar_nb")
+
+        s = kp.data.nickel_ebsd_large()
+        s.remove_static_background()
+        s.remove_dynamic_background()
+
+        dtype = s.data.dtype
+        dtype_out = dtype
+        s.rescale_intensity(out_range=(0, 1), dtype_out=np.float32)
+
+        signal_mask = ~kp.filters.Window(
+            "circular", shape=s.axes_manager.signal_shape[::-1]
+        ).astype(bool)
+
+        # As detector edges are handled differently:
+        s.data *= ~signal_mask
+
+        indices_in = np.flatnonzero(~signal_mask.ravel())
+
+        nrows, ncols = s.axes_manager.navigation_shape[::-1]
+
+        s.rescale_intensity(out_range=(0, 1), dtype_out=np.float32)
+
+        patterns = s.deepcopy().data.reshape(s.axes_manager.navigation_size, -1)
+        sigma = np.std(patterns.reshape(s.data.shape), ddof=0, axis=(-2, -1))
+
+        lamda = 1.0
+
+        # Doesn't work with numba < 0.58
+        out = nlpar(
+            data=patterns,
+            lam=lamda,
+            sr=1,
+            dthresh=0.0,
+            sigma=sigma,
+            nrows=nrows,
+            ncols=ncols,
+            calclim=np.array([0, 0, ncols, nrows]),
+            indices_in=indices_in,
+            saturation_protect=False,
+            diff_offset=0.0,
+        )
+
+        out = kp.signals.EBSD(out.reshape(s.data.shape))
+        out.rescale_intensity(dtype_out=dtype_out)
+
+        # Doesn't work properly with Dask < 2024.12.0
+        s.average_non_local_neighbour_patterns(
+            window="rectangular",
+            window_shape=(3, 3),
+            sigma=sigma,
+            lamda=lamda,
+            signal_mask=signal_mask,
+        )
+        s.rescale_intensity(dtype_out=dtype_out)
+        # Due to edges being handled differently
+        assert np.allclose(out.inav[1:-1, 1:-1], s.inav[1:-1, 1:-1], rtol=1)
 
 
 class TestVirtualBackscatterElectronImaging:
