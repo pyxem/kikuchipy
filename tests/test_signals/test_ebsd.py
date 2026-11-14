@@ -18,12 +18,12 @@
 #
 
 import logging
+import re
 
 import dask.array as da
 import hyperspy.api as hs
 import matplotlib.pyplot as plt
 import numpy as np
-from packaging.version import Version
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -1733,6 +1733,66 @@ class TestDecomposition:
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
     @pytest.mark.parametrize(
+        "components, mean_intensity",
+        [(None, 4.5185), (3, 4.5143), ([0, 1, 3], 4.5037)],
+    )
+    def test_get_decomposition_model(self, dummy_signal, components, mean_intensity):
+        dummy_signal.change_dtype(np.float32)
+        dummy_signal.decomposition()
+        factors = dummy_signal.learning_results.factors
+        loadings = dummy_signal.learning_results.loadings
+
+        model_signal = dummy_signal.get_decomposition_model(components)
+        assert isinstance(model_signal, kp.signals.EBSD)
+        assert model_signal.data.shape == dummy_signal.data.shape
+        assert model_signal.data.dtype == np.float32
+        assert np.allclose(model_signal.data.mean(), mean_intensity, atol=1e-3)
+        assert (
+            model_signal.detector.navigation_shape
+            == dummy_signal.detector.navigation_shape
+        )
+
+        # Learning results are not modified
+        assert dummy_signal.learning_results.factors is factors
+        assert dummy_signal.learning_results.loadings is loadings
+
+    def test_get_decomposition_model_lazy_output(self, dummy_signal):
+        dummy_signal.change_dtype(np.float32)
+        dummy_signal.decomposition()
+
+        model_signal = dummy_signal.get_decomposition_model(3)
+        model_signal_lazy = dummy_signal.get_decomposition_model(3, lazy_output=True)
+        assert isinstance(model_signal_lazy, kp.signals.LazyEBSD)
+        model_signal_lazy.compute()
+        assert np.allclose(model_signal_lazy.data, model_signal.data)
+
+    @pytest.mark.parametrize(
+        "components, mean_intensity",
+        [(None, 117.7), (3, 119.2), ([0, 1, 3], 110.2)],
+    )
+    def test_get_decomposition_model_lazy(
+        self, dummy_signal, components, mean_intensity
+    ):
+        lazy_signal = dummy_signal.as_lazy()
+        lazy_signal.change_dtype(np.float32)
+        lazy_signal.decomposition(algorithm="PCA", output_dimension=9)
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
+
+        model_signal = lazy_signal.get_decomposition_model(components)
+        assert isinstance(model_signal, kp.signals.LazyEBSD)
+        assert model_signal.data.shape == lazy_signal.data.shape
+
+        # Check image intensities after rescaling to 8-bit unsigned int
+        model_signal.rescale_intensity(relative=True, dtype_out=np.uint8)
+        model_mean = model_signal.data.mean().compute()
+        np.testing.assert_allclose(model_mean, mean_intensity, atol=0.1)
+
+        model_signal2 = lazy_signal.get_decomposition_model(
+            components, lazy_output=False
+        )
+        assert isinstance(model_signal2, kp.signals.EBSD)
+
+    @pytest.mark.parametrize(
         "components, dtype_out, mean_intensity",
         [
             (None, np.float16, 4.520),
@@ -1741,59 +1801,44 @@ class TestDecomposition:
             ([0, 1, 3], np.float16, 4.504),
         ],
     )
-    def test_get_decomposition_model(
+    def test_get_decomposition_model_dtype_out_deprecated(
         self, dummy_signal, components, dtype_out, mean_intensity
     ):
-        # Decomposition
         dummy_signal.change_dtype(np.float32)
         dummy_signal.decomposition()
 
-        # Get decomposition model
-        model_signal = dummy_signal.get_decomposition_model(
-            components=components, dtype_out=dtype_out
-        )
+        msg = "Parameter `dtype_out` is deprecated and will be removed in version 0.17"
 
-        # Check data shape, signal class and image intensities in model
-        # signal
-        assert model_signal.data.shape == dummy_signal.data.shape
+        # Passed as keyword
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning, match=msg):
+            model_signal = dummy_signal.get_decomposition_model(
+                components, dtype_out=dtype_out
+            )
         assert isinstance(model_signal, kp.signals.EBSD)
+        assert model_signal.data.dtype == dtype_out
         assert np.allclose(model_signal.data.mean(), mean_intensity, atol=1e-3)
 
-    @pytest.mark.skipif(
-        Version(hs.__version__) <= Version("2.4.0"),
-        reason="Requires HyperSpy > 2.4.0",
-    )
-    @pytest.mark.parametrize(
-        "components, mean_intensity",
-        [(None, 117.7), (3, 119.2), ([0, 1, 3], 110.2)],
-    )
-    def test_get_decomposition_model_lazy(
-        self, dummy_signal, components, mean_intensity
-    ):
-        # Decomposition
+        # Passed as positional argument, returning a lazy signal
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning, match=msg):
+            model_signal2 = dummy_signal.get_decomposition_model(
+                components, dtype_out, lazy_output=True
+            )
+        assert isinstance(model_signal2, kp.signals.LazyEBSD)
+        assert model_signal2.data.dtype == dtype_out
+        model_signal2.compute()
+        assert np.allclose(model_signal2.data, model_signal.data)
+
+    def test_get_decomposition_model_dtype_out_lazy_deprecated(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
         lazy_signal.change_dtype(np.float32)
         lazy_signal.decomposition(algorithm="PCA", output_dimension=9)
 
-        # Signal type
-        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
-
-        # Get decomposition model
-        model_signal = lazy_signal.get_decomposition_model(
-            components=components,
-            dtype_out=np.float32,
-        )
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning):
+            model_signal = lazy_signal.get_decomposition_model(3, dtype_out=np.float32)
         assert isinstance(model_signal, kp.signals.LazyEBSD)
+        assert model_signal.data.dtype == np.float32
 
-        # Check data shape, signal class and image intensities in model
-        # signal after rescaling to 8 bit unsigned integer
-        assert model_signal.data.shape == lazy_signal.data.shape
-        assert isinstance(model_signal, kp.signals.LazyEBSD)
-        model_signal.rescale_intensity(relative=True, dtype_out=np.uint8)
-        model_mean = model_signal.data.mean().compute()
-        np.testing.assert_allclose(model_mean, mean_intensity, atol=0.1)
-
-    @pytest.mark.parametrize("components, mean_intensity", [(None, 132.1), (3, 122.9)])
+    @pytest.mark.parametrize("components, mean_intensity", [(None, 117.7), (3, 119.2)])
     def test_get_decomposition_model_write(
         self, dummy_signal, components, mean_intensity, tmp_path
     ):
@@ -1805,17 +1850,24 @@ class TestDecomposition:
         lazy_signal.decomposition(algorithm="PCA", output_dimension=9)
         lazy_signal.change_dtype(dtype_in)
 
-        with pytest.raises(AttributeError, match="Output directory has to be"):
-            lazy_signal.get_decomposition_model_write()
+        msg = "Function `get_decomposition_model_write()` is deprecated"
+        with pytest.warns(
+            np.exceptions.VisibleDeprecationWarning, match=re.escape(msg)
+        ):
+            with pytest.raises(AttributeError, match="Output directory has to be"):
+                lazy_signal.get_decomposition_model_write()
 
         # Current time stamp is added to output file name
-        lazy_signal.get_decomposition_model_write(dir_out=tmp_path)
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning):
+            lazy_signal.get_decomposition_model_write(dir_out=tmp_path)
+        assert len(list(tmp_path.glob("model_*"))) == 1
 
         # Reload file to check...
         fname_out = "tests.h5"
-        lazy_signal.get_decomposition_model_write(
-            components=components, dir_out=tmp_path, fname_out=fname_out
-        )
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning):
+            lazy_signal.get_decomposition_model_write(
+                components=components, dir_out=tmp_path, fname_out=fname_out
+            )
         s_reload = kp.load(tmp_path / fname_out)
 
         # ... data type, data shape and mean intensity

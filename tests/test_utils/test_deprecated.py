@@ -149,3 +149,35 @@ class TestDeprecateArgument:
             r"To avoid this warning, please do not use `a`. Use `b` instead. See the "
             r"documentation of `bar_arg_alt()` for more details."
         )
+
+    def test_deprecate_positional_argument(self):
+        """A deprecated argument which is a named parameter raises a
+        warning whether it is passed as a positional or keyword
+        argument.
+        """
+
+        class Foo:
+            @deprecated_argument(name="a", since="1.3", removal="1.4")
+            def bar(self, b=1, a=None, c=3):
+                return b, a, c
+
+        my_foo = Foo()
+
+        # Does not warn
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert my_foo.bar() == (1, None, 3)
+            assert my_foo.bar(2) == (2, None, 3)
+            assert my_foo.bar(2, c=4) == (2, None, 4)
+
+        # Warns when passed as positional argument
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning, match="`a`"):
+            assert my_foo.bar(2, 5) == (2, 5, 3)
+
+        # Warns when passed as keyword argument
+        with pytest.warns(np.exceptions.VisibleDeprecationWarning, match="`a`"):
+            assert my_foo.bar(a=5) == (1, 5, 3)
+
+        # Invalid input is left to the function to raise an error
+        with pytest.raises(TypeError):
+            my_foo.bar(1, 2, 3, 4)

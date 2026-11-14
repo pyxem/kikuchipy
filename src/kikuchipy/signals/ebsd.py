@@ -31,7 +31,6 @@ import warnings
 import dask
 import dask.array as da
 from dask.diagnostics.progress import ProgressBar
-from h5py import File
 import hyperspy.api as hs
 from hyperspy.axes import AxesManager
 from hyperspy.roi import BaseInteractiveROI
@@ -43,7 +42,7 @@ from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
 from kikuchipy._constants import pyopencl_context_available, verify_dependency_or_raise
-from kikuchipy._utils.hyperspy_utils import LearningResults
+from kikuchipy._utils.deprecated import deprecated, deprecated_argument
 from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
@@ -89,8 +88,6 @@ from kikuchipy.signals.util._crystal_map import (
 )
 from kikuchipy.signals.util._dask import (
     _get_chunk_overlap_depth,
-    _rechunk_learning_results,
-    _update_learning_results,
     get_chunking,
     get_dask_array,
 )
@@ -2672,22 +2669,22 @@ class EBSD(KikuchipySignal2D):
             return
         _save(fname, self, overwrite=overwrite, **kwargs)
 
+    # TODO: Remove overwritten method once 0.17 is released
+    @deprecated_argument(
+        "dtype_out", since="0.15", removal="0.17", alternative="change_dtype()"
+    )
     def get_decomposition_model(
         self,
         components: int | list[int] | None = None,
-        dtype_out: str | np.dtype | type = "float32",
+        dtype_out: str | np.dtype | type | None = None,
+        chunks: str | int | tuple = "auto",
+        lazy_output: bool | None = None,
     ) -> EBSD | LazyEBSD:
-        """Get the model signal generated with the selected number of
+        """Return the model signal generated with the selected number of
         principal components from a decomposition.
 
         Calls HyperSpy's
-        :meth:`~hyperspy.learn.mva.MVA.get_decomposition_model`.
-        Learning results are preconditioned before this call, doing the
-        following:
-
-        1. Set :class:`numpy.dtype` to desired ``dtype_out``.
-        2. Remove unwanted components.
-        3. Rechunk to suitable chunks if :class:`~dask.array.Array`.
+        :meth:`~hyperspy.api.signals.BaseSignal.get_decomposition_model`.
 
         Parameters
         ----------
@@ -2697,38 +2694,47 @@ class EBSD(KikuchipySignal2D):
             0-given ``int``. If list of ``ints``, rebuilds signal from
             only ``components`` in given list.
         dtype_out
-            Data type to cast learning results to (default is
-            ``"float32``). Note that HyperSpy casts to ``"float64"``.
+            Data type of the model signal. If not given (default), the
+            data type is determined by the learning results.
+
+            .. deprecated:: 0.15
+               ``dtype_out`` is deprecated and will be removed in
+               version 0.17. Use ``change_dtype()`` on the returned
+               model signal instead. To avoid holding the model in
+               memory with the learning results' data type, pass
+               ``lazy_output=True``, change the data type, and then
+               compute the model.
+        chunks
+            Chunking of the model signal data if it is lazy. Passed on
+            to HyperSpy.
+        lazy_output
+            Whether the returned model signal is lazy. If not given
+            (default), the model signal is lazy if this signal is lazy.
 
         Returns
         -------
         s_model
             Model signal.
+
+        Notes
+        -----
+        The returned signal keeps a copy of the learning results.
         """
-        # Keep original results to revert back after updating
-        factors_orig = self.learning_results.factors.copy()
-        loadings_orig = self.learning_results.loadings.copy()
+        if dtype_out is None:
+            return super().get_decomposition_model(
+                components, chunks=chunks, lazy_output=lazy_output
+            )
 
-        # Change data type, keep desired components and rechunk if lazy
-        dtype_out = np.dtype(dtype_out)
-        (
-            self.learning_results.factors,
-            self.learning_results.loadings,
-        ) = _update_learning_results(
-            learning_results=self.learning_results,
-            dtype_out=dtype_out,
-            components=components,
+        # Change data type lazily, then compute if requested, to avoid
+        # holding the full model in memory with the learning results'
+        # data type
+        return_lazy = lazy_output or (lazy_output is None and self._lazy)
+        s_model = super().get_decomposition_model(
+            components, chunks=chunks, lazy_output=True
         )
-
-        # Call HyperSpy's function
-        s_model = super().get_decomposition_model()
-
-        # Revert learning results to original results
-        self.learning_results.factors = factors_orig
-        self.learning_results.loadings = loadings_orig
-
-        # Remove learning results from model signal
-        s_model.learning_results = LearningResults()
+        s_model.change_dtype(dtype_out)
+        if not return_lazy:
+            s_model.compute()
 
         return s_model
 
@@ -3207,6 +3213,8 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
     def compute(self, *args, **kwargs) -> None:
         super().compute(*args, **kwargs)
 
+    # TODO: Remove method once 0.17 is released
+    @deprecated(since="0.15", alternative="get_decomposition_model", removal="0.17")
     def get_decomposition_model_write(
         self,
         components: int | list[int] | None = None,
@@ -3229,11 +3237,10 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
             0-given ``int``. If list of ``int``, rebuilds signal from
             only ``components`` in given list.
         dtype_learn
-            Data type to set learning results to (default is
-            ``"float32"``) before multiplication.
+            Data type to set the model signal to (default is
+            ``"float32"``) before rescaling intensities.
         mbytes_chunk
-            Size of learning results chunks in MB, default is 100 MB as
-            suggested in the Dask documentation.
+            Not used.
         dir_out
             Directory to place output signal in.
         fname_out
@@ -3241,64 +3248,32 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
 
         Notes
         -----
-        Multiplying the learning results' factors and loadings in memory
-        to create the model signal cannot sometimes be done due to too
-        large matrices. Here, instead, learning results are written to
-        file, read into dask arrays and multiplied using
-        :func:`dask.array.matmul`, out of core.
+        The same can be achieved with a lazy model signal, which is
+        computed chunk by chunk when written to file:
+
+        >>> s_model = s.get_decomposition_model(
+        ...     components, lazy_output=True
+        ... )  # doctest: +SKIP
+        >>> s_model.rescale_intensity(
+        ...     relative=True, dtype_out=s.data.dtype
+        ... )  # doctest: +SKIP
+        >>> s_model.save("model.hspy")  # doctest: +SKIP
         """
-        dtype_learn = np.dtype(dtype_learn)
-
-        # Change data type, keep desired components and rechunk if lazy
-        factors, loadings = _update_learning_results(
-            self.learning_results, components=components, dtype_out=dtype_learn
-        )
-
-        # Write learning results to HDF5 file
         if dir_out is None:
             try:
                 dir_out = self.original_metadata.General.original_filepath
             except AttributeError:
                 raise AttributeError("Output directory has to be specified")
 
-        t_str = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-        file_learn = os.path.join(dir_out, "learn_" + t_str + ".h5")
-        with File(file_learn, mode="w") as f:
-            f.create_dataset(name="factors", data=factors)
-            f.create_dataset(name="loadings", data=loadings)
+        s_model = self.get_decomposition_model(components, lazy_output=True)
+        s_model.change_dtype(dtype_learn)
+        s_model.rescale_intensity(dtype_out=self.data.dtype, relative=True)
 
-        # Matrix multiplication
-        with File(file_learn) as f:
-            # Read learning results from HDF5 file
-            chunks = _rechunk_learning_results(
-                factors=factors, loadings=loadings, mbytes_chunk=mbytes_chunk
-            )
-            factors = da.from_array(f["factors"], chunks=chunks[0])
-            loadings = da.from_array(f["loadings"], chunks=chunks[1])
-
-            # Perform matrix multiplication
-            loadings = loadings.T
-            res = factors @ loadings
-            res = res.T  # Transpose
-
-            # Create new signal from result of matrix multiplication
-            s_model = self.deepcopy()
-            s_model.learning_results = LearningResults()
-            s_model.data = res.reshape(s_model.data.shape)
-            s_model.data = s_model.data.rechunk(chunks=(1, 1, -1, -1))
-
-            # Rescale intensities
-            s_model.rescale_intensity(dtype_out=self.data.dtype, relative=True)
-
-            # Write signal to file
-            if fname_out is None:
-                fname_out = "model_" + t_str
-            file_model = os.path.join(dir_out, fname_out)
-            s_model.save(file_model)
-
-        # Delete temporary files
-        os.remove(file_learn)
-        gc.collect()  # Don't sink
+        if fname_out is None:
+            t_str = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
+            fname_out = "model_" + t_str
+        file_model = os.path.join(dir_out, fname_out)
+        s_model.save(file_model)
 
 
 def _update_custom_attributes(
