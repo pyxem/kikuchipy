@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,17 +15,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import dask.array as da
 import numpy as np
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.signals.util._dask import (
-    _rechunk_learning_results,
-    get_chunking,
-    get_dask_array,
-)
+from kikuchipy.signals.util._dask import get_chunking, get_dask_array
 
 
 class TestDask:
@@ -111,32 +109,3 @@ class TestDask:
         array_out2 = get_dask_array(s, chunk_bytes=30e3)
         assert array_out0.chunks != array_out1.chunks
         assert array_out1.chunks == array_out2.chunks
-
-    def test_rechunk_learning_results(self):
-        data = da.from_array(np.random.rand(10, 100, 100, 5).astype(np.float32))
-        lazy_signal = kp.signals.LazyEBSD(data)
-
-        # Decomposition
-        lazy_signal.decomposition(algorithm="PCA", output_dimension=10)
-        factors = lazy_signal.learning_results.factors
-        loadings = lazy_signal.learning_results.loadings
-
-        # Raise error when last dimension in factors/loadings are not identical
-        with pytest.raises(ValueError, match="The last dimensions in factors"):
-            _ = _rechunk_learning_results(factors=factors, loadings=loadings.T)
-
-        # Only chunk first axis in loadings
-        chunks = _rechunk_learning_results(
-            factors=factors, loadings=loadings, mbytes_chunk=0.02
-        )
-        assert chunks[0] == (-1, -1)
-        assert chunks[1][0] in [200, 333]
-        assert chunks[1][1] == -1
-
-        # Chunk first axis in both loadings and factors
-        chunks = _rechunk_learning_results(
-            factors=factors, loadings=loadings, mbytes_chunk=0.01
-        )
-        assert chunks[0] == (125, -1)
-        assert chunks[1][0] in [125, 62]
-        assert chunks[1][1] == -1
