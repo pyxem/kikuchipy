@@ -26,14 +26,12 @@ from typing import Any
 import warnings
 
 import dask.array as da
-from hyperspy.signals import Signal2D
+from hyperspy.signals import LazySignal2D, Signal2D
 import numpy as np
-from packaging.version import Version
 from skimage.util.dtype import dtype_range
 from typing_extensions import Self
 import yaml
 
-from kikuchipy._constants import dependency_version
 from kikuchipy._utils.rosettasciio_utils import RGB_DTYPES
 from kikuchipy.pattern._pattern import (
     _adaptive_histogram_equalization,
@@ -43,11 +41,6 @@ from kikuchipy.pattern._pattern import (
 from kikuchipy.signals.util._overwrite_hyperspy_methods import (
     insert_doc_disclaimer,
 )
-
-if dependency_version["hyperspy"] >= Version("2.4.0"):
-    from hyperspy.signals import LazySignal2D
-else:
-    from hyperspy._lazy_signals import LazySignal2D
 
 _logger = logging.getLogger(__name__)
 
@@ -584,11 +577,7 @@ class KikuchipySignal2D(Signal2D):
     def _assign_subclass(self, chunks: bool = False) -> None:
         attrs = self._custom_attributes
 
-        kw = {}
-        if dependency_version["hyperspy"] >= Version("2.3"):
-            kw["chunks"] = chunks
-
-        super()._assign_subclass(**kw)
+        super()._assign_subclass(chunks=chunks)
 
         if self._signal_type not in SIGNAL_TYPES:
             for name in attrs:

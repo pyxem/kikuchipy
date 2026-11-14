@@ -45,10 +45,10 @@ keywords=[
     "dictionary indexing",
 ]
 dependencies = [
-    "dask[array]      >= 2021.8.1",
+    "dask[array]      >= 2024.12.0",
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
-    "hyperspy         >= 2.2",
+    "hyperspy         >= 2.5",
     "h5py             >= 2.10",
     "imageio",
     "lazy_loader",
