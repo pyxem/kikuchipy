@@ -20,6 +20,7 @@
 import importlib
 import logging
 
+from dask import __version__ as dv
 import dask.array as da
 import hyperspy.api as hs
 import matplotlib.pyplot as plt
@@ -2136,8 +2137,9 @@ class TestAverageNonLocalNeighbourPatternsEBSD:
 
 @pytest.mark.skipif(
     importlib.util.find_spec("pyebsdindex") is None
-    or Version(nbv) <= Version("0.57.0"),
-    reason="Requires pyebsdindex and Numba > 0.57",
+    or Version(nbv) < Version("0.58.0")
+    or Version(dv) < Version("2024.12.0"),
+    reason="Requires pyebsdindex, Numba > 0.57 and Dask > 2024.11",
 )
 class TestAverageNonLocalPatternsEBSDAndPyEBSDIndexNLPAR:
     def test_average_non_local_patterns_pyebsdindex_nlpar(self):
@@ -2171,6 +2173,7 @@ class TestAverageNonLocalPatternsEBSDAndPyEBSDIndexNLPAR:
 
         lamda = 1.0
 
+        # Doesn't work with numba < 0.58
         out = nlpar(
             data=patterns,
             lam=lamda,
@@ -2188,6 +2191,7 @@ class TestAverageNonLocalPatternsEBSDAndPyEBSDIndexNLPAR:
         out = kp.signals.EBSD(out.reshape(s.data.shape))
         out.rescale_intensity(dtype_out=dtype_out)
 
+        # Doesn't work properly with Dask < 2024.12.0
         s.average_non_local_neighbour_patterns(
             window="rectangular",
             window_shape=(3, 3),
@@ -2196,6 +2200,7 @@ class TestAverageNonLocalPatternsEBSDAndPyEBSDIndexNLPAR:
             signal_mask=signal_mask,
         )
         s.rescale_intensity(dtype_out=dtype_out)
+        # Due to edges being handled differently
         assert np.allclose(out.inav[1:-1, 1:-1], s.inav[1:-1, 1:-1], rtol=1)
 
 
