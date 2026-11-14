@@ -26,11 +26,11 @@ preferred-citation:
   - family-names: "Marthinsen"
     given-names: "Knut"
     orcid: "0000-0003-1732-6421"
-  doi: 10.48550/arXiv.2605.25722
   title: "kikuchipy: an open-source toolbox for analysis of EBSD patterns"
-  journal: "arXiv preprint arXiv:2605.25722"
+  journal: "Microscopy and Microanalysis"
   year: 2026
-  eprint: "2605.25722"
-  archive-prefix: "arXiv"
-  primary-class: "cond-mat.mtrl-sci"
-  url: "https://arxiv.org/abs/2605.25722"
+  volume: 32
+  issue: 5
+  date-published: 2026-09-25
+  doi: 10.1093/mam/ozag097
+  url: "https://doi.org/10.1093/mam/ozag097"

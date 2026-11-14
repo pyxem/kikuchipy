@@ -5,8 +5,8 @@
    :width: 50%
    :target: https://kikuchipy.org
 
-kikuchipy [ki-ko-chi-pai] is a library for processing, simulating, and indexing of
-electron backscatter diffraction (EBSD) patterns in Python.
+kikuchipy is a library for processing, simulating, and indexing of electron backscatter
+diffraction (EBSD) patterns in Python.
 It is built on the tools for multi-dimensional data analysis provided by the HyperSpy
 library.
 
@@ -31,8 +31,8 @@ library.
 .. |conda_downloads| image:: https://img.shields.io/conda/dn/conda-forge/kikuchipy.svg?label=conda%20downloads
    :target: https://anaconda.org/conda-forge/kikuchipy
 
-.. |arxiv_doi| image:: https://img.shields.io/badge/DOI-10.48550/arXiv.2605.25722-blue
-   :target: https://doi.org/10.48550/arXiv.2605.25722
+.. |paper_doi| image:: https://img.shields.io/badge/DOI-10.1093/mam/ozag097-blue
+   :target: https://doi.org/10.1093/mam/ozag097
 
 .. |zenodo_doi| image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
    :target: https://doi.org/10.5281/zenodo.3597646
@@ -64,7 +64,7 @@ library.
 +----------------------+------------------------------------------------+
 | Activity             | |pypi_downloads| |conda_downloads|             |
 +----------------------+------------------------------------------------+
-| Citation             | |arxiv_doi| |zenodo_doi|                       |
+| Citation             | |paper_doi| |zenodo_doi|                       |
 +----------------------+------------------------------------------------+
 | License              | |GPLv3| |BSD3|                                 |
 +----------------------+------------------------------------------------+
@@ -118,24 +118,15 @@ Paper:
 .. code:: bibtex
 
    @article{aanes2026kikuchipy,
-     author  = {{\AA}nes, H{\aa}kon W and Crout, Phillip and Lervik, Lars Andreas and Natlandsmyr, Ole and Bergh, Tina and Hjelen, Jarle and van Helvoort, Antonius TJ and Marthinsen, Knut},
-     title   = {{kikuchipy: an open-source toolbox for analysis of EBSD patterns}},
-     doi     = {10.1093/mam/ozag097},
-     pages   = {Accepted},
-     journal = {Microscopy and Microanalysis},
-     year    = {2026},
-   }
-
-Pre-print:
-
-.. code:: bibtex
-
-   @article{aanes2026kikuchipy_arxiv,
-     author  = {{\AA}nes, H{\aa}kon W and Crout, Phillip and Lervik, Lars Andreas and Natlandsmyr, Ole and Bergh, Tina and Hjelen, Jarle and van Helvoort, Antonius TJ and Marthinsen, Knut},
-     title   = {{kikuchipy: an open-source toolbox for analysis of EBSD patterns}},
-     doi     = {10.48550/arXiv.2605.25722},
-     journal = {arXiv preprint arXiv:2605.25722},
-     year    = {2026},
+     author    = {{\AA}nes, H{\aa}kon W and Crout, Phillip and Lervik, Lars Andreas and Natlandsmyr, Ole and Bergh, Tina and Hjelen, Jarle and van Helvoort, Antonius TJ and Marthinsen, Knut},
+     title     = {kikuchipy: an open-source toolbox for analysis of EBSD patterns},
+     doi       = {10.1093/mam/ozag097},
+     number    = {5},
+     pages     = {ozag097},
+     volume    = {32},
+     journal   = {Microscopy and Microanalysis},
+     publisher = {Oxford University Press US},
+     year      = {2026},
    }
 
 Software DOI on Zenodo: https://doi.org/10.5281/zenodo.3597646.
