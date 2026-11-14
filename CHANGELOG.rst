@@ -32,6 +32,15 @@ Deprecated
 ----------
 
 
+0.14.2 (2026-11-14)
+===================
+
+Changed
+-------
+- Improved how EBSD patterns are written to a NORDIF file.
+  (`#847 <https://github.com/pyxem/kikuchipy/pull/847>`_)
+
+
 0.14.1 (2026-11-13)
 ===================
 
