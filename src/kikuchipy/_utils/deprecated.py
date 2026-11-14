@@ -134,9 +134,24 @@ class deprecated_argument:
         self.alternative = alternative
 
     def __call__(self, func: Callable) -> Callable:
+        signature = inspect.signature(func)
+
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
-            if self.name in kwargs.keys():
+            # Check keyword arguments first, since an argument passed
+            # via **kwargs is not a named parameter in the signature
+            is_used = self.name in kwargs.keys()
+            if not is_used:
+                # Check positional arguments
+                try:
+                    bound = signature.bind_partial(*args, **kwargs)
+                except TypeError:
+                    # Let the function raise an error on invalid input
+                    pass
+                else:
+                    is_used = self.name in bound.arguments
+
+            if is_used:
                 msg = (
                     f"Parameter `{self.name}` is deprecated and will be removed in "
                     f"version {self.removal}. To avoid this warning, please do not use "
