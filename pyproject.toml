@@ -128,12 +128,14 @@ dev = [
 [project.entry-points."hyperspy.extensions"]
 kikuchipy = "kikuchipy"
 
+# https://packaging.python.org/en/latest/specifications/well-known-project-urls
 [project.urls]
+"Bug Reports" = "https://github.com/pyxem/kikuchipy/issues"
+Source = "https://github.com/pyxem/kikuchipy"
 Documentation = "https://kikuchipy.org"
-Download = "https://pypi.python.org/pypi/kikuchipy"
-"Bug Tracker" = "https://github.com/pyxem/kikuchipy/issues"
-"Source Code" = "https://github.com/pyxem/kikuchipy"
 Changelog = "https://kikuchipy.org/en/stable/changelog.html"
+Download = "https://pypi.python.org/pypi/kikuchipy"
+Conda-forge = "https://anaconda.org/conda-forge/kikuchipy"
 
 # ------------------------------- Tool ------------------------------- #
 
