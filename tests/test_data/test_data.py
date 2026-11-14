@@ -84,7 +84,7 @@ class TestData:
         assert isinstance(mp_lazy, kp.signals.LazyEBSDMasterPattern)
         assert isinstance(mp_lazy.data, Array)
 
-    def test_not_allow_download_raises(self, nickel_ebsd_large_h5ebsd_renamed):
+    def test_not_allow_download_raises(self, nickel_ebsd_large_not_in_cache):
         """Not passing `allow_download` raises expected error.
 
         Also tests that None is returned if the file does not exist but

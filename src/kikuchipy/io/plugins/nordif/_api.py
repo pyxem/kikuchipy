@@ -439,11 +439,22 @@ def file_writer(filename: str, signal: "EBSD | LazyEBSD") -> None:
         Full path of HDF file.
     signal
         Signal instance.
+
+    Notes
+    -----
+    Patterns are written in flyback order (column index changing
+    fastest), which is the C order of the data array of shape (n rows,
+    n columns, n pattern rows, n pattern columns).
     """
+    data = signal.data
     with open(filename, "wb") as file:
         if signal._lazy:
-            for pattern in signal._iterate_signal(iterpath="flyback"):
-                np.array(pattern.flatten()).tofile(file)
+            # Write one chunk of patterns at a time, keeping every
+            # pattern within a single chunk so that chunks are written
+            # in the correct order
+            n_pixels = signal.axes_manager.signal_size
+            data = data.reshape((-1, n_pixels)).rechunk({1: -1})
+            for block in data.to_delayed().ravel():
+                np.asarray(block.compute()).tofile(file)
         else:
-            for pattern in signal._iterate_signal(iterpath="flyback"):
-                pattern.flatten().tofile(file)
+            np.ascontiguousarray(data).tofile(file)

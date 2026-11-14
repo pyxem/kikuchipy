@@ -13,6 +13,15 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.14.2 (2026-11-14)
+===================
+
+Changed
+-------
+- Improved how NORDIF patterns are written to file.
+  (`#847 <https://github.com/pyxem/kikuchipy/pull/847>`_)
+
+
 0.14.1 (2026-11-10)
 ===================
 

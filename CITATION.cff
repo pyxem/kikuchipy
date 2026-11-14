@@ -1,36 +1,40 @@
 cff-version: 1.2.0
 message: "If you are using kikuchipy in your research, please help our scientific visibility by citing our work!"
+title: "kikuchipy"
+authors:
+- name: "kikuchipy developers"
+doi: 10.5281/zenodo.3597646
 preferred-citation:
   type: article
   authors:
   - family-names: "Ånes"
     given-names: "Håkon W."
-    orcid: "0000-0002-1213-2911"
+    orcid: "https://orcid.org/0000-0002-1213-2911"
   - family-names: "Crout"
     given-names: "Phillip"
-    orcid: "0000-0001-5754-0938"
+    orcid: "https://orcid.org/0000-0001-5754-0938"
   - family-names: "Lervik"
     given-names: "Lars Andreas"
-    orcid: 0009-0009-9139-7544
+    orcid: "https://orcid.org/0009-0009-9139-7544"
   - family-names: "Natlandsmyr"
     given-names: "Ole"
-    orcid: 0009-0003-2863-3002
+    orcid: "https://orcid.org/0009-0003-2863-3002"
   - family-names: "Bergh"
     given-names: "Tina"
-    orcid: "0000-0003-3757-3876"
+    orcid: "https://orcid.org/0000-0003-3757-3876"
   - family-names: "Hjelen"
     given-names: "Jarle"
   - family-names: "van Helvoort"
     given-names: "Antonius T. J."
-    orcid: "0000-0001-6437-1474"
+    orcid: "https://orcid.org/0000-0001-6437-1474"
   - family-names: "Marthinsen"
     given-names: "Knut"
-    orcid: "0000-0003-1732-6421"
-  doi: 10.48550/arXiv.2605.25722
+    orcid: "https://orcid.org/0000-0003-1732-6421"
   title: "kikuchipy: an open-source toolbox for analysis of EBSD patterns"
-  journal: "arXiv preprint arXiv:2605.25722"
+  journal: "Microscopy and Microanalysis"
   year: 2026
-  eprint: "2605.25722"
-  archive-prefix: "arXiv"
-  primary-class: "cond-mat.mtrl-sci"
-  url: "https://arxiv.org/abs/2605.25722"
+  volume: 32
+  issue: 5
+  date-published: 2026-09-25
+  doi: 10.1093/mam/ozag097
+  url: "https://doi.org/10.1093/mam/ozag097"

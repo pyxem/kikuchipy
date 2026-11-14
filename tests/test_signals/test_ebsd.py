@@ -2545,6 +2545,10 @@ class TestSignal2DMethods:
         challenging to overwrite ``BaseSignal.change_dtype()`` in
         ``KikuchipySignal2D``, and the implementation may be unstable.
         """
+        # Set units recognized by pint, since HyperSpy < 2.4 fails to
+        # parse undefined units ("<undefined>") with some pint versions
+        for axis in dummy_signal.axes_manager.signal_axes:
+            axis.units = "um"
         s_fft = dummy_signal.fft()
         assert isinstance(s_fft, hs.signals.ComplexSignal2D)
         assert not hasattr(s_fft, "_xmap")

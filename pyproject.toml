@@ -128,12 +128,14 @@ dev = [
 [project.entry-points."hyperspy.extensions"]
 kikuchipy = "kikuchipy"
 
+# https://packaging.python.org/en/latest/specifications/well-known-project-urls
 [project.urls]
+"Bug Reports" = "https://github.com/pyxem/kikuchipy/issues"
+Source = "https://github.com/pyxem/kikuchipy"
 Documentation = "https://kikuchipy.org"
-Download = "https://pypi.python.org/pypi/kikuchipy"
-"Bug Tracker" = "https://github.com/pyxem/kikuchipy/issues"
-"Source Code" = "https://github.com/pyxem/kikuchipy"
 Changelog = "https://kikuchipy.org/en/stable/changelog.html"
+Download = "https://pypi.python.org/pypi/kikuchipy"
+Conda-forge = "https://anaconda.org/conda-forge/kikuchipy"
 
 # ------------------------------- Tool ------------------------------- #
 
@@ -168,6 +170,9 @@ addopts = [
     # Skip benchmarks, enable with --benchmark-enable or --benchmark-only
     # https://pytest-benchmark.readthedocs.io/en/stable/usage.html#commandline-options
     "--benchmark-skip",
+    # ---------------------------- Ignore ---------------------------- #
+    # Some ignores may also be needed in codecov.yml ignore section
+    #
     # Documentation scripts
     "--ignore=doc/_static/image/doc_reference_frames.py",
     # Examples

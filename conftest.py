@@ -514,12 +514,27 @@ def kikuchipy_h5ebsd_path() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def nickel_ebsd_large_h5ebsd_renamed() -> Generator[Path, None, None]:
-    marshall = get_fetching_pooch()
-    f1 = Path(marshall.path) / "data/nickel_ebsd_large/patterns.h5"
-    f2 = f1.rename(f1.with_suffix(".bak"))
-    yield f2
-    f2.rename(f1)
+def nickel_ebsd_large_not_in_cache(
+    tmp_path, monkeypatch
+) -> Generator[Path, None, None]:
+    """Point the data cache to an empty directory, so that the nickel
+    dataset is not found locally.
+
+    Unlike renaming the file in the actual cache, this works when the
+    file has not been downloaded, and does not affect other tests
+    running in parallel.
+    """
+    monkeypatch.setenv("KIKUCHIPY_DATA_DIR", str(tmp_path))
+    # The fetcher is cached, so it must be recreated to use the new
+    # cache directory, and again after the test to use the original one
+    get_fetching_pooch.cache_clear()
+    file_path = Path(get_fetching_pooch().path) / "data/nickel_ebsd_large/patterns.h5"
+    if file_path.exists():
+        raise ValueError(
+            f"Assumption that {str(file_path)} does not exist is incorrect"
+        )
+    yield file_path
+    get_fetching_pooch.cache_clear()
 
 
 # --------------------------- EDAX formats --------------------------- #
