@@ -21,25 +21,25 @@ Added
 - ``EBSD.get_decomposition_model()`` accepts the ``chunks`` and ``lazy_output``
   parameters from HyperSpy's method, so that the model signal can be lazy also when the
   signal is not.
-  (`#769 <https://github.com/pyxem/kikuchipy/issues/769>`_)
+  (`#850 <https://github.com/pyxem/kikuchipy/pull/850>`_)
 
 Fixed
 -----
 - ``LazyEBSD.get_decomposition_model_write()`` now adds back the mean subtracted in the
   decomposition, e.g. with lazy PCA, to the model signal.
-  (`#769 <https://github.com/pyxem/kikuchipy/issues/769>`_)
+  (`#850 <https://github.com/pyxem/kikuchipy/pull/850>`_)
 - ``EBSD.get_decomposition_model()`` no longer modifies the signal's learning results
   temporarily, and ``dtype_out`` is respected for lazy signals.
-  (`#769 <https://github.com/pyxem/kikuchipy/issues/769>`_)
+  (`#850 <https://github.com/pyxem/kikuchipy/pull/850>`_)
 
 Changed
 -------
 - Minimal version of HyperSpy is 2.5 and of Dask is 2024.12.0.
-  (`#769 <https://github.com/pyxem/kikuchipy/issues/769>`_)
+  (`#850 <https://github.com/pyxem/kikuchipy/pull/850>`_)
 - ``EBSD.get_decomposition_model()`` returns a model signal with the data type of the
-  learning results instead of 32-bit floats by default. The model signal keeps a copy of
-  the learning results, like in HyperSpy.
-  (`#769 <https://github.com/pyxem/kikuchipy/issues/769>`_)
+  learning results instead of 32-bit floats by default.
+  The model signal keeps a copy of the learning results, like in HyperSpy.
+  (`#850 <https://github.com/pyxem/kikuchipy/pull/850>`_)
 
 Removed
 -------
@@ -48,11 +48,11 @@ Deprecated
 ----------
 - Parameter ``dtype_out`` in ``EBSD.get_decomposition_model()``. It will be removed in
   version 0.17. Use ``change_dtype()`` on the returned model signal instead.
-  (`#769 <https://github.com/pyxem/kikuchipy/issues/769>`_)
+  (`#850 <https://github.com/pyxem/kikuchipy/pull/850>`_)
 - ``LazyEBSD.get_decomposition_model_write()``. It will be removed in version 0.17. Use
   ``get_decomposition_model(lazy_output=True)``, ``rescale_intensity()`` and ``save()``
   instead.
-  (`#769 <https://github.com/pyxem/kikuchipy/issues/769>`_)
+  (`#850 <https://github.com/pyxem/kikuchipy/pull/850>`_)
 
 
 0.14.2 (2026-11-14)
