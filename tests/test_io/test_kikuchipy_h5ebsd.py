@@ -45,7 +45,7 @@ class TestH5EBSD:
         # The file path can contain spaces
         repr_str_list = repr(reader).split(" ", maxsplit=2)
         assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.8.dev0):"]
-        assert repr_str_list[2][-11:] == "patterns.h5"
+        assert repr_str_list[-1][-11:] == "patterns.h5"
 
     def test_check_file_invalid_version(self, save_path_hdf5):
         f = h5py.File(save_path_hdf5, mode="w")
